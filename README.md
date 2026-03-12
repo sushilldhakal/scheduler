@@ -229,6 +229,16 @@ interface SchedulerLabels {
 }
 ```
 
+## Demo
+
+A live demo is available at: **https://sushilldhakal.github.io/scheduler/**
+
+To run the demo locally:
+```bash
+npm run demo        # Dev server
+npm run demo:build  # Build for GitHub Pages (outputs to docs/)
+```
+
 ## License
 
 MIT
