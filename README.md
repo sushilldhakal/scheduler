@@ -118,13 +118,13 @@ function App() {
       employees={employees}
       shifts={shifts}
       onShiftsChange={setShifts}
-      config={{
+      config={% raw %}{{% endraw %}
         labels: { category: "Department", employee: "Staff" },
         defaultSettings: {
           visibleFrom: 8,
           visibleTo: 22,
         },
-      }}
+      {% raw %}}}{% endraw %}
     />
   )
 }
