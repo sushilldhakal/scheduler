@@ -1,5 +1,5 @@
 {
-  "name": "shadcn-scheduler",
+  "name": "@sushilldhakal/shadcn-scheduler",
   "version": "0.1.0",
   "description": "A flexible shift scheduling component for React with shadcn UI, Tailwind CSS, and lucide-react icons",
   "type": "module",
@@ -13,11 +13,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/sushilldhakal/scheduler.git"
+    "url": "git+https://github.com/sushilldhakal/scheduler.git"
   },
   "homepage": "https://sushilldhakal.github.io/scheduler/",
   "bugs": {
     "url": "https://github.com/sushilldhakal/scheduler/issues"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "engines": {
     "node": ">=18"
