@@ -1,0 +1,82 @@
+{
+  "name": "shadcn-scheduler",
+  "version": "0.1.0",
+  "description": "A flexible shift scheduling component for React with shadcn UI, Tailwind CSS, and lucide-react icons",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sushilldhakal/scheduler.git"
+  },
+  "homepage": "https://github.com/sushilldhakal/scheduler#readme",
+  "bugs": {
+    "url": "https://github.com/sushilldhakal/scheduler/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "scheduler",
+    "shadcn",
+    "tailwind",
+    "react",
+    "shift-scheduling",
+    "calendar",
+    "lucide-react"
+  ],
+  "author": "Sushil Dhakal",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "lucide-react": ">=0.260.0",
+    "tailwindcss": ">=3.0.0",
+    "@radix-ui/react-popover": ">=1.0.0",
+    "@radix-ui/react-tabs": ">=1.0.0",
+    "@radix-ui/react-toggle-group": ">=1.0.0",
+    "@radix-ui/react-checkbox": ">=1.0.0",
+    "@radix-ui/react-slot": ">=1.0.0",
+    "react-day-picker": ">=8.0.0",
+    "class-variance-authority": ">=0.7.0",
+    "clsx": ">=2.0.0",
+    "tailwind-merge": ">=2.0.0"
+  },
+  "devDependencies": {
+    "@radix-ui/react-checkbox": "^1.0.4",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-popover": "^1.0.7",
+    "@radix-ui/react-tabs": "^1.0.4",
+    "@radix-ui/react-toggle-group": "^1.0.4",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "lucide-react": "^0.263.0",
+    "react": "^18.2.0",
+    "react-day-picker": "^8.10.0",
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^2.2.0",
+    "tailwindcss": "^3.4.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}
