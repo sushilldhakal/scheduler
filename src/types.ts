@@ -32,10 +32,14 @@ export interface WorkingHours {
   to: number
 }
 
+/** "drag" = drag only, "resize" = resize only, "both" = drag + resize */
+export type BadgeVariant = "drag" | "resize" | "both"
+
 export interface Settings {
   visibleFrom: number
   visibleTo: number
   workingHours: Record<number, WorkingHours | null>
+  badgeVariant?: BadgeVariant
 }
 
 export interface CategoryColor {
@@ -61,11 +65,15 @@ export interface SchedulerLabels {
   copyLastWeek?: string
   fillFromSchedules?: string
   publishAll?: string
-  roles?: string
+  categories?: string
 }
 
 export interface SchedulerConfig {
   labels?: Partial<SchedulerLabels>
   categoryColors?: CategoryColor[]
   defaultSettings?: Partial<Settings>
+}
+
+export interface SchedulerSettingsContext {
+  onSettingsChange: (partial: Partial<Settings>) => void
 }

@@ -9,7 +9,6 @@ import { getWeekDates, sameDay } from "./constants"
 import { TodayButton, DateNavigator } from "./components/DateNavigator"
 import { ViewTabs } from "./components/ViewTabs"
 import { UserSelect } from "./components/UserSelect"
-import { RosterActions } from "./components/RosterActions"
 import { AddShiftModal } from "./components/modals/AddShiftModal"
 import { ShiftModal } from "./components/modals/ShiftModal"
 import { DayView, WeekView } from "./components/views/DayWeekViews"
@@ -17,7 +16,7 @@ import { MonthView } from "./components/views/MonthView"
 import { YearView } from "./components/views/YearView"
 import { ListView } from "./components/views/ListView"
 import type { Employee } from "./types"
-import type { SchedulerConfig } from "./types"
+import type { SchedulerConfig, SchedulerSettingsContext } from "./types"
 
 interface AddContext {
   date: Date
@@ -34,7 +33,22 @@ export interface SchedulerProps {
   settings?: Partial<Settings>
   initialView?: string
   initialDate?: Date
-  onFillFromSchedules?: () => void
+  /**
+   * Custom action buttons to render before the Add Shift button.
+   * Pass a ReactNode or a function that receives actions (copyLastWeek, publishAllDrafts, draftCount) to build custom UI.
+   */
+  headerActions?: React.ReactNode | ((actions: SchedulerHeaderActions) => React.ReactNode)
+  /**
+   * Renders in the header next to actions (e.g. Settings gear icon).
+   * Receives { onSettingsChange } to control visible hours, working hours, badge variant.
+   */
+  footerSlot?: (ctx: SchedulerSettingsContext) => React.ReactNode
+}
+
+export interface SchedulerHeaderActions {
+  copyLastWeek: () => void
+  publishAllDrafts: () => void
+  draftCount: number
 }
 
 export function Scheduler({
@@ -46,7 +60,8 @@ export function Scheduler({
   settings: settingsProp,
   initialView = "week",
   initialDate,
-  onFillFromSchedules,
+  headerActions,
+  footerSlot,
 }: SchedulerProps): JSX.Element {
   const parentCtx = useContext(SchedulerContext)
   const categories = categoriesProp ?? parentCtx?.categories ?? []
@@ -71,6 +86,7 @@ export function Scheduler({
   const [selShift, setSelShift] = useState<Shift | null>(null)
   const [selCategory, setSelCategory] = useState<Category | null>(null)
   const [addCtx, setAddCtx] = useState<AddContext | null>(null)
+  const [settingsOverride, setSettingsOverride] = useState<Partial<import("./types").Settings>>({})
   const [selEmps, setSelEmps] = useState<Set<string>>(
     () => new Set(employees.map((e) => e.id))
   )
@@ -158,8 +174,6 @@ export function Scheduler({
   const handleAllEmployees = (): void =>
     setSelEmps(new Set(employees.map((e) => e.id)))
   const handleNoEmployees = (): void => setSelEmps(new Set())
-  const handleFillFromSchedules = (): void =>
-    onFillFromSchedules?.() ?? alert("Connect your scheduling engine")
   const handlePublishAllDrafts = (): void =>
     publishShifts(
       ...shifts.filter((s) => s.status === "draft").map((s) => s.id)
@@ -190,8 +204,16 @@ export function Scheduler({
     defaultSettings: {
       ...config?.defaultSettings,
       ...settingsProp,
+      ...settingsOverride,
     },
   }
+
+  const handleSettingsChange = useCallback(
+    (partial: Partial<import("./types").Settings>) => {
+      setSettingsOverride((prev) => ({ ...prev, ...partial }))
+    },
+    []
+  )
 
   const content = (
       <div
@@ -236,13 +258,13 @@ export function Scheduler({
 
         <div className="flex flex-col gap-4 border-b p-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
-            <TodayButton onToday={handleTodayClick} />
             <DateNavigator
               view={view}
               currentDate={currentDate}
               onDateChange={setCurrentDate}
               onNavigate={navigate}
               shifts={shifts}
+              slotAbove={<TodayButton onToday={handleTodayClick} />}
             />
           </div>
 
@@ -257,13 +279,15 @@ export function Scheduler({
               />
             </div>
 
-            <div className="flex w-full gap-2 sm:w-auto">
-              <RosterActions
-                onCopyLastWeek={copyLastWeek}
-                onFillFromSchedules={handleFillFromSchedules}
-                onPublishAll={handlePublishAllDrafts}
-                draftCount={draftCount}
-              />
+            <div className="flex w-full items-center gap-2 sm:w-auto">
+              {footerSlot && footerSlot({ onSettingsChange: handleSettingsChange })}
+              {typeof headerActions === "function"
+                ? headerActions({
+                    copyLastWeek,
+                    publishAllDrafts: handlePublishAllDrafts,
+                    draftCount,
+                  })
+                : headerActions}
               <Button onClick={handleAddShiftButton} className="w-full sm:w-auto">
                 <Plus size={16} />
                 Add Shift
@@ -281,7 +305,11 @@ export function Scheduler({
           }}
         >
           {!isListView && baseView === "day" && (
-            <DayView date={currentDate} {...sharedGridProps} />
+            <DayView
+              date={currentDate}
+              setDate={setCurrentDate}
+              {...sharedGridProps}
+            />
           )}
           {!isListView && baseView === "week" && (
             <WeekView

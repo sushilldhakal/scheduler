@@ -16,7 +16,7 @@ const DEFAULT_LABELS = {
   copyLastWeek: "Copy Last Week",
   fillFromSchedules: "Fill from Schedules",
   publishAll: "Publish All",
-  roles: "Roles",
+  categories: "Categories",
 }
 
 export interface SchedulerContextValue {

@@ -1,22 +1,24 @@
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, Search } from "lucide-react"
 import * as PopoverPrimitive from "@radix-ui/react-popover"
 import * as CheckboxPrimitive from "@radix-ui/react-checkbox"
 import { cn } from "../../lib/utils"
 
 export interface GroupedOption {
   heading: string
-  options: { label: string; value: string; icon?: () => React.ReactNode }[]
+  options: { label: string; value: string; icon?: () => React.ReactNode; meta?: Record<string, unknown> }[]
 }
 
 interface MultiSelectProps {
   options: GroupedOption[]
   value: string[]
   onValueChange: (value: string[]) => void
-  placeholder?: string
+  placeholder?: React.ReactNode
   searchable?: boolean
   className?: string
   maxCount?: number
+  /** Custom render for selected values (e.g. overlapping badges). If not provided, falls back to default text. */
+  renderSelected?: (value: string[], options: GroupedOption[]) => React.ReactNode
 }
 
 export function MultiSelect({
@@ -27,6 +29,7 @@ export function MultiSelect({
   searchable = false,
   className,
   maxCount = 3,
+  renderSelected,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
@@ -53,19 +56,21 @@ export function MultiSelect({
       .filter((g) => g.options.length > 0)
   }, [options, search])
 
-  const displayText =
+  const displayContent =
     value.length === 0
       ? placeholder
-      : value.length <= maxCount
-        ? value
-            .map(
-              (v) =>
-                options
-                  .flatMap((g) => g.options)
-                  .find((o) => o.value === v)?.label ?? v
-            )
-            .join(", ")
-        : `${value.length} selected`
+      : renderSelected
+        ? renderSelected(value, options)
+        : value.length <= maxCount
+          ? value
+              .map(
+                (v) =>
+                  options
+                    .flatMap((g) => g.options)
+                    .find((o) => o.value === v)?.label ?? v
+              )
+              .join(", ")
+          : `${value.length} selected`
 
   return (
     <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
@@ -73,11 +78,13 @@ export function MultiSelect({
         <button
           type="button"
           className={cn(
-            "flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+            "flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
             className
           )}
         >
-          <span className="truncate">{displayText}</span>
+          <span className={cn("flex min-w-0 flex-1 items-center", !renderSelected && "truncate text-left")}>
+            {displayContent}
+          </span>
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </button>
       </PopoverPrimitive.Trigger>
@@ -87,12 +94,15 @@ export function MultiSelect({
           className="z-50 w-[--radix-popover-trigger-width] rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none"
         >
           {searchable && (
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search..."
-              className="mb-1 h-8 w-full rounded border border-input bg-background px-2 text-sm outline-none"
-            />
+            <div className="relative mb-1">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search..."
+                className="h-8 w-full rounded border border-input bg-background py-1.5 pl-8 pr-2 text-sm outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-ring"
+              />
+            </div>
           )}
           <div className="max-h-60 overflow-auto">
             {filtered.map((group) => (

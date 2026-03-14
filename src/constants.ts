@@ -1,11 +1,17 @@
 import type { CategoryColor, Settings } from "./types"
 
 export const HOUR_W = 88
+/** Week view: hours between time labels (e.g. 2 = 7am, 9am, 11am...) */
+export const WEEK_TIME_LABEL_GAP = 2
 export const SNAP = 0.5
 export const SIDEBAR_W = 190
 export const SHIFT_H = 42
 export const ROLE_HDR = 38
 export const HOUR_HDR_H = 44
+/** Reserved height at bottom of each category row for the add-shift + button */
+export const ADD_BTN_H = 32
+/** Horizontal scroll buffer (px) for day view - scroll into buffer to navigate prev/next day */
+export const DAY_SCROLL_BUFFER = 400
 
 export const HOURS: readonly number[] = Array.from({ length: 24 }, (_, i) => i)
 
@@ -71,6 +77,7 @@ export const DEFAULT_SETTINGS: Settings = {
     5: { from: 8, to: 17 },
     6: { from: 8, to: 12 },
   },
+  badgeVariant: "both",
 }
 
 export const snapH = (v: number): number => Math.round(v / SNAP) * SNAP
@@ -141,3 +148,14 @@ export function hourBg(h: number, settings: Settings, dow: number): string {
   if (h < wh.from || h >= wh.to) return "#f9f9f9"
   return "#fff"
 }
+
+/** Returns true if hour is outside working hours (for dashed background in week/day view) */
+export function isOutsideWorkingHours(h: number, settings: Settings, dow: number): boolean {
+  const wh = settings.workingHours[dow]
+  if (wh === null) return false
+  return h < wh.from || h >= wh.to
+}
+
+/** CSS for dashed background (outside working hours) */
+export const DASHED_BG =
+  "repeating-linear-gradient(-45deg, #f5f5f5, #f5f5f5 2px, #fafafa 2px, #fafafa 4px)"

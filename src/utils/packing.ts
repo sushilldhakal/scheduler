@@ -1,5 +1,5 @@
 import type { Shift } from "../types"
-import { ROLE_HDR, SHIFT_H } from "../constants"
+import { ROLE_HDR, SHIFT_H, ADD_BTN_H } from "../constants"
 
 export function packShifts(shifts: Shift[]): number[] {
   const ends: number[] = []
@@ -16,8 +16,8 @@ export function packShifts(shifts: Shift[]): number[] {
 
 export function getCategoryRowHeight(categoryId: string, dayShifts: Shift[]): number {
   const rs = dayShifts.filter((s) => s.categoryId === categoryId)
-  if (rs.length === 0) return ROLE_HDR + SHIFT_H
+  if (rs.length === 0) return ROLE_HDR + SHIFT_H + ADD_BTN_H
   const sorted = [...rs].sort((a, b) => a.startH - b.startH)
   const trackCount = packShifts(sorted).reduce((mx, t) => Math.max(mx, t + 1), 1)
-  return ROLE_HDR + trackCount * SHIFT_H
+  return ROLE_HDR + trackCount * SHIFT_H + ADD_BTN_H
 }

@@ -8,7 +8,9 @@ import {
   SHIFT_H,
   ROLE_HDR,
   HOUR_HDR_H,
-  HOURS,
+  ADD_BTN_H,
+  DAY_SCROLL_BUFFER,
+  WEEK_TIME_LABEL_GAP,
   DOW_MON_FIRST,
   snapH,
   clamp,
@@ -16,6 +18,8 @@ import {
   isToday,
   fmt12,
   hourBg,
+  isOutsideWorkingHours,
+  DASHED_BG,
 } from "../constants"
 import { packShifts, getCategoryRowHeight } from "../utils/packing"
 import { StaffPanel } from "./StaffPanel"
@@ -52,6 +56,10 @@ interface GridViewProps {
   onAddShift: (date: Date, categoryId?: string, empId?: string) => void
   isWeekView?: boolean
   setDate?: React.Dispatch<React.SetStateAction<Date>>
+  /** Day view with multiple days: [Mon 7-5pm][Tue 7-5pm]... horizontal scroll */
+  isDayViewMultiDay?: boolean
+  /** The date that should be centered/focused (e.g. from calendar pick) */
+  focusedDate?: Date
 }
 
 interface StaffPanelState {
@@ -92,6 +100,8 @@ export function GridView({
   onAddShift,
   isWeekView,
   setDate,
+  isDayViewMultiDay = false,
+  focusedDate,
 }: GridViewProps): JSX.Element {
   const { categories, employees, nextUid, getColor, labels, settings } = useSchedulerContext()
   const CATEGORIES = categories
@@ -102,6 +112,8 @@ export function GridView({
   const gridRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
   const initRef = useRef<boolean>(false)
+  const lastReportedDayIdxRef = useRef<number>(-1)
+  const scrollTriggeredUpdateRef = useRef(false)
 
   const [staffPanel, setStaffPanel] = useState<StaffPanelState | null>(null)
   const [dragEmpId, setDragEmpId] = useState<string | null>(null)
@@ -112,56 +124,173 @@ export function GridView({
   const COL_W_WEEK = useMemo((): number => {
     if (!isWeekView) return HOUR_W
     const vh = settings.visibleTo - settings.visibleFrom
-    return Math.max(vh * 14, 130)
+    return Math.max(vh * 18, 160)
   }, [isWeekView, settings])
 
   const PX_WEEK = isWeekView ? COL_W_WEEK / Math.max(settings.visibleTo - settings.visibleFrom, 1) : 1
-  const TOTAL_W = isWeekView ? dates.length * COL_W_WEEK : HOURS.length * HOUR_W
+  const DAY_VISIBLE_HOURS = useMemo(
+    () =>
+      Array.from(
+        { length: settings.visibleTo - settings.visibleFrom },
+        (_, k) => settings.visibleFrom + k
+      ),
+    [settings.visibleFrom, settings.visibleTo]
+  )
+  const DAY_WIDTH = DAY_VISIBLE_HOURS.length * HOUR_W
+  const hasDayScrollNav = !isWeekView && !!setDate && !isDayViewMultiDay
+  const TOTAL_W = isWeekView
+    ? dates.length * COL_W_WEEK
+    : isDayViewMultiDay
+      ? dates.length * DAY_WIDTH
+      : hasDayScrollNav
+        ? 2 * DAY_SCROLL_BUFFER + DAY_WIDTH
+        : DAY_WIDTH
 
+  const isDayViewNav = isWeekView && dates.length === 7
+  const scrollNavDelta = isDayViewNav ? 1 : 7
+  const scrollNavCols = isDayViewNav ? 1 : 7
+  const initialScrollCol = isDayViewNav ? 3 : 7
+
+  const centerDayIdx = isDayViewMultiDay ? Math.floor(dates.length / 2) : 0
   useEffect(() => {
     if (!initRef.current && scrollRef.current) {
-      scrollRef.current.scrollLeft = isWeekView
-        ? 7 * COL_W_WEEK
-        : Math.max(0, settings.visibleFrom - 0.5) * HOUR_W
+      if (isWeekView) {
+        scrollRef.current.scrollLeft = initialScrollCol * COL_W_WEEK
+      } else if (hasDayScrollNav) {
+        scrollRef.current.scrollLeft = DAY_SCROLL_BUFFER
+      } else if (isDayViewMultiDay) {
+        scrollRef.current.scrollLeft = Math.max(0, centerDayIdx * DAY_WIDTH - 200)
+      } else {
+        scrollRef.current.scrollLeft = 0
+      }
       initRef.current = true
+      lastReportedDayIdxRef.current = centerDayIdx
     }
-  }, [isWeekView, COL_W_WEEK, settings.visibleFrom])
+  }, [isWeekView, hasDayScrollNav, isDayViewMultiDay, initialScrollCol, COL_W_WEEK, centerDayIdx, DAY_WIDTH])
+
+  const focusedDateTime = focusedDate?.getTime()
+  useEffect(() => {
+    if (!isDayViewMultiDay || !scrollRef.current || !focusedDate || dates.length === 0) return
+    if (scrollTriggeredUpdateRef.current) {
+      scrollTriggeredUpdateRef.current = false
+      return
+    }
+    const idx = dates.findIndex((d) => d.getTime() === focusedDateTime)
+    if (idx < 0) return
+    const targetScroll = Math.max(0, idx * DAY_WIDTH - 200)
+    scrollRef.current.scrollLeft = targetScroll
+    lastReportedDayIdxRef.current = idx
+  }, [isDayViewMultiDay, focusedDateTime, dates, DAY_WIDTH])
 
   const onWeekScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>): void => {
       if (!isWeekView || !setDate) return
       const el = e.currentTarget
-      if (el.scrollLeft < COL_W_WEEK * 3) {
+      const leftThreshold = COL_W_WEEK * (isDayViewNav ? 1.5 : 3)
+      const rightThreshold = TOTAL_W - COL_W_WEEK * (isDayViewNav ? 5.5 : 10)
+      if (el.scrollLeft < leftThreshold) {
         setDate((d) => {
           const nd = new Date(d)
-          nd.setDate(nd.getDate() - 7)
+          nd.setDate(nd.getDate() - scrollNavDelta)
           return nd
         })
         requestAnimationFrame(() => {
-          if (scrollRef.current) scrollRef.current.scrollLeft += 7 * COL_W_WEEK
+          if (scrollRef.current)
+            scrollRef.current.scrollLeft += scrollNavCols * COL_W_WEEK
         })
-      } else if (el.scrollLeft > TOTAL_W - COL_W_WEEK * 10) {
+      } else if (el.scrollLeft > rightThreshold) {
         setDate((d) => {
           const nd = new Date(d)
-          nd.setDate(nd.getDate() + 7)
+          nd.setDate(nd.getDate() + scrollNavDelta)
           return nd
         })
         requestAnimationFrame(() => {
-          if (scrollRef.current) scrollRef.current.scrollLeft -= 7 * COL_W_WEEK
+          if (scrollRef.current)
+            scrollRef.current.scrollLeft -= scrollNavCols * COL_W_WEEK
         })
       }
       if (headerRef.current) headerRef.current.scrollLeft = el.scrollLeft
       if (sidebarRef.current) sidebarRef.current.scrollTop = el.scrollTop
     },
-    [isWeekView, setDate, COL_W_WEEK, TOTAL_W]
+    [isWeekView, setDate, COL_W_WEEK, TOTAL_W, isDayViewNav, scrollNavDelta, scrollNavCols]
   )
 
   const onDayScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>): void => {
       if (isWeekView) return
-      if (sidebarRef.current) sidebarRef.current.scrollTop = e.currentTarget.scrollTop
+      const el = e.currentTarget
+      if (sidebarRef.current) sidebarRef.current.scrollTop = el.scrollTop
+      if (isDayViewMultiDay && setDate) {
+        const sl = el.scrollLeft
+        const vw = el.clientWidth
+        const centerX = sl + vw / 2
+        const dayIdx = clamp(Math.floor(centerX / DAY_WIDTH), 0, dates.length - 1)
+        if (dayIdx !== lastReportedDayIdxRef.current && dates[dayIdx]) {
+          lastReportedDayIdxRef.current = dayIdx
+          scrollTriggeredUpdateRef.current = true
+          const newDate = new Date(dates[dayIdx])
+          setDate(newDate)
+          const halfWindow = Math.floor(dates.length / 2)
+          requestAnimationFrame(() => {
+            if (scrollRef.current) {
+              const vw = scrollRef.current.clientWidth
+              scrollRef.current.scrollLeft = Math.max(
+                0,
+                halfWindow * DAY_WIDTH + DAY_WIDTH / 2 - vw / 2
+              )
+            }
+          })
+        }
+        const halfWindow = Math.floor(dates.length / 2)
+        if (sl < DAY_WIDTH) {
+          scrollTriggeredUpdateRef.current = true
+          setDate((d) => {
+            const nd = new Date(d)
+            nd.setDate(nd.getDate() - halfWindow)
+            return nd
+          })
+          lastReportedDayIdxRef.current = halfWindow
+          requestAnimationFrame(() => {
+            if (scrollRef.current)
+              scrollRef.current.scrollLeft = halfWindow * DAY_WIDTH - 200
+          })
+        } else if (sl > TOTAL_W - 2 * DAY_WIDTH) {
+          scrollTriggeredUpdateRef.current = true
+          setDate((d) => {
+            const nd = new Date(d)
+            nd.setDate(nd.getDate() + halfWindow)
+            return nd
+          })
+          lastReportedDayIdxRef.current = halfWindow
+          requestAnimationFrame(() => {
+            if (scrollRef.current)
+              scrollRef.current.scrollLeft = halfWindow * DAY_WIDTH - 200
+          })
+        }
+      } else if (hasDayScrollNav && setDate) {
+        const sl = el.scrollLeft
+        if (sl < DAY_SCROLL_BUFFER / 2) {
+          setDate((d) => {
+            const nd = new Date(d)
+            nd.setDate(nd.getDate() - 1)
+            return nd
+          })
+          requestAnimationFrame(() => {
+            if (scrollRef.current) scrollRef.current.scrollLeft = DAY_SCROLL_BUFFER
+          })
+        } else if (sl > DAY_SCROLL_BUFFER + DAY_WIDTH - DAY_SCROLL_BUFFER / 2) {
+          setDate((d) => {
+            const nd = new Date(d)
+            nd.setDate(nd.getDate() + 1)
+            return nd
+          })
+          requestAnimationFrame(() => {
+            if (scrollRef.current) scrollRef.current.scrollLeft = DAY_SCROLL_BUFFER
+          })
+        }
+      }
     },
-    [isWeekView]
+    [isWeekView, isDayViewMultiDay, hasDayScrollNav, setDate, DAY_WIDTH, TOTAL_W, dates]
   )
 
   const categoryHeights = useMemo((): Record<string, number> => {
@@ -227,17 +356,26 @@ export function GridView({
         const localX = x - di * COL_W_WEEK
         return snapH(clamp(settings.visibleFrom + localX / PX_WEEK, 0, 24))
       }
-      return snapH(clamp(x / HOUR_W, 0, 24))
+      if (isDayViewMultiDay) {
+        const localX = x - di * DAY_WIDTH
+        return snapH(
+          clamp(settings.visibleFrom + localX / HOUR_W, settings.visibleFrom, settings.visibleTo)
+        )
+      }
+      return snapH(
+        clamp(settings.visibleFrom + x / HOUR_W, settings.visibleFrom, settings.visibleTo)
+      )
     },
-    [isWeekView, COL_W_WEEK, PX_WEEK, settings.visibleFrom]
+    [isWeekView, isDayViewMultiDay, COL_W_WEEK, DAY_WIDTH, PX_WEEK, HOUR_W, settings.visibleFrom, settings.visibleTo]
   )
 
   const getDateIdx = useCallback(
     (x: number): number => {
+      if (isDayViewMultiDay) return clamp(Math.floor(x / DAY_WIDTH), 0, dates.length - 1)
       if (!isWeekView) return 0
       return clamp(Math.floor(x / COL_W_WEEK), 0, dates.length - 1)
     },
-    [isWeekView, COL_W_WEEK, dates.length]
+    [isWeekView, isDayViewMultiDay, COL_W_WEEK, DAY_WIDTH, dates.length]
   )
 
   const onBD = useCallback(
@@ -314,27 +452,27 @@ export function GridView({
 
       if (d.type === "move") {
         const dx = x - d.sx
-        const di0 = isWeekView ? getDateIdx(d.sx) : 0
+        const di0 = isWeekView || isDayViewMultiDay ? getDateIdx(d.sx) : 0
         const di1 = getDateIdx(x)
         const dayDelta = di1 - di0
         const hourOffset = isWeekView
           ? snapH((dx - dayDelta * COL_W_WEEK) / PX_WEEK)
-          : snapH(dx / HOUR_W)
+          : isDayViewMultiDay
+            ? snapH((dx - dayDelta * DAY_WIDTH) / HOUR_W)
+            : snapH(dx / HOUR_W)
         const ns = snapH(clamp(d.startH + hourOffset, 0, 24 - d.dur))
         setGhost({ ns, ne: ns + d.dur, categoryId: newCat.id, dayDelta, id: d.id })
       } else if (d.type === "resize-right") {
-        const ne = snapH(
-          clamp(d.endH + (x - d.sx) / (isWeekView ? PX_WEEK : HOUR_W), d.startH + SNAP, 24)
-        )
+        const pxPerH = isWeekView ? PX_WEEK : isDayViewMultiDay ? HOUR_W : HOUR_W
+        const ne = snapH(clamp(d.endH + (x - d.sx) / pxPerH, d.startH + SNAP, 24))
         setGhost({ ns: d.startH, ne, categoryId: d.categoryId, dayDelta: 0, id: d.id })
       } else {
-        const ns = snapH(
-          clamp(d.startH + (x - d.sx) / (isWeekView ? PX_WEEK : HOUR_W), 0, d.endH - SNAP)
-        )
+        const pxPerH = isWeekView ? PX_WEEK : isDayViewMultiDay ? HOUR_W : HOUR_W
+        const ns = snapH(clamp(d.startH + (x - d.sx) / pxPerH, 0, d.endH - SNAP))
         setGhost({ ns, ne: d.endH, categoryId: d.categoryId, dayDelta: 0, id: d.id })
       }
     },
-    [getGridXY, getCategoryAtY, getDateIdx, isWeekView, COL_W_WEEK, PX_WEEK]
+    [getGridXY, getCategoryAtY, getDateIdx, isWeekView, isDayViewMultiDay, COL_W_WEEK, DAY_WIDTH, PX_WEEK, HOUR_W]
   )
 
   const onPU = useCallback(
@@ -353,16 +491,19 @@ export function GridView({
           const origEmp = ALL_EMPLOYEES.find((emp) => emp.id === s.employeeId)
 
           if (d.type === "move") {
-            const di0 = isWeekView ? getDateIdx(d.sx) : 0
+            const di0 = isWeekView || isDayViewMultiDay ? getDateIdx(d.sx) : 0
             const di1 = getDateIdx(x)
             const dayDelta = di1 - di0
             const hourOffset = isWeekView
               ? snapH(((x - d.sx) - dayDelta * COL_W_WEEK) / PX_WEEK)
-              : snapH((x - d.sx) / HOUR_W)
+              : isDayViewMultiDay
+                ? snapH(((x - d.sx) - dayDelta * DAY_WIDTH) / HOUR_W)
+                : snapH((x - d.sx) / HOUR_W)
             const ns = snapH(clamp(d.startH + hourOffset, 0, 24 - d.dur))
             const origDateIdx = dates.findIndex((dt) => sameDay(dt, s.date))
             const newDateIdx = clamp(origDateIdx + dayDelta, 0, dates.length - 1)
-            const newDate = isWeekView ? new Date(dates[newDateIdx]) : s.date
+            const newDate =
+              isWeekView || isDayViewMultiDay ? new Date(dates[newDateIdx]) : s.date
 
             if (newCat.id !== s.categoryId && origEmp && origEmp.categoryId !== newCat.id) {
               setCategoryWarn({ shift: s, newCategoryId: newCat.id, ns, ne: ns + d.dur, newDate })
@@ -388,8 +529,11 @@ export function GridView({
       getCategoryAtY,
       getDateIdx,
       isWeekView,
+      isDayViewMultiDay,
       COL_W_WEEK,
+      DAY_WIDTH,
       PX_WEEK,
+      HOUR_W,
       dates,
       setShifts,
       ALL_EMPLOYEES,
@@ -482,7 +626,7 @@ export function GridView({
                 letterSpacing: 0.5,
               }}
             >
-              {labels.roles}
+              {labels.categories}
             </span>
           </div>
           <div ref={headerRef} style={{ flex: 1, overflowX: "hidden" }}>
@@ -530,6 +674,48 @@ export function GridView({
                     >
                       {d.getDate()}
                     </div>
+                    {!closed && (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginTop: 4,
+                          paddingLeft: 2,
+                          paddingRight: 2,
+                        }}
+                      >
+                        {Array.from(
+                          {
+                            length:
+                              Math.floor(
+                                (settings.visibleTo - settings.visibleFrom) /
+                                  WEEK_TIME_LABEL_GAP
+                              ) + 1,
+                          },
+                          (_, k) => {
+                            const h = Math.min(
+                              settings.visibleFrom + k * WEEK_TIME_LABEL_GAP,
+                              settings.visibleTo - 0.01
+                            )
+                            return (
+                              <span
+                                key={h}
+                              style={{
+                                fontSize: 8,
+                                fontWeight: 600,
+                                color: "#9ca3af",
+                                flex: 1,
+                                textAlign: "center",
+                                minWidth: 0,
+                              }}
+                              >
+                                {fmt12(h)}
+                              </span>
+                            )
+                          }
+                        )}
+                      </div>
+                    )}
                     {closed && (
                       <div style={{ fontSize: 8, color: "#d1d5db", fontWeight: 600, marginTop: 1 }}>
                         CLOSED
@@ -663,66 +849,191 @@ export function GridView({
           onScroll={isWeekView ? onWeekScroll : onDayScroll}
           style={{ flex: 1, overflowX: "auto", overflowY: "auto" }}
         >
-          {!isWeekView && (
+          <div
+            style={{
+              display: "flex",
+              width: isWeekView || isDayViewMultiDay ? TOTAL_W : hasDayScrollNav ? TOTAL_W : DAY_WIDTH,
+              minWidth:
+                isWeekView || isDayViewMultiDay ? TOTAL_W : hasDayScrollNav ? TOTAL_W : DAY_WIDTH,
+            }}
+          >
+            {hasDayScrollNav && (
+              <div style={{ width: DAY_SCROLL_BUFFER, flexShrink: 0, minWidth: DAY_SCROLL_BUFFER }} />
+            )}
             <div
               style={{
-                position: "sticky",
-                top: 0,
-                zIndex: 12,
                 display: "flex",
-                width: HOURS.length * HOUR_W,
-                height: HOUR_HDR_H,
-                background: "#f9fafb",
-                borderBottom: "1px solid #e5e7eb",
+                flexDirection: "column",
+                width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
                 flexShrink: 0,
               }}
             >
-              {HOURS.map((h) => (
+              {isDayViewMultiDay && (
                 <div
-                  key={h}
                   style={{
-                    width: HOUR_W,
-                    flexShrink: 0,
-                    height: "100%",
                     display: "flex",
-                    alignItems: "flex-end",
-                    padding: "0 0 6px 8px",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    borderRight: "1px solid #eee",
-                    background: hourBg(h, settings, dates[0].getDay()),
-                    color:
-                      h >= settings.visibleFrom && h < settings.visibleTo
-                        ? h === Math.floor(nowH)
-                          ? "#3b82f6"
-                          : "#6b7280"
-                        : "#c0c0c0",
+                    flexDirection: "column",
+                    width: TOTAL_W,
+                    background: "#f9fafb",
+                    borderBottom: "1px solid #e5e7eb",
+                    flexShrink: 0,
                   }}
                 >
-                  {fmt12(h)}
+                  <div
+                    style={{
+                      display: "flex",
+                      width: TOTAL_W,
+                      padding: "4px 0 2px",
+                    }}
+                  >
+                    {dates.map((d, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          width: DAY_WIDTH,
+                          flexShrink: 0,
+                          textAlign: "center",
+                          borderRight: "1px solid #e5e7eb",
+                          padding: "0 4px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 9,
+                            fontWeight: 700,
+                            color: isToday(d) ? "#3b82f6" : "#9ca3af",
+                          }}
+                        >
+                          {DOW_MON_FIRST[(d.getDay() + 6) % 7]} {d.getDate()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      width: TOTAL_W,
+                      minHeight: 32,
+                    }}
+                  >
+                    {dates.map((d, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: "flex",
+                          width: DAY_WIDTH,
+                          flexShrink: 0,
+                          borderRight: "1px solid #e5e7eb",
+                          background: isToday(d) ? "#eff6ff" : "transparent",
+                        }}
+                      >
+                        {DAY_VISIBLE_HOURS.map((h) => {
+                          const dashed = isOutsideWorkingHours(h, settings, d.getDay())
+                          return (
+                            <div
+                              key={h}
+                              style={{
+                                width: HOUR_W,
+                                flexShrink: 0,
+                                display: "flex",
+                                alignItems: "flex-end",
+                                padding: "0 0 4px 6px",
+                                fontSize: 10,
+                                fontWeight: 600,
+                                borderRight: "1px solid #eee",
+                                background: dashed ? DASHED_BG : hourBg(h, settings, d.getDay()),
+                                color: h === Math.floor(nowH) && isToday(d) ? "#3b82f6" : "#6b7280",
+                              }}
+                            >
+                              {fmt12(h)}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
-
-          <div
-            ref={gridRef}
-            style={{
-              position: "relative",
-              width: TOTAL_W,
-              height: totalH,
-              minHeight: "100%",
-            }}
-            onPointerMove={onPM}
-            onPointerUp={onPU}
-            onPointerLeave={onPU}
-          >
+              )}
+              {!isWeekView && !isDayViewMultiDay && (
+                <div
+                  style={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 12,
+                    display: "flex",
+                    width: DAY_WIDTH,
+                    height: HOUR_HDR_H,
+                    background: "#f9fafb",
+                    borderBottom: "1px solid #e5e7eb",
+                  }}
+                >
+                  {DAY_VISIBLE_HOURS.map((h) => {
+                    const dashed = isOutsideWorkingHours(h, settings, dates[0].getDay())
+                    return (
+                      <div
+                        key={h}
+                        style={{
+                          width: HOUR_W,
+                          flexShrink: 0,
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "flex-end",
+                          padding: "0 0 6px 8px",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          borderRight: "1px solid #eee",
+                          background: dashed ? DASHED_BG : hourBg(h, settings, dates[0].getDay()),
+                          color: h === Math.floor(nowH) ? "#3b82f6" : "#6b7280",
+                        }}
+                      >
+                        {fmt12(h)}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              <div
+                ref={gridRef}
+                style={{
+                  position: "relative",
+                  width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
+                  height: totalH,
+                  minHeight: "100%",
+                }}
+                onPointerMove={onPM}
+                onPointerUp={onPU}
+                onPointerLeave={onPU}
+              >
             {CATEGORIES.map((cat) => {
               const top = categoryTops[cat.id]
               const rowH = categoryHeights[cat.id]
               return dates.map((date, di) => {
                 const closed = settings.workingHours[date.getDay()] === null
                 const today = isToday(date)
+                if (isDayViewMultiDay) {
+                  return DAY_VISIBLE_HOURS.map((h) => {
+                    const dashed = isOutsideWorkingHours(h, settings, date.getDay())
+                    return (
+                      <div
+                        key={`bg-${cat.id}-${di}-${h}`}
+                        style={{
+                          position: "absolute",
+                          left: di * DAY_WIDTH + (h - settings.visibleFrom) * HOUR_W,
+                          top,
+                          width: HOUR_W,
+                          height: rowH,
+                          background: dashed ? DASHED_BG : hourBg(h, settings, date.getDay()),
+                          borderRight: "1px solid #ebebeb",
+                        }}
+                        onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
+                          e.preventDefault()
+                          setDropHover({ categoryId: cat.id, di, hour: h })
+                        }}
+                        onDrop={(e: React.DragEvent<HTMLDivElement>) => onCellDrop(e, cat.id, di, h)}
+                      />
+                    )
+                  })
+                }
                 if (isWeekView) {
                   return (
                     <div
@@ -747,34 +1058,42 @@ export function GridView({
                     >
                       {Array.from(
                         { length: settings.visibleTo - settings.visibleFrom + 1 },
-                        (_, k) => (
-                          <div
-                            key={k}
-                            style={{
-                              position: "absolute",
-                              left: k * PX_WEEK,
-                              top: 0,
-                              width: 1,
-                              height: "100%",
-                              background: k % 2 === 0 ? "#e8e8e8" : "#f3f3f3",
-                              pointerEvents: "none",
-                            }}
-                          />
-                        )
+                        (_, k) => {
+                          const h = settings.visibleFrom + k
+                          const dashed = isOutsideWorkingHours(h, settings, date.getDay())
+                          return (
+                            <div
+                              key={k}
+                              style={{
+                                position: "absolute",
+                                left: k * PX_WEEK,
+                                top: 0,
+                                width: Math.max(PX_WEEK, 2),
+                                height: "100%",
+                                background: dashed ? DASHED_BG : "transparent",
+                                borderRight: "1px solid",
+                                borderColor: k % 2 === 0 ? "#e8e8e8" : "#f3f3f3",
+                                pointerEvents: "none",
+                              }}
+                            />
+                          )
+                        }
                       )}
                     </div>
                   )
                 }
-                return HOURS.map((h) => (
+                return DAY_VISIBLE_HOURS.map((h) => {
+                  const dashed = isOutsideWorkingHours(h, settings, date.getDay())
+                  return (
                   <div
                     key={`bg-${cat.id}-${h}`}
                     style={{
                       position: "absolute",
-                      left: h * HOUR_W,
+                      left: (h - settings.visibleFrom) * HOUR_W,
                       top,
                       width: HOUR_W,
                       height: rowH,
-                      background: hourBg(h, settings, date.getDay()),
+                      background: dashed ? DASHED_BG : hourBg(h, settings, date.getDay()),
                       borderRight: "1px solid #ebebeb",
                     }}
                     onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
@@ -783,7 +1102,7 @@ export function GridView({
                     }}
                     onDrop={(e: React.DragEvent<HTMLDivElement>) => onCellDrop(e, cat.id, 0, h)}
                   />
-                ))
+                )})
               })
             })}
 
@@ -794,7 +1113,7 @@ export function GridView({
                   position: "absolute",
                   left: 0,
                   top: categoryTops[cat.id] + categoryHeights[cat.id] - 1,
-                  width: TOTAL_W,
+                  width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
                   height: 2,
                   background: "#e5e7eb",
                   zIndex: 3,
@@ -803,32 +1122,54 @@ export function GridView({
               />
             ))}
 
-            {!isWeekView &&
-              HOURS.map((h) => (
-                <div
-                  key={`vl-${h}`}
-                  style={{
-                    position: "absolute",
-                    left: h * HOUR_W,
-                    top: 0,
-                    width: 1,
-                    height: totalH,
-                    background: "#e8e8e8",
-                    zIndex: 1,
-                    pointerEvents: "none",
-                  }}
-                />
-              ))}
+            {(!isWeekView || isDayViewMultiDay) &&
+              (isDayViewMultiDay
+                ? dates.flatMap((_, di) =>
+                    DAY_VISIBLE_HOURS.map((h) => (
+                      <div
+                        key={`vl-${di}-${h}`}
+                        style={{
+                          position: "absolute",
+                          left: di * DAY_WIDTH + (h - settings.visibleFrom) * HOUR_W,
+                          top: 0,
+                          width: 1,
+                          height: totalH,
+                          background: "#e8e8e8",
+                          zIndex: 1,
+                          pointerEvents: "none",
+                        }}
+                      />
+                    ))
+                  )
+                : DAY_VISIBLE_HOURS.map((h) => (
+                    <div
+                      key={`vl-${h}`}
+                      style={{
+                        position: "absolute",
+                        left: (h - settings.visibleFrom) * HOUR_W,
+                        top: 0,
+                        width: 1,
+                        height: totalH,
+                        background: "#e8e8e8",
+                        zIndex: 1,
+                        pointerEvents: "none",
+                      }}
+                    />
+                  )))}
 
             {dates.map((d, di) =>
-              isToday(d) ? (
+              isToday(d) &&
+              nowH >= settings.visibleFrom &&
+              nowH < settings.visibleTo ? (
                 <div
                   key={`now-${di}`}
                   style={{
                     position: "absolute",
                     left: isWeekView
                       ? di * COL_W_WEEK + (nowH - settings.visibleFrom) * PX_WEEK
-                      : nowH * HOUR_W,
+                      : isDayViewMultiDay
+                        ? di * DAY_WIDTH + (nowH - settings.visibleFrom) * HOUR_W
+                        : (nowH - settings.visibleFrom) * HOUR_W,
                     top: 0,
                     height: totalH,
                     width: 2,
@@ -856,7 +1197,9 @@ export function GridView({
             {CATEGORIES.map((cat) => {
               const top = categoryTops[cat.id]
               const rowH = categoryHeights[cat.id]
-              if (isWeekView) {
+              const addBtnTop = top + rowH - ADD_BTN_H + (ADD_BTN_H - 20) / 2
+              if (isWeekView || isDayViewMultiDay) {
+                const colW = isDayViewMultiDay ? DAY_WIDTH : COL_W_WEEK
                 return dates.map((date, di) => (
                   <button
                     key={`add-${cat.id}-${di}`}
@@ -865,8 +1208,8 @@ export function GridView({
                     }
                     style={{
                       position: "absolute",
-                      left: di * COL_W_WEEK + COL_W_WEEK / 2 - 10,
-                      top: top + rowH / 2 - 10,
+                      left: di * colW + colW / 2 - 10,
+                      top: addBtnTop,
                       width: 20,
                       height: 20,
                       borderRadius: "50%",
@@ -877,38 +1220,38 @@ export function GridView({
                       alignItems: "center",
                       justifyContent: "center",
                       color: "#a0aab8",
-                      zIndex: 4,
+                      zIndex: 25,
                       padding: 0,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                     }}
                   >
                     <Plus size={9} />
                   </button>
                 ))
               }
-              return HOURS.filter((h) => h >= settings.visibleFrom && h < settings.visibleTo).map(
-                (h) => (
+              return DAY_VISIBLE_HOURS.map((h) => (
                   <button
                     key={`add-${cat.id}-${h}`}
                     onClick={() =>
-                      setAddPrompt({ date: dates[0], categoryId: cat.id, hour: h })
+                      setAddPrompt({ date: dates[1] ?? dates[0], categoryId: cat.id, hour: h })
                     }
                     style={{
                       position: "absolute",
-                      left: h * HOUR_W + HOUR_W / 2 - 9,
-                      top: top + ROLE_HDR + 2,
+                      left: (h - settings.visibleFrom) * HOUR_W + HOUR_W / 2 - 9,
+                      top: addBtnTop,
                       width: 18,
                       height: 18,
                       borderRadius: "50%",
                       border: "1.5px dashed #d1d5db",
-                      background: "rgba(255,255,255,0.9)",
+                      background: "rgba(255,255,255,0.95)",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       color: "#b0b8c4",
-                      zIndex: 4,
+                      zIndex: 25,
                       padding: 0,
-                      opacity: 0.7,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                     }}
                   >
                     <Plus size={8} />
@@ -942,11 +1285,30 @@ export function GridView({
                       }}
                     />
                   )
+                if (isDayViewMultiDay)
+                  return (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left:
+                          (dropHover.di ?? 0) * DAY_WIDTH +
+                          ((dropHover.hour ?? settings.visibleFrom) - settings.visibleFrom) * HOUR_W,
+                        top,
+                        width: HOUR_W * 2,
+                        height: rowH,
+                        background: `${c.bg}18`,
+                        border: `2px dashed ${c.bg}`,
+                        borderRadius: 4,
+                        pointerEvents: "none",
+                        zIndex: 10,
+                      }}
+                    />
+                  )
                 return (
                   <div
                     style={{
                       position: "absolute",
-                      left: (dropHover.hour ?? 0) * HOUR_W,
+                      left: ((dropHover.hour ?? settings.visibleFrom) - settings.visibleFrom) * HOUR_W,
                       top,
                       width: HOUR_W * 2,
                       height: rowH,
@@ -974,9 +1336,20 @@ export function GridView({
                   const newDi = clamp(origDi + (ghost.dayDelta ?? 0), 0, dates.length - 1)
                   left = newDi * COL_W_WEEK + (ghost.ns - settings.visibleFrom) * PX_WEEK
                   width = Math.max((ghost.ne - ghost.ns) * PX_WEEK - 2, 8)
+                } else if (isDayViewMultiDay) {
+                  const origDi = dates.findIndex((d) => sameDay(d, orig.date))
+                  const newDi = clamp(origDi + (ghost.dayDelta ?? 0), 0, dates.length - 1)
+                  const cs = Math.max(ghost.ns, settings.visibleFrom)
+                  const ce = Math.min(ghost.ne, settings.visibleTo)
+                  if (ce <= cs) return null
+                  left = newDi * DAY_WIDTH + (cs - settings.visibleFrom) * HOUR_W + 2
+                  width = Math.max((ce - cs) * HOUR_W - 4, 10)
                 } else {
-                  left = ghost.ns * HOUR_W + 2
-                  width = Math.max((ghost.ne - ghost.ns) * HOUR_W - 4, 10)
+                  const cs = Math.max(ghost.ns, settings.visibleFrom)
+                  const ce = Math.min(ghost.ne, settings.visibleTo)
+                  if (ce <= cs) return null
+                  left = (cs - settings.visibleFrom) * HOUR_W + 2
+                  width = Math.max((ce - cs) * HOUR_W - 4, 10)
                 }
                 return (
                   <div
@@ -1029,6 +1402,9 @@ export function GridView({
                   const isDraft = shift.status === "draft"
                   const isDrag = dragId === shift.id
                   const top = catTop + ROLE_HDR + track * SHIFT_H + 3
+                  const variant = settings.badgeVariant ?? "both"
+                  const canDrag = variant === "drag" || variant === "both"
+                  const showResize = variant === "resize" || variant === "both"
 
                   let left: number, width: number
                   if (isWeekView) {
@@ -1037,40 +1413,56 @@ export function GridView({
                     if (ce <= cs) return null
                     left = di * COL_W_WEEK + (cs - settings.visibleFrom) * PX_WEEK + 1
                     width = Math.max((ce - cs) * PX_WEEK - 2, 12)
+                  } else if (isDayViewMultiDay) {
+                    const cs = Math.max(shift.startH, settings.visibleFrom)
+                    const ce = Math.min(shift.endH, settings.visibleTo)
+                    if (ce <= cs) return null
+                    left = di * DAY_WIDTH + (cs - settings.visibleFrom) * HOUR_W + 2
+                    width = Math.max((ce - cs) * HOUR_W - 4, 18)
                   } else {
-                    left = shift.startH * HOUR_W + 2
-                    width = Math.max((shift.endH - shift.startH) * HOUR_W - 4, 18)
+                    const cs = Math.max(shift.startH, settings.visibleFrom)
+                    const ce = Math.min(shift.endH, settings.visibleTo)
+                    if (ce <= cs) return null
+                    left = (cs - settings.visibleFrom) * HOUR_W + 2
+                    width = Math.max((ce - cs) * HOUR_W - 4, 18)
+                  }
+
+                  const blockStyle: React.CSSProperties = {
+                    position: "absolute",
+                    left,
+                    top,
+                    width,
+                    height: SHIFT_H - 6,
+                    borderRadius: 5,
+                    cursor: canDrag ? (isDrag ? "grabbing" : "grab") : "default",
+                    userSelect: "none",
+                    touchAction: "none",
+                    opacity: isDrag ? 0.3 : 1,
+                    zIndex: isDrag ? 20 : 8,
+                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    background: isDraft
+                      ? "transparent"
+                      : `linear-gradient(135deg,${c.bg},${c.bg}cc)`,
+                    border: isDraft ? `1.5px dashed ${c.bg}` : `1px solid ${c.bg}88`,
+                    boxShadow: isDrag || isDraft ? "none" : `0 2px 6px ${c.bg}44`,
                   }
 
                   return (
                     <div
                       key={shift.id}
-                      onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onBD(e, shift)}
+                      onPointerDown={
+                        canDrag
+                          ? (e: React.PointerEvent<HTMLDivElement>) => onBD(e, shift)
+                          : undefined
+                      }
                       onClick={() => {
                         if (!dragId) onShiftClick(shift, cat)
                       }}
-                      style={{
-                        position: "absolute",
-                        left,
-                        top,
-                        width,
-                        height: SHIFT_H - 6,
-                        borderRadius: 5,
-                        cursor: isDrag ? "grabbing" : "grab",
-                        userSelect: "none",
-                        touchAction: "none",
-                        opacity: isDrag ? 0.3 : 1,
-                        background: isDraft
-                          ? "transparent"
-                          : `linear-gradient(135deg,${c.bg},${c.bg}cc)`,
-                        border: isDraft ? `1.5px dashed ${c.bg}` : `1px solid ${c.bg}88`,
-                        boxShadow: isDrag || isDraft ? "none" : `0 2px 6px ${c.bg}44`,
-                        zIndex: isDrag ? 20 : 8,
-                        overflow: "hidden",
-                        display: "flex",
-                        alignItems: "center",
-                      }}
+                      style={blockStyle}
                     >
+                      {showResize && (
                       <div
                         data-resize="left"
                         onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
@@ -1100,7 +1492,7 @@ export function GridView({
                           ))}
                         </div>
                       </div>
-
+                      )}
                       <div
                         style={{
                           flex: 1,
@@ -1154,6 +1546,7 @@ export function GridView({
                         )}
                       </div>
 
+                      {showResize && (
                       <div
                         data-resize="right"
                         onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
@@ -1183,11 +1576,17 @@ export function GridView({
                           ))}
                         </div>
                       </div>
+                      )}
                     </div>
                   )
                 })
               })
             })}
+              </div>
+            </div>
+            {hasDayScrollNav && (
+              <div style={{ width: DAY_SCROLL_BUFFER, flexShrink: 0, minWidth: DAY_SCROLL_BUFFER }} />
+            )}
           </div>
         </div>
       </div>
@@ -1195,7 +1594,7 @@ export function GridView({
       {staffPanel &&
         (() => {
           const cat = CATEGORIES.find((c) => c.id === staffPanel.categoryId)
-          const date = dates[isWeekView ? Math.floor(dates.length / 2) : 0]
+          const date = dates[isWeekView || isDayViewMultiDay ? Math.floor(dates.length / 2) : 0]
           const dayShifts = shifts.filter((s) => sameDay(s.date, date))
           return cat ? (
             <StaffPanel

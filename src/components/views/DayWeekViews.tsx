@@ -5,6 +5,7 @@ import { GridView } from "../GridView"
 
 interface DayViewProps {
   date: Date
+  setDate?: React.Dispatch<React.SetStateAction<Date>>
   shifts: Shift[]
   setShifts: React.Dispatch<React.SetStateAction<Shift[]>>
   selEmps: Set<string>
@@ -14,22 +15,34 @@ interface DayViewProps {
 
 export function DayView({
   date,
+  setDate,
   shifts,
   setShifts,
   selEmps,
   onShiftClick,
   onAddShift,
 }: DayViewProps): JSX.Element {
+  const dates = useMemo((): Date[] => {
+    if (!setDate) return [date]
+    return Array.from({ length: 31 }, (_, i) => {
+      const d = new Date(date)
+      d.setDate(d.getDate() + i - 15)
+      return d
+    })
+  }, [date, setDate])
+
   return (
     <GridView
-      dates={[date]}
+      dates={dates}
       shifts={shifts}
       setShifts={setShifts}
       selEmps={selEmps}
       onShiftClick={onShiftClick}
       onAddShift={onAddShift}
       isWeekView={false}
-      setDate={undefined}
+      setDate={setDate}
+      isDayViewMultiDay={!!setDate && dates.length > 1}
+      focusedDate={date}
     />
   )
 }
