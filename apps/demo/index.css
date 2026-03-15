@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+  --radius: 0.625rem;
+  /* Use space-separated HSL values so hsl(var(--primary)) works in Tailwind */
+  --background: 0 0% 100%;
+  --foreground: 0 0% 9%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 9%;
+  --primary: 0 0% 9%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 9%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --accent: 0 0% 96%;
+  --accent-foreground: 0 0% 9%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 0 0% 44%;
+  --chart-1: 220 70% 50%;
+  --chart-2: 160 60% 45%;
+  --chart-3: 30 80% 55%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
+  --sidebar: 0 0% 98%;
+  --sidebar-foreground: 0 0% 9%;
+  --sidebar-primary: 0 0% 9%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 0 0% 96%;
+  --sidebar-accent-foreground: 0 0% 9%;
+  --sidebar-border: 0 0% 90%;
+  --sidebar-ring: 0 0% 44%;
+  --shadow: 0 8px 32px hsl(0 0% 0% / 0.12);
+
+  /* Scheduler semantic tokens (light) */
+  --sch-bg: var(--background);
+  --sch-bg-muted: var(--muted);
+  --sch-bg-hover: var(--accent);
+  --sch-border: var(--border);
+  --sch-border-light: var(--border);
+  --sch-text: var(--foreground);
+  --sch-text-muted: var(--muted-foreground);
+  --sch-text-light: var(--muted-foreground);
+  --sch-today-bg: var(--accent);
+  --sch-today-text: var(--accent-foreground);
+  --sch-closed-bg: var(--muted);
+  --sch-closed-text: var(--muted-foreground);
+  --sch-bg-alpha: hsl(var(--background) / 0.95);
+  --sch-black-alpha: hsl(var(--foreground) / 0.13);
+}
+
+.dark {
+  --background: 0 0% 9%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 13%;
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 13%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 0 0% 9%;
+  --secondary: 0 0% 13%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 13%;
+  --muted-foreground: 0 0% 64%;
+  --accent: 0 0% 20%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62% 50%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 20%;
+  --input: 0 0% 20%;
+  --ring: 0 0% 44%;
+  --chart-1: 220 70% 50%;
+  --chart-2: 160 60% 45%;
+  --chart-3: 30 80% 55%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
+  --sidebar: 0 0% 13%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-primary: 220 70% 50%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 0 0% 20%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-border: 0 0% 20%;
+  --sidebar-ring: 0 0% 36%;
+
+  --sch-bg: var(--background);
+  --sch-bg-muted: var(--muted);
+  --sch-bg-hover: var(--accent);
+  --sch-border: var(--border);
+  --sch-border-light: var(--border);
+  --sch-text: var(--foreground);
+  --sch-text-muted: var(--muted-foreground);
+  --sch-text-light: var(--muted-foreground);
+  --sch-today-bg: var(--accent);
+  --sch-today-text: var(--accent-foreground);
+  --sch-closed-bg: var(--muted);
+  --sch-closed-text: var(--muted-foreground);
+  --sch-bg-alpha: hsl(var(--background) / 0.95);
+  --sch-black-alpha: hsl(var(--foreground) / 0.13);
+  --shadow: 0 8px 32px hsl(0 0% 100% / 0.15);
+}
+}
+
+
+body, html {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}

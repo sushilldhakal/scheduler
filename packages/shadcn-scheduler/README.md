@@ -4,32 +4,26 @@
 
 A flexible shift scheduling component for React, designed to work seamlessly with **shadcn UI**, **Tailwind CSS**, and **lucide-react** icons.
 
-## Monorepo structure
-
-```
-scheduler/
-├── packages/
-│   └── shadcn-scheduler/   # NPM package
-├── apps/
-│   └── demo/               # Demo app (GitHub Pages)
-├── docs/                   # Built demo output
-└── package.json            # Root workspace
-```
-
 ## Features
 
 - **Multiple views**: Day, Week, Month, and Year
-- **Day view**: Infinite horizontal scroll with 31 days, hour labels per day, date sync with navigator
-- **Week view**: Time labels (7am, 9am, 11am…) below each date, wider columns
+- **Day view**: Horizontal scroll with configurable buffer (`bufferDays`), hour or 30‑minute labels per day (zoom-based), date sync with navigator. Drag existing shifts to another day; time is preserved when moving across days.
+- **Week view**: Time labels below each date with zoom-based spacing (1h when zoomed in, 2h default, 4h when zoomed out). Scroll syncs the header range; scroll near the edge to load previous/next week. Month + day in headers (e.g. “Mar Tue 17”).
+- **Month view**: “+X more” on busy dates—hover to see overflow list, click to open a dialog with all shifts for that day grouped by category and hours.
+- **Year view**: Scheduled dates use a clearer highlight (primary color) so they stand out.
+- **Navigation**: Double‑click a date in month view to open that week in week view; double‑click a date in week view to open that day in day view.
 - **List view**: Compact list with drag-to-reorder
-- **Drag & drop**: Move shifts between categories and time slots; configurable drag vs resize behavior
+- **Drag & drop**: Move shifts between categories, time slots, and days; configurable drag vs resize behavior
 - **Staff panel**: Drag employees from unscheduled list onto the grid
 - **Draft/Published**: Shifts can be in draft (hidden from staff) or published
 - **Category-based**: Organize shifts by categories (e.g., Department, Team, Role—fully configurable)
+- **Zoom**: Day and week views support zoom in/out. Day view shows 30‑minute intervals when zoomed in; week view adjusts time label density (1h / 2h / 4h) so labels stay readable.
+- **Prefetching**: Optional `bufferDays`, `onVisibleRangeChange`, and `prefetchThreshold` for large datasets or API-backed shifts.
 - **Configurable labels**: Rename Category, Employee, Shift, Staff, and more via props
 - **Provider pattern**: Wrap with `SchedulerProvider` for shared config across multiple schedulers
 - **Visible hours**: Restrict day/week view to a time range (e.g., 7am–5pm)
 - **Add-shift button**: Fixed at bottom of each cell, always visible
+- **Now indicator**: Subtle “now” line in day/week view (muted, non-distracting)
 
 ## Installation
 
@@ -61,41 +55,78 @@ npm install @sushill/shadcn-scheduler react react-dom lucide-react tailwindcss @
 
 ### 3. Configure Tailwind
 
-Add the package to your Tailwind `content` paths so its styles are processed:
+**Important:** Add the package to your Tailwind `content` paths. Without this, utility classes used by the scheduler (e.g. `bg-primary`, `text-foreground`) will not be generated and styles will not apply.
 
 ```js
 // tailwind.config.js
 module.exports = {
+  darkMode: "class",
   content: [
     "./src/**/*.{js,ts,jsx,tsx}",
     "./node_modules/@sushill/shadcn-scheduler/dist/**/*.js",
   ],
+  theme: {
+    extend: {
+      colors: {
+        border: "var(--border)",
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        primary: { DEFAULT: "var(--primary)", foreground: "var(--primary-foreground)" },
+        muted: { DEFAULT: "var(--muted)", foreground: "var(--muted-foreground)" },
+        accent: { DEFAULT: "var(--accent)", foreground: "var(--accent-foreground)" },
+        popover: { DEFAULT: "var(--popover)", foreground: "var(--popover-foreground)" },
+        destructive: { DEFAULT: "var(--destructive)", foreground: "var(--destructive-foreground)" },
+        input: "var(--input)",
+        ring: "var(--ring)",
+      },
+    },
+  },
   // ... rest of your config
 }
 ```
 
-### 4. shadcn CSS variables
+### 4. CSS variables (light & dark mode)
 
-The scheduler uses shadcn's design tokens. If you use shadcn UI, your `globals.css` already has these. If not, add the base CSS variables (e.g. by running `npx shadcn@latest init`) or include minimal variables like:
+The scheduler uses shadcn-style design tokens. Variables must use **space-separated HSL values** (e.g. `0 0% 9%`) so that `hsl(var(--primary))` works in Tailwind. Include in your `globals.css`:
 
 ```css
 @layer base {
   :root {
+    --radius: 0.625rem;
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --border: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --foreground: 0 0% 9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 9%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 44%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 0 0% 9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+  }
+  .dark {
+    --background: 0 0% 9%;
+    --foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 0 0% 20%;
+    --accent-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 98%;
+    --destructive: 0 62% 50%;
   }
 }
 ```
+
+For dark mode, set `darkMode: "class"` in your Tailwind config and toggle the `dark` class on `<html>`.
 
 ## Usage
 
@@ -251,8 +282,44 @@ import {
 | `initialDate` | `Date` | No | Initial date to display |
 | `headerActions` | `ReactNode` or `(actions) => ReactNode` | No | Custom buttons before Add Shift. Pass a function to get `copyLastWeek`, `publishAllDrafts`, `draftCount` |
 | `footerSlot` | `(ctx) => ReactNode` | No | Renders in header next to actions. `ctx.onSettingsChange` updates visible hours, working hours, shift badge style |
+| `bufferDays` | `number` | No | Days to render before/after visible range in day/week view. E.g. `2` = 2 before + 2 after (5 total). Default: 15 |
+| `onVisibleRangeChange` | `(start: Date, end: Date) => void` | No | Fired when user scrolls near edge. Use to prefetch from API and optionally trim old shifts |
+| `prefetchThreshold` | `number` | No | Scroll threshold (0–1) for firing `onVisibleRangeChange`. 0.8 = fire at 80% scrolled. Default: 0.8 |
 
 \* When using `SchedulerProvider`, `categories` and `employees` can be provided at the provider level instead.
+
+### Prefetching / Data loading
+
+For large datasets or API-backed shifts, use `bufferDays`, `onVisibleRangeChange`, and `prefetchThreshold`:
+
+```tsx
+function App() {
+  const [shifts, setShifts] = useState<Shift[]>([])
+
+  const handleRangeChange = async (start: Date, end: Date) => {
+    if (alreadyHasData(start, end)) return
+    const newShifts = await fetchShiftsFromAPI(start, end)
+    setShifts(prev => {
+      const combined = [...prev, ...newShifts]
+      return removeOldShiftsOutsideWindow(combined, start, end)
+    })
+  }
+
+  return (
+    <Scheduler
+      shifts={shifts}
+      onShiftsChange={setShifts}
+      categories={categories}
+      employees={employees}
+      bufferDays={3}
+      onVisibleRangeChange={handleRangeChange}
+      prefetchThreshold={0.8}
+    />
+  )
+}
+```
+
+The library only renders `bufferDays` before/after the visible range, so the host app can safely trim old shifts for garbage collection and keep scrolling smooth.
 
 ### SchedulerProvider
 
@@ -325,15 +392,33 @@ interface SchedulerLabels {
 - **Scroll horizontally** to navigate through days. The date in the navigator updates as you scroll.
 - **Click a date** in the calendar popover (or use prev/next) to jump to that date; the view scrolls to center it.
 - **Visible hours** control which hours appear (e.g., 7am–5pm). Hours outside the range are hidden.
-- Each day block shows hour labels (7am, 8am, 9am…) in the header.
+- **Time labels**: At default zoom you see hourly labels (7am, 8am, 9am…). When you **zoom in** (zoom ≥ 1.25), labels switch to **30‑minute intervals** (7:00, 7:30, 8:00…) for finer placement. Shifts still snap to 30‑minute increments.
+- **Drag shifts between days**: Drag an existing shift to another day; its start/end time is preserved on the new day.
+- Use the **zoom** controls (+/−) in the header to change scale and time granularity.
 
 ### Week view
 
-- **Scroll horizontally** to navigate weeks. The date range in the navigator updates.
-- **Time labels** (7am, 9am, 11am…) appear below each date with 2-hour intervals.
+- **Scroll horizontally** to navigate weeks. The date range in the navigator stays in sync with the visible week.
+- **Time labels** are zoom-based: **1‑hour** gap when zoomed in (7am, 8am, 9am…), **2‑hour** at default zoom (7am, 9am, 11am…), **4‑hour** when zoomed out (7am, 11am, 3pm…) so labels fit in narrow columns.
+- **Scroll near the left or right edge** (with buffer) to load the previous or next week and keep scrolling.
+- **Double‑click** a date header to switch to day view for that date. Headers show month and day (e.g. “Mar Tue 17”).
 - **Visible hours** restrict the time range shown for each day.
 
-## What's New in 0.2.0
+## What's New
+
+### 0.3.0
+
+- **Zoom-based time intervals**: Day view shows 30‑minute labels when zoomed in; week view uses 1h / 2h / 4h label gaps depending on zoom so labels stay readable (including when zoomed out with narrow columns).
+- **Drag shifts between days**: Move existing shifts to another day in day or week view; duration is preserved when moving across days.
+- **Week view scroll sync**: Header date range updates as you scroll; scroll near the edge to load previous/next week without losing position.
+- **Month view “+X more”**: Hover to see overflow shifts; click to open a dialog with all shifts for that day, grouped by category with times.
+- **Year view**: Scheduled dates use a clearer highlight so they stand out.
+- **Double‑click navigation**: Month date → week view; week date → day view.
+- **Prefetching API**: `bufferDays`, `onVisibleRangeChange`, and `prefetchThreshold` for large or API-backed data.
+- **Now line**: Dimmed (muted) so it’s visible but not distracting.
+- **Week view headers**: Month name added (e.g. “Mar Tue 17”).
+
+### 0.2.0
 
 - **Day view**: 31-day horizontal timeline with infinite scroll, hour labels per day, and date sync with the navigator
 - **Week view**: Time labels under each date (7am, 9am, 11am…) and wider columns
@@ -354,8 +439,8 @@ A live demo is available at: **https://sushilldhakal.github.io/scheduler/**
 
 To run the demo locally:
 ```bash
-npm run demo        # Build package + dev server (apps/demo)
-npm run demo:build  # Build package + demo for GitHub Pages (outputs to docs/)
+npm run demo        # Dev server
+npm run demo:build  # Build for GitHub Pages (outputs to docs/)
 ```
 
 ## Publishing
@@ -374,16 +459,8 @@ The package is published to both **public npm** and **GitHub Packages**.
 
 ### Publish to both registries
 
-From the repo root:
 ```bash
-cd packages/shadcn-scheduler && npm version patch   # or minor, major
-cd ../.. && npm run publish:all
-git push && git push --tags
-```
-
-Or from root (version bump is manual):
-```bash
-# Bump version in packages/shadcn-scheduler/package.json first
+npm version patch   # or minor, major
 npm run publish:all
 git push && git push --tags
 ```
