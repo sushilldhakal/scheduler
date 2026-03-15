@@ -17,9 +17,14 @@ interface MultiSelectProps {
   searchable?: boolean
   className?: string
   maxCount?: number
+  /** Show a "Select all" checkbox at the top of the dropdown. */
+  showSelectAll?: boolean
   /** Custom render for selected values (e.g. overlapping badges). If not provided, falls back to default text. */
   renderSelected?: (value: string[], options: GroupedOption[]) => React.ReactNode
 }
+
+const allValuesFromOptions = (opts: GroupedOption[]) =>
+  opts.flatMap((g) => g.options.map((o) => o.value))
 
 export function MultiSelect({
   options,
@@ -29,6 +34,7 @@ export function MultiSelect({
   searchable = false,
   className,
   maxCount = 3,
+  showSelectAll = false,
   renderSelected,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false)
@@ -104,6 +110,28 @@ export function MultiSelect({
               />
             </div>
           )}
+          {showSelectAll && filtered.length > 0 && (() => {
+            const allInFiltered = allValuesFromOptions(filtered)
+            const allSelected = allInFiltered.length > 0 && allInFiltered.every((v) => value.includes(v))
+            return (
+              <div className="border-b border-border px-2 py-1.5 mb-1">
+                <label className="flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm font-medium hover:bg-accent hover:text-accent-foreground">
+                  <CheckboxPrimitive.Root
+                    checked={allSelected}
+                    onCheckedChange={() => {
+                      onValueChange(allSelected ? [] : allInFiltered)
+                    }}
+                    className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-primary"
+                  >
+                    <CheckboxPrimitive.Indicator>
+                      <Check className="h-3 w-3" />
+                    </CheckboxPrimitive.Indicator>
+                  </CheckboxPrimitive.Root>
+                  <span>{allSelected ? "Deselect all" : "Select all"}</span>
+                </label>
+              </div>
+            )
+          })()}
           <div className="max-h-60 overflow-auto">
             {filtered.map((group) => (
               <div key={group.heading} className="py-1">

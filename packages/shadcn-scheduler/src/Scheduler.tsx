@@ -188,6 +188,15 @@ export function Scheduler({
   const baseView = view.replace("list", "") || "day"
   const draftCount = shifts.filter((s) => s.status === "draft").length
 
+  const handleDeleteShift = useCallback(
+    (id: string) => {
+      setShifts((prev) => prev.filter((s) => s.id !== id))
+      setSelShift(null)
+      setSelCategory(null)
+    },
+    [setShifts]
+  )
+
   const sharedGridProps = {
     shifts,
     setShifts,
@@ -200,6 +209,7 @@ export function Scheduler({
     bufferDays,
     onVisibleRangeChange,
     prefetchThreshold,
+    onDeleteShift: handleDeleteShift,
   }
 
   const handleSetDate = useCallback((action: React.SetStateAction<Date>) => {
@@ -429,6 +439,7 @@ export function Scheduler({
           onClose={handleCloseShiftModal}
           onPublish={handleShiftModalPublish}
           onUnpublish={handleShiftModalUnpublish}
+          onDelete={handleDeleteShift}
         />
       </div>
   )

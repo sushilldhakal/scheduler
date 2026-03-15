@@ -9,6 +9,7 @@ interface ShiftModalProps {
   onClose: () => void
   onPublish: (shiftId: string) => void
   onUnpublish: (shiftId: string) => void
+  onDelete?: (shiftId: string) => void
 }
 
 export function ShiftModal({
@@ -17,6 +18,7 @@ export function ShiftModal({
   onClose,
   onPublish,
   onUnpublish,
+  onDelete,
 }: ShiftModalProps): JSX.Element | null {
   const { getColor, labels } = useSchedulerContext()
   if (!shift || !category) return null
@@ -132,15 +134,16 @@ export function ShiftModal({
           {fmt12(shift.startH)} – {fmt12(shift.endH)} · {shift.endH - shift.startH}h
         </div>
 
-        <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 20 }}>
           {isDraft ? (
             <button
               onClick={handlePublish}
               style={{
                 flex: 1,
+                minWidth: 80,
                 padding: "9px",
                 background: "hsl(var(--primary))",
-                color: "hsl(var(--background))",
+                color: "hsl(var(--primary-foreground))",
                 border: "none",
                 borderRadius: 9,
                 fontSize: 13,
@@ -155,6 +158,7 @@ export function ShiftModal({
               onClick={handleUnpublish}
               style={{
                 flex: 1,
+                minWidth: 80,
                 padding: "9px",
                 background: "hsl(var(--border))",
                 color: "hsl(var(--foreground))",
@@ -166,6 +170,26 @@ export function ShiftModal({
               }}
             >
               Revert to {labels.draft}
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={() => {
+                onDelete(shift.id)
+                onClose()
+              }}
+              style={{
+                padding: "9px 14px",
+                background: "hsl(var(--destructive))",
+                color: "hsl(var(--destructive-foreground))",
+                border: "none",
+                borderRadius: 9,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              Delete
             </button>
           )}
           <button

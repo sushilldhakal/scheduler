@@ -26,7 +26,7 @@ import { packShifts, getCategoryRowHeight } from "../utils/packing"
 import { StaffPanel } from "./StaffPanel"
 import { RoleWarningModal } from "./modals/RoleWarningModal"
 import { AddShiftModal } from "./modals/AddShiftModal"
-import { Plus, Copy, ClipboardPaste } from "lucide-react"
+import { Plus, Copy, ClipboardPaste, Trash2 } from "lucide-react"
 
 interface DragState {
   type: "move" | "resize-left" | "resize-right"
@@ -72,6 +72,8 @@ interface GridViewProps {
   onVisibleRangeChange?: (visibleStartDate: Date, visibleEndDate: Date) => void
   /** Scroll threshold (0–1) for firing onVisibleRangeChange. Default 0.8 */
   prefetchThreshold?: number
+  /** Called when user confirms delete from the grid (after confirm dialog). */
+  onDeleteShift?: (shiftId: string) => void
 }
 
 interface StaffPanelState {
@@ -121,6 +123,7 @@ export function GridView({
   onVisibleCenterChange,
   onVisibleRangeChange,
   prefetchThreshold = 0.8,
+  onDeleteShift,
 }: GridViewProps): JSX.Element {
   const { categories, employees, nextUid, getColor, labels, settings } = useSchedulerContext()
   const CATEGORIES = categories
@@ -143,6 +146,7 @@ export function GridView({
   const [categoryWarn, setCategoryWarn] = useState<CategoryWarnState | null>(null)
   const [addPrompt, setAddPrompt] = useState<AddPromptState | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [shiftToDeleteConfirm, setShiftToDeleteConfirm] = useState<Shift | null>(null)
 
   const toggleCollapse = useCallback((id: string) => {
     setCollapsed((prev) => {
@@ -1081,14 +1085,47 @@ export function GridView({
             background: "hsl(var(--muted))",
           }}
         >
-          {CATEGORIES.map((cat) => {
-            const c = getColor(cat.colorIdx)
-            const h = categoryHeights[cat.id]
-            const dayShifts0 = shifts.filter(
-              (s) => sameDay(s.date, dates[0]) && selEmps.has(s.employeeId)
-            )
-            const scheduled = dayShifts0.filter((s) => s.categoryId === cat.id).length
-            return (
+          {(() => {
+            const refDate = focusedDate ?? dates[0]
+            let baseShifts: Shift[]
+            if (isWeekView) {
+              const [weekStartOrig] = getWeekDates(refDate)
+              const weekStart = new Date(weekStartOrig)
+              weekStart.setHours(0, 0, 0, 0)
+              const weekEnd = new Date(weekStart)
+              weekEnd.setDate(weekEnd.getDate() + 6)
+              weekEnd.setHours(23, 59, 59, 999)
+              baseShifts = shifts.filter(
+                (s) =>
+                  selEmps.has(s.employeeId) &&
+                  s.date >= weekStart &&
+                  s.date <= weekEnd
+              )
+            } else {
+              baseShifts = shifts.filter(
+                (s) => sameDay(s.date, refDate) && selEmps.has(s.employeeId)
+              )
+            }
+            const isDev =
+              (typeof process !== "undefined" && process.env?.NODE_ENV === "development") ||
+              (typeof import.meta !== "undefined" && (import.meta as { env?: { DEV?: boolean } }).env?.DEV)
+            if (isDev) {
+              const refLabel = refDate.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" })
+              console.log("[scheduler] category counts", {
+                refDate: refLabel,
+                isWeekView,
+                totalShiftsInRange: baseShifts.length,
+                byCategory: CATEGORIES.map((cat) => ({
+                  name: cat.name,
+                  scheduled: baseShifts.filter((s) => s.categoryId === cat.id).length,
+                })),
+              })
+            }
+            return CATEGORIES.map((cat) => {
+              const c = getColor(cat.colorIdx)
+              const h = categoryHeights[cat.id]
+              const scheduled = baseShifts.filter((s) => s.categoryId === cat.id).length
+              return (
               <div
                 key={cat.id}
                 style={{
@@ -1136,6 +1173,7 @@ export function GridView({
                   </span>
                   {scheduled > 0 && (
                     <span
+                      title="Scheduled in this view"
                       style={{
                         fontSize: 10,
                         color: c.bg,
@@ -1203,8 +1241,9 @@ export function GridView({
                   </button>
                 </div>
               </div>
-            )
-          })}
+            );
+            });
+          })()}
         </div>
 
         <div
@@ -1872,6 +1911,29 @@ export function GridView({
                           <Copy size={12} />
                         </button>
                       )}
+                      {onDeleteShift && (
+                        <button
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setShiftToDeleteConfirm(shift)
+                          }}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: isDraft ? c.bg : "hsl(var(--background))",
+                            cursor: "pointer",
+                            padding: "0 4px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            zIndex: 10,
+                          }}
+                          title="Delete shift"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
 
                       {showResize && (
                       <div
@@ -1936,6 +1998,78 @@ export function GridView({
             />
           ) : null
         })()}
+
+      {shiftToDeleteConfirm && onDeleteShift && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 10000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.4)",
+            backdropFilter: "blur(3px)",
+          }}
+          onClick={() => setShiftToDeleteConfirm(null)}
+        >
+          <div
+            style={{
+              background: "hsl(var(--background))",
+              borderRadius: 12,
+              padding: 20,
+              maxWidth: 340,
+              boxShadow: "0 24px 64px rgba(0,0,0,0.22)",
+              border: "1px solid hsl(var(--border))",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "hsl(var(--foreground))" }}>
+              Delete shift?
+            </div>
+            <div style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", marginBottom: 16 }}>
+              This shift will be removed. This cannot be undone.
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setShiftToDeleteConfirm(null)}
+                style={{
+                  padding: "8px 16px",
+                  background: "hsl(var(--muted))",
+                  color: "hsl(var(--foreground))",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteShift(shiftToDeleteConfirm.id)
+                  setShiftToDeleteConfirm(null)
+                }}
+                style={{
+                  padding: "8px 16px",
+                  background: "hsl(var(--destructive))",
+                  color: "hsl(var(--destructive-foreground))",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {categoryWarn &&
         (() => {

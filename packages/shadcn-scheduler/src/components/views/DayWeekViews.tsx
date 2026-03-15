@@ -17,6 +17,7 @@ interface DayViewProps {
   bufferDays?: number
   onVisibleRangeChange?: (visibleStartDate: Date, visibleEndDate: Date) => void
   prefetchThreshold?: number
+  onDeleteShift?: (shiftId: string) => void
 }
 
 export function DayView({
@@ -33,6 +34,7 @@ export function DayView({
   bufferDays = 15,
   onVisibleRangeChange,
   prefetchThreshold = 0.8,
+  onDeleteShift,
 }: DayViewProps): JSX.Element {
   const [centerDate, setCenterDate] = useState(date)
 
@@ -69,6 +71,7 @@ export function DayView({
       zoom={zoom}
       onVisibleRangeChange={onVisibleRangeChange}
       prefetchThreshold={prefetchThreshold}
+      onDeleteShift={onDeleteShift}
     />
   )
 }
@@ -90,6 +93,7 @@ interface WeekViewProps {
   bufferDays?: number
   onVisibleRangeChange?: (visibleStartDate: Date, visibleEndDate: Date) => void
   prefetchThreshold?: number
+  onDeleteShift?: (shiftId: string) => void
 }
 
 export function WeekView({
@@ -108,6 +112,7 @@ export function WeekView({
   bufferDays = 15,
   onVisibleRangeChange,
   prefetchThreshold = 0.8,
+  onDeleteShift,
 }: WeekViewProps): JSX.Element {
   const bufferWeeks = Math.max(1, Math.ceil(bufferDays / 7))
   const allDates = useMemo(
@@ -132,6 +137,7 @@ export function WeekView({
       onVisibleCenterChange={onVisibleCenterChange}
       onVisibleRangeChange={onVisibleRangeChange}
       prefetchThreshold={prefetchThreshold}
+      onDeleteShift={onDeleteShift}
     />
   )
 }

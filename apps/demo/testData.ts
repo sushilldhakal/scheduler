@@ -120,3 +120,42 @@ export const testShifts: Shift[] = generateShifts({
   daysAhead: 90,
   shiftsPerDay: 14,
 })
+
+// Small dataset for minimal / small-team demos
+export const smallCategories: Category[] = [
+  { id: "sc1", name: "Service", colorIdx: 0 },
+  { id: "sc2", name: "Kitchen", colorIdx: 1 },
+]
+
+export const smallEmployees: Employee[] = [
+  { id: "se1", name: "Alex", categoryId: "sc1", avatar: "AX", colorIdx: 0 },
+  { id: "se2", name: "Sam", categoryId: "sc1", avatar: "SM", colorIdx: 0 },
+  { id: "se3", name: "Jordan", categoryId: "sc2", avatar: "JR", colorIdx: 1 },
+  { id: "se4", name: "Casey", categoryId: "sc2", avatar: "CS", colorIdx: 1 },
+  { id: "se5", name: "Morgan", categoryId: "sc1", avatar: "MG", colorIdx: 0 },
+]
+
+export const smallShifts: Shift[] = (() => {
+  const base = new Date()
+  base.setHours(0, 0, 0, 0)
+  const out: Shift[] = []
+  for (let d = -7; d <= 14; d++) {
+    const date = new Date(base)
+    date.setDate(date.getDate() + d)
+    const dayShifts = d % 3 === 0 ? 4 : 2
+    for (let i = 0; i < dayShifts; i++) {
+      const emp = smallEmployees[i % smallEmployees.length]
+      out.push({
+        id: `ss-${d}-${i}`,
+        categoryId: emp.categoryId,
+        employeeId: emp.id,
+        date: new Date(date),
+        startH: 8 + (i % 3) * 3,
+        endH: 12 + (i % 3) * 3 + 4,
+        employee: emp.name,
+        status: "published",
+      })
+    }
+  }
+  return out
+})()

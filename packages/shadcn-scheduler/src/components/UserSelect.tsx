@@ -110,6 +110,7 @@ export function UserSelect({ selEmps, onToggle }: UserSelectProps): JSX.Element 
         </span>
       }
       searchable={true}
+      showSelectAll={true}
       className="max-w-full sm:w-48"
       renderSelected={renderSelected}
     />
