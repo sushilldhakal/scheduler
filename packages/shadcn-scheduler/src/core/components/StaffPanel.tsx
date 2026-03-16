@@ -18,7 +18,7 @@ export function StaffPanel({
   onDragStaff,
   anchorRect,
   onClose,
-}: StaffPanelProps): JSX.Element | null {
+}: StaffPanelProps): React.ReactElement | null {
   const { employees, getColor, labels } = useSchedulerContext()
   const scheduledIds = new Set(
     dayShifts.filter((s) => s.categoryId === category.id).map((s) => s.employeeId)

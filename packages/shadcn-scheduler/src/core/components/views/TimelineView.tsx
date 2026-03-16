@@ -34,8 +34,8 @@ export function TimelineView({
   onShiftClick,
   onAddShift,
   zoom = 1,
-}: TimelineViewProps): JSX.Element {
-  const { categories, employees, getColor, settings } = useSchedulerContext()
+}: TimelineViewProps): React.ReactElement {
+  const { categories, employees, getColor, settings, slots } = useSchedulerContext()
   const categoryMap = useMemo(
     () => Object.fromEntries(categories.map((c) => [c.id, c])),
     [categories]
@@ -146,9 +146,18 @@ export function TimelineView({
                     height: rowH,
                   }}
                 >
-                  <span className="truncate text-xs font-medium text-foreground">
-                    {emp.name}
-                  </span>
+                  {slots.resourceHeader
+                    ? slots.resourceHeader({
+                        resource: emp,
+                        scheduledCount: empShifts.length,
+                        isCollapsed: false,
+                        onToggleCollapse: () => {},
+                      })
+                    : (
+                      <span className="truncate text-xs font-medium text-foreground">
+                        {emp.name}
+                      </span>
+                    )}
                 </div>
                 <div
                   className="relative flex-1"
@@ -185,6 +194,27 @@ export function TimelineView({
                     const top = ROLE_HDR + lane * SHIFT_H + 2
                     const height = SHIFT_H - 4
                     const isDraft = shift.status === "draft"
+                    const widthPx = Math.max(w, 24)
+
+                    if (slots.block) {
+                      return (
+                        <div
+                          key={shift.id}
+                          className="absolute"
+                          style={{ left, top, width: widthPx, height }}
+                        >
+                          {slots.block({
+                            block: shift,
+                            resource: cat,
+                            isDraft,
+                            isDragging: false,
+                            hasConflict: false,
+                            widthPx,
+                            onDoubleClick: () => onShiftClick(shift, cat),
+                          })}
+                        </div>
+                      )
+                    }
 
                     return (
                       <button
@@ -194,7 +224,7 @@ export function TimelineView({
                         style={{
                           left,
                           top,
-                          width: Math.max(w, 24),
+                          width: widthPx,
                           height,
                           background: isDraft ? c.light : c.bg,
                           color: isDraft ? c.text : "hsl(var(--background))",

@@ -43,7 +43,7 @@ Status: **Done** = implemented; **Partial** = partly done; **Todo** = not starte
 | P7-20 | Scheduler.tv | Partial (SchedulerTV) |
 | P7-21–25 | Scheduler.conference, .festival, .healthcare, .gantt, .venue | Todo |
 | P7-26 | Scheduler namespace object | Todo |
-| P7-27 | views prop on domain components | Partial (enabledViews in config) |
+| P7-27 | views prop (Record<ViewKey, boolean>) | Done |
 | P7-28 | ViewTabs reads views prop | Done |
 | P7-29 | src/all.ts — opt-in bundle | Todo |
 

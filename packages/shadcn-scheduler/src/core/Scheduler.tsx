@@ -87,7 +87,7 @@ export function Scheduler({
   onVisibleRangeChange,
   prefetchThreshold = 0.8,
   slots: slotsProp,
-}: SchedulerProps): JSX.Element {
+}: SchedulerProps): React.ReactElement {
   const parentCtx = useContext(SchedulerContext)
   const slots = slotsProp ?? {}
   const categories = categoriesProp ?? parentCtx?.categories ?? []
@@ -336,7 +336,7 @@ export function Scheduler({
                 </div>
               )}
             <div className="flex w-full items-center gap-2">
-              <ViewTabs view={view} setView={setView} enabledViews={mergedConfig.enabledViews} />
+              <ViewTabs view={view} setView={setView} views={mergedConfig.views} />
               <UserSelect
                 selEmps={selEmps}
                 onToggle={toggleEmp}

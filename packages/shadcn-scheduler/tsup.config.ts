@@ -3,8 +3,13 @@ import { defineConfig } from "tsup"
 export default defineConfig({
   entry: {
     index: "src/index.ts",
-    tv: "src/domains/tv/index.tsx",
     default: "src/domains/default/index.tsx",
+    tv: "src/domains/tv/index.tsx",
+    conference: "src/domains/conference/index.tsx",
+    festival: "src/domains/festival/index.tsx",
+    healthcare: "src/domains/healthcare/index.tsx",
+    gantt: "src/domains/gantt/index.tsx",
+    venue: "src/domains/venue/index.tsx",
   },
   format: ["cjs", "esm"],
   dts: true,

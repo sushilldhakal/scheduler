@@ -17,7 +17,7 @@ export function RoleWarningModal({
   toCategory,
   onConfirm,
   onCancel,
-}: CategoryWarningModalProps): JSX.Element | null {
+}: CategoryWarningModalProps): React.ReactElement | null {
   const { getColor, labels } = useSchedulerContext()
   if (!emp) return null
 

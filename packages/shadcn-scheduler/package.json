@@ -41,6 +41,31 @@
       "types": "./dist/default.d.ts",
       "import": "./dist/default.js",
       "require": "./dist/default.cjs"
+    },
+    "./conference": {
+      "types": "./dist/conference.d.ts",
+      "import": "./dist/conference.js",
+      "require": "./dist/conference.cjs"
+    },
+    "./festival": {
+      "types": "./dist/festival.d.ts",
+      "import": "./dist/festival.js",
+      "require": "./dist/festival.cjs"
+    },
+    "./healthcare": {
+      "types": "./dist/healthcare.d.ts",
+      "import": "./dist/healthcare.js",
+      "require": "./dist/healthcare.cjs"
+    },
+    "./gantt": {
+      "types": "./dist/gantt.d.ts",
+      "import": "./dist/gantt.js",
+      "require": "./dist/gantt.cjs"
+    },
+    "./venue": {
+      "types": "./dist/venue.d.ts",
+      "import": "./dist/venue.js",
+      "require": "./dist/venue.cjs"
     }
   },
   "scripts": {

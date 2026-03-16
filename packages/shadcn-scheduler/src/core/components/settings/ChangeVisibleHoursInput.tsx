@@ -19,7 +19,7 @@ export function ChangeVisibleHoursInput({
   onChange,
   label = "Visible hours",
   className,
-}: ChangeVisibleHoursInputProps): JSX.Element {
+}: ChangeVisibleHoursInputProps): React.ReactElement {
   return (
     <div className={cn("space-y-2", className)}>
       <label className="text-xs font-medium text-foreground">{label}</label>

@@ -39,7 +39,7 @@ export function AddShiftModal({
   prefillStartH,
   onAdd,
   onClose,
-}: AddShiftModalProps): JSX.Element {
+}: AddShiftModalProps): React.ReactElement {
   const { categories, employees, nextUid, getColor, labels } = useSchedulerContext()
   const [category, setCategory] = useState<string>(
     categoryId || categories[0]?.id || ""

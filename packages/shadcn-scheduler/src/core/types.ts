@@ -81,14 +81,17 @@ export interface SchedulerLabels {
   categories?: string
 }
 
+/** View keys for the scheduler. Used in config.views to enable/disable tabs. */
+export type ViewKey = "day" | "week" | "month" | "year" | "timeline" | "gantt" | "list" | "now"
+
 export interface SchedulerConfig {
   labels?: Partial<SchedulerLabels>
   categoryColors?: CategoryColor[]
   defaultSettings?: Partial<Settings>
   /** When true, day/week view scrolls to current time on mount. Default: false. */
   initialScrollToNow?: boolean
-  /** View keys to show in the view tabs (e.g. ['day','week','month','year','timeline']). If absent, all views are shown. */
-  enabledViews?: string[]
+  /** Per-view visibility. Omitted or true = show tab; false = hide. If absent, all views are shown. */
+  views?: Partial<Record<ViewKey, boolean>>
   /** When true, show a "live" indicator when current time is within a block's range. Used by e.g. TV preset. */
   showLiveIndicator?: boolean
   /** Snap grid in fractional hours (e.g. 0.5 = 30 min). If absent, uses engine default. */

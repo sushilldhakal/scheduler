@@ -17,7 +17,7 @@ export interface SchedulerTVProps extends Omit<React.ComponentProps<typeof Sched
 export function SchedulerTV({
   config: configOverrides,
   ...props
-}: SchedulerTVProps): JSX.Element {
+}: SchedulerTVProps): React.ReactElement {
   const config = createSchedulerConfig({ preset: "tv", ...configOverrides })
   return <Scheduler {...props} config={config} />
 }

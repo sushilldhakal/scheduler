@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback } from "react"
 import type { Block, Resource } from "../../types"
 import { useSchedulerContext } from "../../context"
-import { sameDay, isToday, fmt12, getDIM, getFirst, DOW_MON_FIRST } from "../../constants"
+import { sameDay, isToday, fmt12, getDIM, getFirst, DOW_MON_FIRST, toDateISO } from "../../constants"
 import { Plus, Copy, ClipboardPaste } from "lucide-react"
 import { StaffPanel } from "../StaffPanel"
 import { DayShiftsDialog } from "../modals/DayShiftsDialog"
@@ -40,8 +40,8 @@ export function MonthView({
   copiedShift,
   setCopiedShift,
   onDateDoubleClick,
-}: MonthViewProps): JSX.Element {
-  const { categories, employees, getColor, settings, nextUid, labels } = useSchedulerContext()
+}: MonthViewProps): React.ReactElement {
+  const { categories, employees, getColor, settings, nextUid, labels, slots } = useSchedulerContext()
   const [moreShiftsDialog, setMoreShiftsDialog] = useState<Date | null>(null)
   const [hoverMore, setHoverMore] = useState<{ date: Date; rect: DOMRect } | null>(null)
   const y = date.getFullYear()
@@ -238,7 +238,7 @@ export function MonthView({
                     id: nextUid(),
                     categoryId,
                     employeeId: empId,
-                    date: d,
+                    date: toDateISO(d),
                     startH: 12,
                     endH: 20,
                     employee: emp?.name || "?",

@@ -17,7 +17,7 @@ export function DayShiftsDialog({
   categoryMap,
   onClose,
   onShiftClick,
-}: DayShiftsDialogProps): JSX.Element {
+}: DayShiftsDialogProps): React.ReactElement {
   const { getColor } = useSchedulerContext()
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>): void => {

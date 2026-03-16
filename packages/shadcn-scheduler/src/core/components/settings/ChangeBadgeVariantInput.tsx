@@ -20,7 +20,7 @@ export function ChangeBadgeVariantInput({
   onChange,
   label = "Shift badge style",
   className,
-}: ChangeBadgeVariantInputProps): JSX.Element {
+}: ChangeBadgeVariantInputProps): React.ReactElement {
   return (
     <div className={cn("space-y-2", className)}>
       <label className="text-xs font-medium text-foreground">{label}</label>

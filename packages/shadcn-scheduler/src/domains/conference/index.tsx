@@ -6,19 +6,19 @@ import { createSchedulerConfig } from "../../core/config"
 import type { Block, Resource } from "../../core/types"
 import type { SchedulerConfig } from "../../core/types"
 
-export interface SchedulerDefaultProps extends Omit<React.ComponentProps<typeof Scheduler>, "config"> {
+export interface SchedulerConferenceProps extends Omit<React.ComponentProps<typeof Scheduler>, "config"> {
   config?: Partial<SchedulerConfig>
 }
 
 /**
- * Default roster scheduler: categories, employees, shifts.
- * Applies default preset; pass config to override.
+ * Conference-domain scheduler: Track/Session vocabulary.
+ * Applies preset "conference"; pass config to override.
  */
-export function SchedulerDefault({
+export function SchedulerConference({
   config: configOverrides,
   ...props
-}: SchedulerDefaultProps): React.ReactElement {
-  const config = createSchedulerConfig(configOverrides)
+}: SchedulerConferenceProps): React.ReactElement {
+  const config = createSchedulerConfig({ preset: "conference", ...configOverrides })
   return <Scheduler {...props} config={config} />
 }
 

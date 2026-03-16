@@ -15,7 +15,7 @@ export function ChangeWorkingHoursInput({
   onChange,
   label = "Working hours",
   className,
-}: ChangeWorkingHoursInputProps): JSX.Element {
+}: ChangeWorkingHoursInputProps): React.ReactElement {
   const updateDay = (dow: number, wh: WorkingHours | null): void => {
     onChange({ ...workingHours, [dow]: wh })
   }

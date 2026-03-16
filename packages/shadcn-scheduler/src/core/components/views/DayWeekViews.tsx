@@ -39,7 +39,7 @@ export function DayView({
   onDeleteShift,
   scrollToNowRef,
   initialScrollToNow,
-}: DayViewProps): JSX.Element {
+}: DayViewProps): React.ReactElement {
   const [centerDate, setCenterDate] = useState(date)
 
   let currentCenter = centerDate
@@ -123,7 +123,7 @@ export function WeekView({
   onDeleteShift,
   scrollToNowRef,
   initialScrollToNow,
-}: WeekViewProps): JSX.Element {
+}: WeekViewProps): React.ReactElement {
   const bufferWeeks = Math.max(1, Math.ceil(bufferDays / 7))
   const allDates = useMemo(
     (): Date[] => getWeeksForBuffer(date, bufferWeeks),

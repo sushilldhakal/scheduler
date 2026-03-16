@@ -16,7 +16,7 @@ export function RosterActions({
   onFillFromSchedules,
   onPublishAll,
   draftCount,
-}: RosterActionsProps): JSX.Element {
+}: RosterActionsProps): React.ReactElement {
   const { labels } = useSchedulerContext()
   const [open, setOpen] = useState<boolean>(false)
 

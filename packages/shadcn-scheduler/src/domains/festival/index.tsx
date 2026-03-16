@@ -6,19 +6,19 @@ import { createSchedulerConfig } from "../../core/config"
 import type { Block, Resource } from "../../core/types"
 import type { SchedulerConfig } from "../../core/types"
 
-export interface SchedulerDefaultProps extends Omit<React.ComponentProps<typeof Scheduler>, "config"> {
+export interface SchedulerFestivalProps extends Omit<React.ComponentProps<typeof Scheduler>, "config"> {
   config?: Partial<SchedulerConfig>
 }
 
 /**
- * Default roster scheduler: categories, employees, shifts.
- * Applies default preset; pass config to override.
+ * Festival-domain scheduler: Stage/Set vocabulary.
+ * Applies preset "festival"; pass config to override.
  */
-export function SchedulerDefault({
+export function SchedulerFestival({
   config: configOverrides,
   ...props
-}: SchedulerDefaultProps): React.ReactElement {
-  const config = createSchedulerConfig(configOverrides)
+}: SchedulerFestivalProps): React.ReactElement {
+  const config = createSchedulerConfig({ preset: "festival", ...configOverrides })
   return <Scheduler {...props} config={config} />
 }
 

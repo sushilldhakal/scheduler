@@ -1,5 +1,23 @@
-// Core engine (default export surface)
-export { Scheduler } from "./core/Scheduler"
+// Core engine + compound namespace (Scheduler.roster, Scheduler.tv, …)
+import { Scheduler as SchedulerCore } from "./core/Scheduler"
+import { SchedulerDefault } from "./domains/default"
+import { SchedulerTV } from "./domains/tv"
+import { SchedulerConference } from "./domains/conference"
+import { SchedulerFestival } from "./domains/festival"
+import { SchedulerHealthcare } from "./domains/healthcare"
+import { SchedulerGantt } from "./domains/gantt"
+import { SchedulerVenue } from "./domains/venue"
+
+export const Scheduler = Object.assign(SchedulerCore, {
+  roster: SchedulerDefault,
+  tv: SchedulerTV,
+  conference: SchedulerConference,
+  festival: SchedulerFestival,
+  healthcare: SchedulerHealthcare,
+  gantt: SchedulerGantt,
+  venue: SchedulerVenue,
+})
+
 export type { SchedulerProps, SchedulerHeaderActions } from "./core/Scheduler"
 export { RosterActions } from "./core/components/RosterActions"
 export { SchedulerSettings } from "./core/components/settings/SchedulerSettings"
@@ -12,6 +30,7 @@ export type {
   Block,
   Resource,
   ResourceKind,
+  ViewKey,
   Settings,
   WorkingHours,
   BadgeVariant,
@@ -32,8 +51,18 @@ export { DEFAULT_SETTINGS, DEFAULT_CATEGORY_COLORS, getCategoryColor, toDateISO,
 export { findConflicts } from "./core/utils/packing"
 export { nextUid } from "./core/context"
 
-// Domain wrappers
+// Domain wrappers (also available as Scheduler.roster, Scheduler.tv, etc.)
 export { SchedulerDefault } from "./domains/default"
 export type { SchedulerDefaultProps } from "./domains/default"
 export { SchedulerTV } from "./domains/tv"
 export type { SchedulerTVProps } from "./domains/tv"
+export { SchedulerConference } from "./domains/conference"
+export type { SchedulerConferenceProps } from "./domains/conference"
+export { SchedulerFestival } from "./domains/festival"
+export type { SchedulerFestivalProps } from "./domains/festival"
+export { SchedulerHealthcare } from "./domains/healthcare"
+export type { SchedulerHealthcareProps } from "./domains/healthcare"
+export { SchedulerGantt } from "./domains/gantt"
+export type { SchedulerGanttProps } from "./domains/gantt"
+export { SchedulerVenue } from "./domains/venue"
+export type { SchedulerVenueProps } from "./domains/venue"

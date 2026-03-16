@@ -133,7 +133,7 @@ export function GridView({
   onDeleteShift,
   scrollToNowRef,
   initialScrollToNow = false,
-}: GridViewProps): JSX.Element {
+}: GridViewProps): React.ReactElement {
   const { categories, employees, nextUid, getColor, labels, settings, slots } = useSchedulerContext()
   const CATEGORIES = categories
   const ALL_EMPLOYEES = employees

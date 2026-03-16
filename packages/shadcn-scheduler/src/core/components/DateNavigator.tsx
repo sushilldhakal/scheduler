@@ -10,7 +10,7 @@ interface TodayButtonProps {
   onToday: () => void
 }
 
-export function TodayButton({ onToday }: TodayButtonProps): JSX.Element {
+export function TodayButton({ onToday }: TodayButtonProps): React.ReactElement {
   const today = new Date()
   return (
     <button
@@ -45,7 +45,7 @@ export function DateNavigator({
   onNavigate,
   shifts,
   slotAbove,
-}: DateNavigatorProps): JSX.Element {
+}: DateNavigatorProps): React.ReactElement {
   const [open, setOpen] = useState<boolean>(false)
   const base = view.replace("list", "") || "day"
 

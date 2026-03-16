@@ -28,16 +28,16 @@ const VIEW_TABS: readonly ViewTab[] = [
 interface ViewTabsProps {
   view: string
   setView: (view: string) => void
-  /** When set (e.g. from a preset), only these view keys are shown. */
-  enabledViews?: string[]
+  /** Per-view visibility. false = hide tab. If absent, all views are shown. */
+  views?: Partial<Record<ViewKey, boolean>>
 }
 
-export function ViewTabs({ view, setView, enabledViews }: ViewTabsProps): JSX.Element {
+export function ViewTabs({ view, setView, views }: ViewTabsProps): React.ReactElement {
   const isGrid = !view.startsWith("list")
   const base = view.replace("list", "") || "day"
 
-  const tabsToShow = enabledViews?.length
-    ? VIEW_TABS.filter((t) => enabledViews.includes(t.k))
+  const tabsToShow = views
+    ? VIEW_TABS.filter((t) => views[t.k as ViewKey] !== false)
     : VIEW_TABS
 
   const handleTabChange = (value: string): void => {

@@ -6,19 +6,19 @@ import { createSchedulerConfig } from "../../core/config"
 import type { Block, Resource } from "../../core/types"
 import type { SchedulerConfig } from "../../core/types"
 
-export interface SchedulerDefaultProps extends Omit<React.ComponentProps<typeof Scheduler>, "config"> {
+export interface SchedulerGanttProps extends Omit<React.ComponentProps<typeof Scheduler>, "config"> {
   config?: Partial<SchedulerConfig>
 }
 
 /**
- * Default roster scheduler: categories, employees, shifts.
- * Applies default preset; pass config to override.
+ * Gantt-domain scheduler: Project/Task vocabulary.
+ * Applies preset "gantt"; pass config to override.
  */
-export function SchedulerDefault({
+export function SchedulerGantt({
   config: configOverrides,
   ...props
-}: SchedulerDefaultProps): React.ReactElement {
-  const config = createSchedulerConfig(configOverrides)
+}: SchedulerGanttProps): React.ReactElement {
+  const config = createSchedulerConfig({ preset: "gantt", ...configOverrides })
   return <Scheduler {...props} config={config} />
 }
 

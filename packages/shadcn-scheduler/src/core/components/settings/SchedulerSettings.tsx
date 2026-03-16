@@ -12,7 +12,7 @@ export interface SchedulerSettingsProps {
   onSettingsChange: (partial: Record<string, unknown>) => void
 }
 
-export function SchedulerSettings({ onSettingsChange }: SchedulerSettingsProps): JSX.Element {
+export function SchedulerSettings({ onSettingsChange }: SchedulerSettingsProps): React.ReactElement {
   const { settings } = useSchedulerContext()
   const [open, setOpen] = useState(false)
 

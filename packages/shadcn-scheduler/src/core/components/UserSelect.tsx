@@ -17,7 +17,7 @@ interface OptionMeta {
   text: string
 }
 
-export function UserSelect({ selEmps, onToggle }: UserSelectProps): JSX.Element {
+export function UserSelect({ selEmps, onToggle }: UserSelectProps): React.ReactElement {
   const { categories, employees, getColor, labels } = useSchedulerContext()
 
   const options: GroupedOption[] = useMemo(

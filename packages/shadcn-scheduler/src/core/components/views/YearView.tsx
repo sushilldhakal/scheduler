@@ -1,5 +1,6 @@
 import React from "react"
 import type { Block } from "../../types"
+import { useSchedulerContext } from "../../context"
 import { isToday, getDIM, getFirst, MONTHS } from "../../constants"
 
 interface YearViewProps {
@@ -8,8 +9,17 @@ interface YearViewProps {
   onMonthClick: (year: number, month: number) => void
 }
 
-export function YearView({ date, shifts, onMonthClick }: YearViewProps): JSX.Element {
+export function YearView({ date, shifts, onMonthClick }: YearViewProps): React.ReactElement {
+  const { slots } = useSchedulerContext()
   const year = date.getFullYear()
+
+  if (shifts.length === 0 && slots.emptyState) {
+    return (
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {slots.emptyState({ view: "year" })}
+      </div>
+    )
+  }
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>): void => {
     e.currentTarget.style.boxShadow = "0 6px 20px rgba(0,0,0,0.1)"

@@ -15,9 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Preset support in createSchedulerConfig (Track A Step 3)**  
   - `createSchedulerConfig({ preset: 'default' | 'tv', ...overrides })` applies a preset then merges overrides.  
   - **`default`**: Standard roster labels and 7–20h range.  
-  - **`tv`**: Channel/Program vocabulary, 24h range, `initialScrollToNow`, `showLiveIndicator`, `enabledViews: ['day','week','month','timeline']`, 15‑min snap.  
-  - New config options: `enabledViews?: string[]` (which view tabs to show), `showLiveIndicator?: boolean`, `snapMinutes?: number`.  
-  - `ViewTabs` accepts `enabledViews` and only renders those tabs when set.
+  - **`tv`**: Channel/Program vocabulary, 24h range, `initialScrollToNow`, `showLiveIndicator`, `views: { year: false, list: false }`, 15‑min snap.
+  - New config options: `views?: Partial<Record<ViewKey, boolean>>` (per-view visibility), `showLiveIndicator?: boolean`, `snapMinutes?: number`.
+  - `ViewTabs` accepts `views` and hides tabs when `views[key] === false`.
 - **File structure: core/ and domains/ (Track A Step 4)**  
   - Engine code lives under `core/` (types, constants, context, config, hooks, utils, components, Scheduler).  
   - **Domain wrappers** under `domains/`: `SchedulerDefault` (default preset) and `SchedulerTV` (preset `"tv"`).  
@@ -37,9 +37,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Block date as ISO string (Phase 7 / P7-06)**  
   - Helpers: `toDateISO(d: Date)` for creating `Block.date`, `parseBlockDate(block)` for parsing to `Date`, `sameDay` now accepts `Date | string`.  
   - Exported from main entry for consumers.
+- **Scheduler namespace (P7-26)**  
+  - `Scheduler` is the core component with domain attachments: `Scheduler.roster`, `Scheduler.tv`, `Scheduler.conference`, `Scheduler.festival`, `Scheduler.healthcare`, `Scheduler.gantt`, `Scheduler.venue`. Use `<Scheduler />` for raw engine or `<Scheduler.roster />`, `<Scheduler.tv />`, etc.
+- **Config views (P7-27)**  
+  - `SchedulerConfig.views` is `Partial<Record<ViewKey, boolean>>` (ViewKey = 'day' | 'week' | 'month' | 'year' | 'timeline' | 'gantt' | 'list' | 'now'). Set `views: { year: false }` to hide a tab. Replaces `enabledViews`.
+- **Presets (P7-12)**  
+  - Added presets: `roster`, `default`, `tv`, `conference`, `festival`, `healthcare`, `gantt`, `venue`. Use `createSchedulerConfig({ preset: 'conference' })` etc.
+- **Domain wrappers (P7-21–25)**  
+  - `SchedulerConference`, `SchedulerFestival`, `SchedulerHealthcare`, `SchedulerGantt`, `SchedulerVenue`; subpath exports `@sushill/shadcn-scheduler/conference`, `/festival`, `/healthcare`, `/gantt`, `/venue`.
+- **Slots in views (Task 7)**  
+  - TimelineView, MonthView, YearView, ListView read `slots` from context. `renderBlock`, `renderResourceHeader`, `renderEmptyState` apply in Timeline and List/Year empty states.
 
 ### Breaking
 
+- **`enabledViews` replaced by `views` (P7-27)**  
+  - Config and ViewTabs now use `views?: Partial<Record<ViewKey, boolean>>`. Migrate `enabledViews: ['day','week','month']` to `views: { day: true, week: true, month: true, year: false, timeline: false, list: false }` (or omit to show all).
 - **Block.date is now string (P7-06)**  
   - `Block.date` is an ISO date string (`YYYY-MM-DD`), not a `Date` object. Use `toDateISO(date)` when creating/updating blocks and `parseBlockDate(block)` or `sameDay(block.date, other)` when comparing.  
   - **Migration**: Replace `date: someDate` with `date: toDateISO(someDate)`; replace `sameDay(s.date, d)` (no change, `sameDay` accepts string); replace any `s.date.getFullYear()` etc. with `parseBlockDate(s).getFullYear()` or `new Date(s.date + 'T12:00:00').getFullYear()`.

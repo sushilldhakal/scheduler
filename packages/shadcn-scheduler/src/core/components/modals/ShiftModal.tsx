@@ -19,7 +19,7 @@ export function ShiftModal({
   onPublish,
   onUnpublish,
   onDelete,
-}: ShiftModalProps): JSX.Element | null {
+}: ShiftModalProps): React.ReactElement | null {
   const { getColor, labels } = useSchedulerContext()
   if (!shift || !category) return null
 

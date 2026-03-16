@@ -42,8 +42,8 @@ export function ListView({
   onUnpublish,
   currentDate,
   view,
-}: ListViewProps): JSX.Element {
-  const { categories, getColor } = useSchedulerContext()
+}: ListViewProps): React.ReactElement {
+  const { categories, getColor, labels, slots } = useSchedulerContext()
   const base = view.replace("list", "") || "day"
   const categoryMap: Record<string, Resource> = Object.fromEntries(
     categories.map((c) => [c.id, c])
@@ -116,6 +116,13 @@ export function ListView({
   }, [setShifts])
 
   if (!grouped.length) {
+    if (slots.emptyState) {
+      return (
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {slots.emptyState({ view })}
+        </div>
+      )
+    }
     return (
       <div
         style={{
