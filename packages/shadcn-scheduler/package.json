@@ -31,6 +31,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./tv": {
+      "types": "./dist/tv.d.ts",
+      "import": "./dist/tv.js",
+      "require": "./dist/tv.cjs"
+    },
+    "./default": {
+      "types": "./dist/default.d.ts",
+      "import": "./dist/default.js",
+      "require": "./dist/default.cjs"
     }
   },
   "scripts": {

@@ -136,20 +136,20 @@ The `Scheduler` component wraps its content in `SchedulerProvider` internally. P
 
 ```tsx
 import { useState } from "react"
-import { Scheduler, type Shift, type Category, type Employee } from "@sushill/shadcn-scheduler"
+import { Scheduler, type Block, type Resource } from "@sushill/shadcn-scheduler"
 
-const categories: Category[] = [
-  { id: "c1", name: "Front Desk", colorIdx: 0 },
-  { id: "c2", name: "Kitchen", colorIdx: 1 },
+const categories: Resource[] = [
+  { id: "c1", name: "Front Desk", colorIdx: 0, kind: "category" },
+  { id: "c2", name: "Kitchen", colorIdx: 1, kind: "category" },
 ]
 
-const employees: Employee[] = [
-  { id: "e1", name: "Alice B.", categoryId: "c1", avatar: "AB", colorIdx: 0 },
-  { id: "e2", name: "Tom H.", categoryId: "c1", avatar: "TH", colorIdx: 0 },
-  { id: "e3", name: "Chef Marco", categoryId: "c2", avatar: "CM", colorIdx: 1 },
+const employees: Resource[] = [
+  { id: "e1", name: "Alice B.", categoryId: "c1", avatar: "AB", colorIdx: 0, kind: "employee" },
+  { id: "e2", name: "Tom H.", categoryId: "c1", avatar: "TH", colorIdx: 0, kind: "employee" },
+  { id: "e3", name: "Chef Marco", categoryId: "c2", avatar: "CM", colorIdx: 1, kind: "employee" },
 ]
 
-const initialShifts: Shift[] = [
+const initialShifts: Block[] = [
   {
     id: "s1",
     categoryId: "c1",
@@ -163,7 +163,7 @@ const initialShifts: Shift[] = [
 ]
 
 function App() {
-  const [shifts, setShifts] = useState<Shift[]>(initialShifts)
+  const [shifts, setShifts] = useState<Block[]>(initialShifts)
 
   return (
     <Scheduler
@@ -272,10 +272,10 @@ import {
 
 | Prop | Type | Required | Description |
 |------|------|----------|-------------|
-| `categories` | `Category[]` | Yes* | List of categories (e.g., Department, Team) |
-| `employees` | `Employee[]` | Yes* | List of employees with `categoryId` linking to a category |
-| `shifts` | `Shift[]` | Yes | Current shifts (controlled) |
-| `onShiftsChange` | `(shifts: Shift[]) => void` | Yes | Called when shifts change |
+| `categories` | `Resource[]` | Yes* | List of row resources (e.g., Department, Team) with `kind: "category"` |
+| `employees` | `Resource[]` | Yes* | List of staff resources with `kind: "employee"` and `categoryId` linking to a category |
+| `shifts` | `Block[]` | Yes | Current blocks/shifts (controlled) |
+| `onShiftsChange` | `(blocks: Block[]) => void` | Yes | Called when shifts change |
 | `config` | `SchedulerConfig` | No | Labels, category colors, default settings |
 | `settings` | `Partial<Settings>` | No | Override visible hours, working hours per day |
 | `initialView` | `string` | No | `"day"`, `"week"`, `"month"`, `"year"` (default: `"week"`) |
@@ -285,8 +285,63 @@ import {
 | `bufferDays` | `number` | No | Days to render before/after visible range in day/week view. E.g. `2` = 2 before + 2 after (5 total). Default: 15 |
 | `onVisibleRangeChange` | `(start: Date, end: Date) => void` | No | Fired when user scrolls near edge. Use to prefetch from API and optionally trim old shifts |
 | `prefetchThreshold` | `number` | No | Scroll threshold (0–1) for firing `onVisibleRangeChange`. 0.8 = fire at 80% scrolled. Default: 0.8 |
+| `slots` | `Partial<SchedulerSlots>` | No | Optional render slots to override built-in UI: `block`, `resourceHeader`, `timeSlotLabel`, `emptyCell`, `emptyState`. Omitted slots use defaults. |
 
 \* When using `SchedulerProvider`, `categories` and `employees` can be provided at the provider level instead.
+
+### Domain components
+
+For preset-based usage, use the domain wrappers (same props as `Scheduler`, with preset config applied):
+
+- **`SchedulerDefault`** — default roster (categories, employees, shifts). Config uses `createSchedulerConfig()` defaults.
+- **`SchedulerTV`** — TV schedule preset: Channel/Program labels, 24h range, timeline view, live indicator. Config uses `createSchedulerConfig({ preset: "tv" })`.
+
+```tsx
+import { SchedulerDefault, SchedulerTV } from "@sushill/shadcn-scheduler"
+// Use <SchedulerDefault ... /> or <SchedulerTV ... />; pass config to override preset values.
+```
+
+You can also use subpath imports for smaller bundles:
+
+```tsx
+import { SchedulerTV } from "@sushill/shadcn-scheduler/tv"
+import { SchedulerDefault } from "@sushill/shadcn-scheduler/default"
+```
+
+### shadcn registry
+
+Two blocks are available for the shadcn CLI:
+
+- **scheduler** — Default roster scheduler block.
+- **scheduler-tv** — TV preset block (Channel/Program, timeline, 24h).
+
+Point your project’s registry at this repo (or the hosted registry URL), then run:
+
+```bash
+npx shadcn add scheduler
+# or
+npx shadcn add scheduler-tv
+```
+
+Or add by registry item URL (e.g. `https://yoursite.com/r/scheduler-tv.json`).
+
+### Render slots
+
+Pass `slots` to customize how blocks, resource headers, and other surfaces render. Each slot is a render function; if omitted, the engine uses its default. Exported slot prop types: `BlockSlotProps`, `ResourceHeaderSlotProps`, `TimeSlotLabelSlotProps`, `EmptyCellSlotProps`, `EmptyStateSlotProps`.
+
+```tsx
+<Scheduler
+  slots={{
+    block: ({ block, resource, isDraft, hasConflict, widthPx, onDoubleClick }) => (
+      <div onClick={onDoubleClick}>{block.employee} {isDraft && "(Draft)"}</div>
+    ),
+    resourceHeader: ({ resource, scheduledCount, isCollapsed, onToggleCollapse }) => (
+      <div onClick={onToggleCollapse}>{resource.name} ({scheduledCount})</div>
+    ),
+  }}
+  {...otherProps}
+/>
+```
 
 ### Prefetching / Data loading
 
@@ -294,7 +349,7 @@ For large datasets or API-backed shifts, use `bufferDays`, `onVisibleRangeChange
 
 ```tsx
 function App() {
-  const [shifts, setShifts] = useState<Shift[]>([])
+  const [shifts, setShifts] = useState<Block[]>([])
 
   const handleRangeChange = async (start: Date, end: Date) => {
     if (alreadyHasData(start, end)) return
@@ -325,10 +380,11 @@ The library only renders `bufferDays` before/after the visible range, so the hos
 
 | Prop | Type | Required | Description |
 |------|------|----------|-------------|
-| `categories` | `Category[]` | Yes | Categories for all child schedulers |
-| `employees` | `Employee[]` | Yes | Employees for all child schedulers |
+| `categories` | `Resource[]` | Yes | Category resources (`kind: "category"`) for all child schedulers |
+| `employees` | `Resource[]` | Yes | Employee resources (`kind: "employee"`) for all child schedulers |
 | `config` | `SchedulerConfig` | No | Labels, colors, default settings |
 | `nextUidFn` | `() => string` | No | Custom ID generator for new shifts |
+| `slots` | `Partial<SchedulerSlots>` | No | Optional render slots for child schedulers |
 | `children` | `ReactNode` | Yes | Child components (e.g. `<Scheduler />`) |
 
 ### SchedulerConfig
@@ -342,7 +398,7 @@ The library only renders `bufferDays` before/after the visible range, so the hos
 ## Types
 
 ```ts
-interface Shift {
+interface Block {
   id: string
   categoryId: string
   employeeId: string
@@ -353,18 +409,15 @@ interface Shift {
   status: "draft" | "published"
 }
 
-interface Category {
+type ResourceKind = "category" | "employee"
+
+interface Resource {
   id: string
   name: string
   colorIdx: number  // index into categoryColors (0-7)
-}
-
-interface Employee {
-  id: string
-  name: string
-  categoryId: string  // category id
-  avatar: string      // short label, e.g. "AB"
-  colorIdx: number
+  kind: ResourceKind
+  categoryId?: string  // required when kind === "employee"
+  avatar?: string     // optional; used when kind === "employee"
 }
 
 interface SchedulerLabels {

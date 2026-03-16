@@ -1,0 +1,35 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "shadcn-scheduler",
+  "homepage": "https://github.com/sushilldhakal/scheduler",
+  "items": [
+    {
+      "name": "scheduler",
+      "type": "registry:block",
+      "title": "Scheduler",
+      "description": "A flexible shift scheduling component with day, week, month, year, and list views. Supports drag-and-drop, categories, staff filtering, and prefetching.",
+      "registryDependencies": ["button", "calendar", "tabs", "popover", "checkbox"],
+      "dependencies": ["@sushill/shadcn-scheduler", "lucide-react"],
+      "files": [
+        {
+          "path": "registry/default/scheduler/scheduler-block.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "scheduler-tv",
+      "type": "registry:block",
+      "title": "Scheduler (TV)",
+      "description": "TV-domain scheduler: Channel/Program vocabulary, 24h range, timeline view, live indicator. Uses preset \"tv\" with day, week, month, and timeline views.",
+      "registryDependencies": ["button", "calendar", "tabs", "popover", "checkbox"],
+      "dependencies": ["@sushill/shadcn-scheduler", "lucide-react"],
+      "files": [
+        {
+          "path": "registry/default/scheduler-tv/scheduler-tv-block.tsx",
+          "type": "registry:component"
+        }
+      ]
+    }
+  ]
+}

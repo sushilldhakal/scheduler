@@ -1,0 +1,15 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "scheduler-tv",
+  "type": "registry:block",
+  "title": "Scheduler (TV)",
+  "description": "TV-domain scheduler: Channel/Program vocabulary, 24h range, timeline view, live indicator. Uses preset \"tv\" with day, week, month, and timeline views.",
+  "registryDependencies": ["button", "calendar", "tabs", "popover", "checkbox"],
+  "dependencies": ["@sushill/shadcn-scheduler", "lucide-react"],
+  "files": [
+    {
+      "path": "registry/default/scheduler-tv/scheduler-tv-block.tsx",
+      "type": "registry:component"
+    }
+  ]
+}

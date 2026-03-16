@@ -5,6 +5,52 @@ All notable changes to shadcn-scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Block and Resource generics (Track A Step 2)**  
+  - `Block<TMeta = Record<string, unknown>>` and `Resource<TMeta = Record<string, unknown>>` now accept an optional generic for domain-specific data.  
+  - Optional `meta?: TMeta` on both types. Use `Block<YourMeta>` or `Resource<YourMeta>` for typed meta (e.g. money, episode numbers, qualification codes).
+- **Preset support in createSchedulerConfig (Track A Step 3)**  
+  - `createSchedulerConfig({ preset: 'default' | 'tv', ...overrides })` applies a preset then merges overrides.  
+  - **`default`**: Standard roster labels and 7–20h range.  
+  - **`tv`**: Channel/Program vocabulary, 24h range, `initialScrollToNow`, `showLiveIndicator`, `enabledViews: ['day','week','month','timeline']`, 15‑min snap.  
+  - New config options: `enabledViews?: string[]` (which view tabs to show), `showLiveIndicator?: boolean`, `snapMinutes?: number`.  
+  - `ViewTabs` accepts `enabledViews` and only renders those tabs when set.
+- **File structure: core/ and domains/ (Track A Step 4)**  
+  - Engine code lives under `core/` (types, constants, context, config, hooks, utils, components, Scheduler).  
+  - **Domain wrappers** under `domains/`: `SchedulerDefault` (default preset) and `SchedulerTV` (preset `"tv"`).  
+  - Import `Scheduler` for the raw engine; import `SchedulerDefault` or `SchedulerTV` for a preset-applied scheduler.  
+  - Main entry re-exports from core and domains.
+- **Render slots (Track A Step 5)**  
+  - `Scheduler` and `SchedulerProvider` accept optional **`slots`**: `Partial<SchedulerSlots>`.  
+  - **Slot types**: `block`, `resourceHeader`, `timeSlotLabel`, `emptyCell`, `emptyState`.  
+  - When a slot is provided, the engine uses it instead of the built-in UI for that surface; omitted slots use defaults.  
+  - **`block`**: `(props: BlockSlotProps) => ReactNode` — block content (block, resource, isDraft, isDragging, hasConflict, widthPx, onDoubleClick).  
+  - **`resourceHeader`**: `(props: ResourceHeaderSlotProps) => ReactNode` — category row header (resource, scheduledCount, isCollapsed, onToggleCollapse).  
+  - Other slot props: `TimeSlotLabelSlotProps`, `EmptyCellSlotProps`, `EmptyStateSlotProps` (hooks for future use).  
+  - Slot types are exported for custom renderers.
+- **Multiple entry points and per-domain registry (Track A Step 6)**  
+  - **Subpath exports**: `@sushill/shadcn-scheduler` (main), `@sushill/shadcn-scheduler/tv`, `@sushill/shadcn-scheduler/default` for smaller bundles when using only one domain.  
+  - **Registry**: `scheduler` (default block) and `scheduler-tv` (TV preset block) are in the shadcn registry. Add via URL or registry index so `npx shadcn add scheduler-tv` (or add by item URL) installs the TV block.
+- **Block date as ISO string (Phase 7 / P7-06)**  
+  - Helpers: `toDateISO(d: Date)` for creating `Block.date`, `parseBlockDate(block)` for parsing to `Date`, `sameDay` now accepts `Date | string`.  
+  - Exported from main entry for consumers.
+
+### Breaking
+
+- **Block.date is now string (P7-06)**  
+  - `Block.date` is an ISO date string (`YYYY-MM-DD`), not a `Date` object. Use `toDateISO(date)` when creating/updating blocks and `parseBlockDate(block)` or `sameDay(block.date, other)` when comparing.  
+  - **Migration**: Replace `date: someDate` with `date: toDateISO(someDate)`; replace `sameDay(s.date, d)` (no change, `sameDay` accepts string); replace any `s.date.getFullYear()` etc. with `parseBlockDate(s).getFullYear()` or `new Date(s.date + 'T12:00:00').getFullYear()`.
+- **Type renames (Track A Step 1)**  
+  - `Shift` → `Block`: All schedule items (shifts) are now typed as `Block`.  
+  - `Category` and `Employee` → `Resource`: Row headers (categories) and assignable staff (employees) are merged into a single `Resource` type with a `kind` discriminator: `kind: "category"` for row resources, `kind: "employee"` for staff.  
+  - **Migration**: Use `Block` instead of `Shift`; use `Resource` with `kind: "category"` for categories and `kind: "employee"` for employees. Add `kind` to every category/employee object.  
+  - Public props remain `shifts`, `onShiftsChange`, `categories`, `employees`; only the TypeScript types change.
+
+---
+
 ## [0.3.0] - 2026-03-13
 
 ### Added

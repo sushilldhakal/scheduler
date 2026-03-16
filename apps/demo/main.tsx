@@ -1,13 +1,25 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useCallback } from "react"
 import ReactDOM from "react-dom/client"
 import {
   Scheduler,
   RosterActions,
   SchedulerSettings,
-  type Shift,
+  createSchedulerConfig,
+  toDateISO,
+  type Block,
 } from "@sushill/shadcn-scheduler"
 import "./index.css"
-import { Sun, Moon, Calendar, CalendarDays, List, LayoutGrid, ZoomIn, Sparkles } from "lucide-react"
+import {
+  Sun,
+  Moon,
+  Calendar,
+  CalendarDays,
+  List,
+  LayoutGrid,
+  ZoomIn,
+  Sparkles,
+  Home,
+} from "lucide-react"
 import {
   categories,
   employees,
@@ -17,7 +29,7 @@ import {
   smallShifts,
 } from "./testData"
 
-/** Week (Mon–Sun) containing the given date; weekStart at 00:00, weekEnd at 23:59:59 */
+/** Week (Mon–Sun) containing the given date */
 function getWeekBounds(refDate: Date): { weekStart: Date; weekEnd: Date } {
   const d = new Date(refDate)
   const day = d.getDay()
@@ -31,26 +43,29 @@ function getWeekBounds(refDate: Date): { weekStart: Date; weekEnd: Date } {
   return { weekStart, weekEnd }
 }
 
-/** Verify category counts: run same logic as scheduler and log for comparison */
 function verifyCategoryCounts(
-  shifts: Shift[],
+  shifts: Block[],
   refDate: Date,
   isWeekView: boolean,
   allEmployeeIds: Set<string>
 ) {
-  let inRange: Shift[]
+  let inRange: Block[]
   if (isWeekView) {
     const { weekStart, weekEnd } = getWeekBounds(refDate)
+    const weekStartISO = toDateISO(weekStart)
+    const weekEndISO = toDateISO(weekEnd)
     inRange = shifts.filter(
-      (s) => allEmployeeIds.has(s.employeeId) && s.date >= weekStart && s.date <= weekEnd
+      (s) => allEmployeeIds.has(s.employeeId) && s.date >= weekStartISO && s.date <= weekEndISO
     )
   } else {
     const dayStart = new Date(refDate)
     dayStart.setHours(0, 0, 0, 0)
     const dayEnd = new Date(dayStart)
     dayEnd.setHours(23, 59, 59, 999)
+    const dayStartISO = toDateISO(dayStart)
+    const dayEndISO = toDateISO(dayEnd)
     inRange = shifts.filter(
-      (s) => allEmployeeIds.has(s.employeeId) && s.date >= dayStart && s.date <= dayEnd
+      (s) => allEmployeeIds.has(s.employeeId) && s.date >= dayStartISO && s.date <= dayEndISO
     )
   }
   const byCategory = categories.map((cat) => ({
@@ -63,7 +78,7 @@ function verifyCategoryCounts(
     month: "short",
     year: "numeric",
   })
-  console.log("[demo verify] expected category counts (refDate = start of today; compare with [scheduler] if same week)", {
+  console.log("[demo verify] expected category counts", {
     refDate: refLabel,
     isWeekView,
     totalShiftsInRange: inRange.length,
@@ -71,22 +86,161 @@ function verifyCategoryCounts(
   })
 }
 
-type DemoId = "full" | "day" | "month" | "year" | "list" | "minimal" | "prefetch"
+export type DemoId =
+  | "full"
+  | "day"
+  | "month"
+  | "year"
+  | "list"
+  | "minimal"
+  | "prefetch"
+  | "tv"
 
-const DEMOS: { id: DemoId; label: string; icon: React.ReactNode; description: string }[] = [
-  { id: "full", label: "Full Roster", icon: <CalendarDays size={18} />, description: "Week view with all features: copy week, publish drafts, settings, zoom." },
-  { id: "day", label: "Day View", icon: <Calendar size={18} />, description: "Single-day focus. Zoom in to see 30-minute slots." },
-  { id: "month", label: "Month View", icon: <LayoutGrid size={18} />, description: "Calendar month. Hover '+X more', click for day dialog. Double-click date → week." },
-  { id: "year", label: "Year View", icon: <LayoutGrid size={18} />, description: "Year overview. Scheduled dates highlighted. Click month → month view." },
-  { id: "list", label: "List View", icon: <List size={18} />, description: "Shifts in a list by day/week/month/year. Drag to reorder." },
-  { id: "minimal", label: "Minimal", icon: <Sparkles size={18} />, description: "Small team, custom labels. No extra actions—just the scheduler." },
-  { id: "prefetch", label: "Prefetching", icon: <ZoomIn size={18} />, description: "Buffer + onVisibleRangeChange. Last visible range shown below." },
+const DEMO_IDS: DemoId[] = [
+  "full",
+  "day",
+  "month",
+  "year",
+  "list",
+  "minimal",
+  "prefetch",
+  "tv",
 ]
 
+const DEMOS: {
+  id: DemoId
+  label: string
+  icon: React.ReactNode
+  description: string
+  path: string
+}[] = [
+  {
+    id: "full",
+    label: "Full Roster",
+    icon: <CalendarDays size={18} />,
+    description:
+      "Week view with all features: copy week, publish drafts, settings, zoom.",
+    path: "/full",
+  },
+  {
+    id: "day",
+    label: "Day View",
+    icon: <Calendar size={18} />,
+    description: "Single-day focus. Zoom in to see 30-minute slots.",
+    path: "/day",
+  },
+  {
+    id: "month",
+    label: "Month View",
+    icon: <LayoutGrid size={18} />,
+    description:
+      "Calendar month. Hover '+X more', click for day dialog. Double-click date → week.",
+    path: "/month",
+  },
+  {
+    id: "year",
+    label: "Year View",
+    icon: <LayoutGrid size={18} />,
+    description: "Year overview. Scheduled dates highlighted. Click month → month view.",
+    path: "/year",
+  },
+  {
+    id: "list",
+    label: "List View",
+    icon: <List size={18} />,
+    description: "Shifts in a list by day/week/month/year. Drag to reorder.",
+    path: "/list",
+  },
+  {
+    id: "minimal",
+    label: "Minimal",
+    icon: <Sparkles size={18} />,
+    description: "Small team, custom labels. No extra actions—just the scheduler.",
+    path: "/minimal",
+  },
+  {
+    id: "prefetch",
+    label: "Prefetching",
+    icon: <ZoomIn size={18} />,
+    description:
+      "Buffer + onVisibleRangeChange. Last visible range shown below.",
+    path: "/prefetch",
+  },
+  {
+    id: "tv",
+    label: "TV Preset",
+    icon: <LayoutGrid size={18} />,
+    description:
+      "Preset: Channel/Program labels, 24h range, timeline view, scroll-to-now.",
+    path: "/tv",
+  },
+]
+
+const DEFAULT_DEMO: DemoId = "full"
+
+/** Base path for the app (e.g. /scheduler/ on GitHub Pages). Must match Vite base. */
+const BASE = typeof import.meta !== "undefined" && import.meta.env?.BASE_URL
+  ? import.meta.env.BASE_URL
+  : "/"
+
+/** Parse location (pathname or hash) to demo id. Hash in dev (#/tv), pathname on GitHub Pages (/scheduler/tv). */
+function getDemoIdFromLocation(): DemoId {
+  if (typeof window === "undefined") return DEFAULT_DEMO
+  if (BASE !== "/") {
+    const pathname = window.location.pathname
+    const basePath = BASE.replace(/\/$/, "")
+    const pathAfterBase = pathname.replace(new RegExp("^" + basePath.replace(/\//g, "\\/") + "\\/?"), "").split("/")[0] || ""
+    if (pathAfterBase && DEMO_IDS.includes(pathAfterBase as DemoId)) return pathAfterBase as DemoId
+  }
+  const raw = window.location.hash
+  const path = raw.slice(1).replace(/^\/+/, "").toLowerCase() || ""
+  const id = path ? (path as DemoId) : DEFAULT_DEMO
+  return DEMO_IDS.includes(id) ? id : DEFAULT_DEMO
+}
+
+/** Hash/path-based routing for GitHub Pages. Each demo has its own URL (#/tv or /scheduler/tv). */
+function useHashRoute(): [DemoId, (id: DemoId) => void] {
+  const [demoId, setDemoId] = useState<DemoId>(() => getDemoIdFromLocation())
+
+  const setRoute = useCallback((id: DemoId) => {
+    const path = DEMOS.find((d) => d.id === id)?.path ?? "/full"
+    if (typeof window === "undefined") {
+      setDemoId(id)
+      return
+    }
+    if (BASE === "/") {
+      const hash = "#" + path
+      if (window.location.hash !== hash) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search + hash)
+      }
+    } else {
+      const basePath = BASE.replace(/\/$/, "")
+      const newUrl = window.location.origin + basePath + path + window.location.search
+      if (window.location.pathname + window.location.hash !== basePath + path && window.history.replaceState) {
+        window.history.replaceState(null, "", newUrl)
+      }
+    }
+    setDemoId(id)
+  }, [])
+
+  useEffect(() => {
+    const onHashChange = () => setDemoId(getDemoIdFromLocation())
+    const onPopState = () => setDemoId(getDemoIdFromLocation())
+    window.addEventListener("hashchange", onHashChange)
+    window.addEventListener("popstate", onPopState)
+    return () => {
+      window.removeEventListener("hashchange", onHashChange)
+      window.removeEventListener("popstate", onPopState)
+    }
+  }, [])
+
+  return [demoId, setRoute]
+}
+
 function App() {
-  const [currentDemo, setCurrentDemo] = useState<DemoId>("full")
-  const [shifts, setShifts] = useState<Shift[]>(testShifts)
-  const [smallShiftsState, setSmallShiftsState] = useState<Shift[]>(smallShifts)
+  const [currentDemo, setCurrentDemo] = useHashRoute()
+  const [shifts, setShifts] = useState<Block[]>(testShifts)
+  const [smallShiftsState, setSmallShiftsState] = useState<Block[]>(smallShifts)
   const [isDark, setIsDark] = useState(false)
   const [prefetchRange, setPrefetchRange] = useState<string | null>(null)
 
@@ -98,7 +252,6 @@ function App() {
     }
   }, [isDark])
 
-  // Verify category counts match scheduler logic (week of today, all employees selected)
   useEffect(() => {
     if (currentDemo !== "full") return
     const refDate = new Date()
@@ -111,37 +264,54 @@ function App() {
     setPrefetchRange(`${start.toLocaleDateString()} – ${end.toLocaleDateString()}`)
   }
 
-  const isSmallDemo = currentDemo === "minimal"
-  const isPrefetchDemo = currentDemo === "prefetch"
+  const isSmallDemo = currentDemo === "minimal" || currentDemo === "tv"
+  const currentMeta = DEMOS.find((d) => d.id === currentDemo)
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <header className="border-b px-4 py-3 flex flex-wrap items-center justify-between gap-3 bg-background">
-        <div>
-          <h1 className="text-xl font-semibold">shadcn-scheduler Demo</h1>
-          <p className="text-sm text-muted-foreground">
-            {isSmallDemo
-              ? `${smallShiftsState.length} shifts, ${smallEmployees.length} staff`
-              : `${shifts.length} shifts, ${employees.length} staff`}
-          </p>
+        <div className="flex items-center gap-3">
+          <a
+            href={BASE === "/" ? "#/full" : BASE.replace(/\/$/, "") + "/full"}
+            className="flex items-center gap-2 text-foreground hover:opacity-80 transition-opacity"
+            title="Demo home"
+          >
+            <Home size={22} />
+            <div>
+              <h1 className="text-xl font-semibold">shadcn-scheduler Demo</h1>
+              <p className="text-sm text-muted-foreground">
+                {isSmallDemo
+                  ? `${smallShiftsState.length} shifts, ${smallEmployees.length} staff`
+                  : `${shifts.length} shifts, ${employees.length} staff`}
+              </p>
+            </div>
+          </a>
         </div>
         <div className="flex items-center gap-2">
-          <nav className="flex flex-wrap gap-1">
-            {DEMOS.map((d) => (
-              <button
-                key={d.id}
-                onClick={() => setCurrentDemo(d.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  currentDemo === d.id
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-                title={d.description}
-              >
-                {d.icon}
-                <span className="hidden sm:inline">{d.label}</span>
-              </button>
-            ))}
+          <nav className="flex flex-wrap gap-1" aria-label="Demo pages">
+            {DEMOS.map((d) => {
+              const href = BASE === "/" ? "#" + d.path : BASE.replace(/\/$/, "") + d.path
+              const isActive = currentDemo === d.id
+              return (
+                <a
+                  key={d.id}
+                  href={href}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setCurrentDemo(d.id)
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                  title={d.description}
+                >
+                  {d.icon}
+                  <span className="hidden sm:inline">{d.label}</span>
+                </a>
+              )
+            })}
           </nav>
           <button
             onClick={() => setIsDark(!isDark)}
@@ -153,12 +323,12 @@ function App() {
         </div>
       </header>
 
-      <div className="px-2 py-2 bg-muted/30 border-b text-sm text-muted-foreground">
-        <strong className="text-foreground">{DEMOS.find((d) => d.id === currentDemo)?.label}:</strong>{" "}
-        {DEMOS.find((d) => d.id === currentDemo)?.description}
+      <div className="px-4 py-2 bg-muted/30 border-b text-sm text-muted-foreground">
+        <strong className="text-foreground">{currentMeta?.label}:</strong>{" "}
+        {currentMeta?.description}
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col">
+      <main className="flex-1 min-h-0 flex flex-col" role="main">
         {currentDemo === "full" && (
           <div className="flex-1 min-h-0">
             <Scheduler
@@ -248,7 +418,11 @@ function App() {
               onShiftsChange={setSmallShiftsState}
               initialView="week"
               config={{
-                labels: { category: "Role", employee: "Team member", addShift: "Add shift" },
+                labels: {
+                  category: "Role",
+                  employee: "Team member",
+                  addShift: "Add shift",
+                },
                 defaultSettings: { visibleFrom: 8, visibleTo: 20 },
               }}
             />
@@ -278,7 +452,20 @@ function App() {
             </div>
           </div>
         )}
-      </div>
+
+        {currentDemo === "tv" && (
+          <div className="flex-1 min-h-0">
+            <Scheduler
+              categories={smallCategories}
+              employees={smallEmployees}
+              shifts={smallShiftsState}
+              onShiftsChange={setSmallShiftsState}
+              config={createSchedulerConfig({ preset: "tv" })}
+              initialView="timeline"
+            />
+          </div>
+        )}
+      </main>
     </div>
   )
 }

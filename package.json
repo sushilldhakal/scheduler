@@ -8,7 +8,7 @@
   "scripts": {
     "build": "npm run build --workspace=@sushill/shadcn-scheduler",
     "demo": "npm run build --workspace=@sushill/shadcn-scheduler && npm run dev --workspace=demo",
-    "demo:build": "npm run build --workspace=@sushill/shadcn-scheduler && npm run build --workspace=demo",
+    "demo:build": "npm run build --workspace=@sushill/shadcn-scheduler && npm run build --workspace=demo && cp docs/index.html docs/404.html",
     "publish:npm": "npm run build --workspace=@sushill/shadcn-scheduler && npm publish --workspace=@sushill/shadcn-scheduler --access public --registry https://registry.npmjs.org",
     "publish:github": "npm run build --workspace=@sushill/shadcn-scheduler && npm publish --workspace=@sushill/shadcn-scheduler --registry https://npm.pkg.github.com",
     "publish:all": "npm run publish:npm && npm run publish:github"

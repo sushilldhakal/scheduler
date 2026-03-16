@@ -1,4 +1,5 @@
-import type { Category, Employee, Shift } from "@sushill/shadcn-scheduler"
+import type { Block, Resource } from "@sushill/shadcn-scheduler"
+import { toDateISO } from "@sushill/shadcn-scheduler"
 
 const FIRST_NAMES = [
   "Alice", "Bob", "Carol", "David", "Eva", "Frank", "Grace", "Henry",
@@ -9,21 +10,21 @@ const FIRST_NAMES = [
 
 const LAST_INITIALS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")
 
-export const categories: Category[] = [
-  { id: "c1", name: "Front Desk", colorIdx: 0 },
-  { id: "c2", name: "Kitchen", colorIdx: 1 },
-  { id: "c3", name: "Manager", colorIdx: 2 },
-  { id: "c4", name: "Delivery", colorIdx: 3 },
-  { id: "c5", name: "Security", colorIdx: 4 },
-  { id: "c6", name: "Housekeeping", colorIdx: 5 },
-  { id: "c7", name: "Bar", colorIdx: 6 },
-  { id: "c8", name: "Maintenance", colorIdx: 7 },
+export const categories: Resource[] = [
+  { id: "c1", name: "Front Desk", colorIdx: 0, kind: "category" },
+  { id: "c2", name: "Kitchen", colorIdx: 1, kind: "category" },
+  { id: "c3", name: "Manager", colorIdx: 2, kind: "category" },
+  { id: "c4", name: "Delivery", colorIdx: 3, kind: "category" },
+  { id: "c5", name: "Security", colorIdx: 4, kind: "category" },
+  { id: "c6", name: "Housekeeping", colorIdx: 5, kind: "category" },
+  { id: "c7", name: "Bar", colorIdx: 6, kind: "category" },
+  { id: "c8", name: "Maintenance", colorIdx: 7, kind: "category" },
 ]
 
 const CATEGORY_IDS = categories.map((c) => c.id)
 
-function generateEmployees(count: number): Employee[] {
-  const list: Employee[] = []
+function generateEmployees(count: number): Resource[] {
+  const list: Resource[] = []
   let idx = 0
   for (let i = 0; i < count; i++) {
     const firstName = FIRST_NAMES[i % FIRST_NAMES.length]
@@ -37,12 +38,13 @@ function generateEmployees(count: number): Employee[] {
       categoryId,
       avatar,
       colorIdx: i % 8,
+      kind: "employee",
     })
   }
   return list
 }
 
-export const employees: Employee[] = generateEmployees(80)
+export const employees: Resource[] = generateEmployees(80)
 
 const SHIFT_HOURS = [
   [8, 16],
@@ -72,14 +74,14 @@ export function generateShifts(options?: {
   daysAhead?: number
   /** Shifts per day (approx) */
   shiftsPerDay?: number
-}): Shift[] {
+}): Block[] {
   const {
     daysBack = 60,
     daysAhead = 90,
     shiftsPerDay = 12,
   } = options ?? {}
 
-  const shifts: Shift[] = []
+  const shifts: Block[] = []
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
@@ -115,30 +117,30 @@ export function generateShifts(options?: {
 }
 
 // Pre-generated big dataset: ~150 days, ~12 shifts/day avg = ~1800 shifts
-export const testShifts: Shift[] = generateShifts({
+export const testShifts: Block[] = generateShifts({
   daysBack: 60,
   daysAhead: 90,
   shiftsPerDay: 14,
 })
 
 // Small dataset for minimal / small-team demos
-export const smallCategories: Category[] = [
-  { id: "sc1", name: "Service", colorIdx: 0 },
-  { id: "sc2", name: "Kitchen", colorIdx: 1 },
+export const smallCategories: Resource[] = [
+  { id: "sc1", name: "Service", colorIdx: 0, kind: "category" },
+  { id: "sc2", name: "Kitchen", colorIdx: 1, kind: "category" },
 ]
 
-export const smallEmployees: Employee[] = [
-  { id: "se1", name: "Alex", categoryId: "sc1", avatar: "AX", colorIdx: 0 },
-  { id: "se2", name: "Sam", categoryId: "sc1", avatar: "SM", colorIdx: 0 },
-  { id: "se3", name: "Jordan", categoryId: "sc2", avatar: "JR", colorIdx: 1 },
-  { id: "se4", name: "Casey", categoryId: "sc2", avatar: "CS", colorIdx: 1 },
-  { id: "se5", name: "Morgan", categoryId: "sc1", avatar: "MG", colorIdx: 0 },
+export const smallEmployees: Resource[] = [
+  { id: "se1", name: "Alex", categoryId: "sc1", avatar: "AX", colorIdx: 0, kind: "employee" },
+  { id: "se2", name: "Sam", categoryId: "sc1", avatar: "SM", colorIdx: 0, kind: "employee" },
+  { id: "se3", name: "Jordan", categoryId: "sc2", avatar: "JR", colorIdx: 1, kind: "employee" },
+  { id: "se4", name: "Casey", categoryId: "sc2", avatar: "CS", colorIdx: 1, kind: "employee" },
+  { id: "se5", name: "Morgan", categoryId: "sc1", avatar: "MG", colorIdx: 0, kind: "employee" },
 ]
 
-export const smallShifts: Shift[] = (() => {
+export const smallShifts: Block[] = (() => {
   const base = new Date()
   base.setHours(0, 0, 0, 0)
-  const out: Shift[] = []
+  const out: Block[] = []
   for (let d = -7; d <= 14; d++) {
     const date = new Date(base)
     date.setDate(date.getDate() + d)
@@ -147,9 +149,9 @@ export const smallShifts: Shift[] = (() => {
       const emp = smallEmployees[i % smallEmployees.length]
       out.push({
         id: `ss-${d}-${i}`,
-        categoryId: emp.categoryId,
+        categoryId: emp.categoryId!,
         employeeId: emp.id,
-        date: new Date(date),
+        date: toDateISO(date),
         startH: 8 + (i % 3) * 3,
         endH: 12 + (i % 3) * 3 + 4,
         employee: emp.name,
