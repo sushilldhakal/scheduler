@@ -5,11 +5,11 @@ import { WidthProvider } from '@/components/docs/width-context'
 import { Inter } from 'next/font/google'
 import '@sushill/shadcn-scheduler/tokens'
 import './global.css'
-import type { ReactNode } from 'react'
+import type React from 'react'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: any }) {
   return (
     <html lang="en" className={inter.className} suppressHydrationWarning>
       <body>
