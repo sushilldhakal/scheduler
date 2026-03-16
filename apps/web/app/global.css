@@ -1,9 +1,6 @@
 @import 'tailwindcss';
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
-@import '@sushill/shadcn-scheduler/tokens';
-
-
 @custom-variant dark (&:is(.dark *));
 
 @layer base {

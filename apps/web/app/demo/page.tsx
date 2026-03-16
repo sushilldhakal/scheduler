@@ -27,7 +27,10 @@ export default function DemoPage() {
   }
 
   return (
-    <div className="scheduler-wrapper w-full h-[600px] overflow-hidden rounded-lg border not-prose">
+    <div
+      className="scheduler-wrapper w-full overflow-hidden"
+      style={{ height: 'calc(100vh - 56px)' }}
+    >
       <Scheduler
         categories={categories}
         employees={employees}
