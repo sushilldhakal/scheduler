@@ -23,7 +23,7 @@ export function DialogTrigger({
   children,
 }: {
   asChild?: boolean;
-  children: React.ReactElement;
+  children: React.ReactElement<{ onClick?: React.MouseEventHandler }>;
 }) {
   const ctx = React.useContext(DialogContext);
   if (!ctx) throw new Error('DialogTrigger must be used within Dialog');

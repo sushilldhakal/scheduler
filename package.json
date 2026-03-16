@@ -6,9 +6,9 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace=@sushill/shadcn-scheduler",
-    "dev:web": "npm run dev --workspace=web",
-    "build:web": "npm run build --workspace=web",
+    "build": "npm run build -w @sushill/shadcn-scheduler",
+    "build:web": "npm run build -w @sushill/shadcn-scheduler && npm run build -w web",
+    "dev:web": "npm run dev -w web",
     "publish:npm": "npm run build --workspace=@sushill/shadcn-scheduler && npm publish --workspace=@sushill/shadcn-scheduler --access public --registry https://registry.npmjs.org",
     "publish:github": "npm run build --workspace=@sushill/shadcn-scheduler && npm publish --workspace=@sushill/shadcn-scheduler --registry https://npm.pkg.github.com"
   },

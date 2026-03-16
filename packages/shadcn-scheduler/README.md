@@ -53,9 +53,13 @@ Or with a single command:
 npm install @sushill/shadcn-scheduler react react-dom lucide-react tailwindcss @radix-ui/react-popover @radix-ui/react-tabs @radix-ui/react-toggle-group @radix-ui/react-checkbox @radix-ui/react-slot react-day-picker class-variance-authority clsx tailwind-merge
 ```
 
-### 3. Configure Tailwind
+### 3. Configure Tailwind (v3 and v4)
 
-**Important:** Add the package to your Tailwind `content` paths. Without this, utility classes used by the scheduler (e.g. `bg-primary`, `text-foreground`) will not be generated and styles will not apply.
+The scheduler does **not** ship compiled Tailwind utilities. Instead, your Tailwind build scans the library’s JS bundles for class names like `bg-primary`, `text-muted-foreground`, `border-border`, etc.
+
+#### Tailwind v3 – `tailwind.config.js`
+
+Add the package to your Tailwind `content` paths so utilities used by the scheduler are generated:
 
 ```js
 // tailwind.config.js
@@ -65,27 +69,27 @@ module.exports = {
     "./src/**/*.{js,ts,jsx,tsx}",
     "./node_modules/@sushill/shadcn-scheduler/dist/**/*.js",
   ],
-  theme: {
-    extend: {
-      colors: {
-        border: "var(--border)",
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        primary: { DEFAULT: "var(--primary)", foreground: "var(--primary-foreground)" },
-        muted: { DEFAULT: "var(--muted)", foreground: "var(--muted-foreground)" },
-        accent: { DEFAULT: "var(--accent)", foreground: "var(--accent-foreground)" },
-        popover: { DEFAULT: "var(--popover)", foreground: "var(--popover-foreground)" },
-        destructive: { DEFAULT: "var(--destructive)", foreground: "var(--destructive-foreground)" },
-        input: "var(--input)",
-        ring: "var(--ring)",
-      },
-    },
-  },
-  // ... rest of your config
+  // ... your existing theme/config
 }
 ```
 
-### 4. CSS variables (light & dark mode)
+#### Tailwind v4 – `global.css`
+
+Point Tailwind at the library’s `dist` folder:
+
+```css
+@source "../node_modules/@sushill/shadcn-scheduler/dist";
+```
+
+### 4. Scheduler tokens CSS (variables + keyframes)
+
+The package ships a small CSS file with only scheduler-specific variables and keyframes. Import it once in your global CSS:
+
+```css
+@import '@sushill/shadcn-scheduler/tokens';
+```
+
+### 5. CSS variables (light & dark mode)
 
 The scheduler uses shadcn-style design tokens. Variables must use **space-separated HSL values** (e.g. `0 0% 9%`) so that `hsl(var(--primary))` works in Tailwind. Include in your `globals.css`:
 

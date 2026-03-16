@@ -1,15 +1,16 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
-  "name": "scheduler-tv",
+  "name": "scheduler",
   "type": "registry:block",
-  "title": "Scheduler (TV)",
-  "description": "TV-domain scheduler: Channel/Program vocabulary, 24h range, timeline view, live indicator. Uses preset \"tv\" with day, week, month, and timeline views.",
+  "title": "Scheduler",
+  "description": "A flexible shift scheduling component with day, week, month, year, and list views. Supports drag-and-drop, categories, staff filtering, prefetching, and scroll-to-now.",
   "registryDependencies": ["button", "calendar", "tabs", "popover", "checkbox"],
   "dependencies": ["@sushill/shadcn-scheduler", "lucide-react"],
   "files": [
     {
-      "path": "registry/default/scheduler-tv/scheduler-tv-block.tsx",
+      "path": "registry/default/scheduler/scheduler-block.tsx",
       "type": "registry:component"
     }
   ]
 }
+

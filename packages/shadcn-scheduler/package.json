@@ -27,7 +27,6 @@
     "node": ">=18"
   },
   "exports": {
-    "./scheduler.css": "./dist/scheduler.css",
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
@@ -67,10 +66,13 @@
       "types": "./dist/venue.d.ts",
       "import": "./dist/venue.js",
       "require": "./dist/venue.cjs"
+    },
+    "./tokens": {
+      "default": "./dist/scheduler-tokens.css"
     }
   },
   "scripts": {
-    "build": "tsup && cp src/core/scheduler.css dist/",
+    "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",

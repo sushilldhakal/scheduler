@@ -1,0 +1,42 @@
+/* shadcn-scheduler: CSS custom properties and keyframes */
+/* Add this once to your app's global CSS */
+
+:root {
+  --sch-bg: var(--background);
+  --sch-bg-muted: var(--muted);
+  --sch-bg-hover: var(--accent);
+  --sch-border: var(--border);
+  --sch-border-light: var(--border);
+  --sch-text: var(--foreground);
+  --sch-text-muted: var(--muted-foreground);
+  --sch-text-light: var(--muted-foreground);
+  --sch-today-bg: var(--accent);
+  --sch-today-text: var(--accent-foreground);
+  --sch-closed-bg: var(--muted);
+  --sch-closed-text: var(--muted-foreground);
+  --sch-bg-alpha: hsl(var(--background) / 0.95);
+  --sch-black-alpha: hsl(var(--foreground) / 0.13);
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slideInFromLeft {
+  from { transform: translateX(-8px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInFromRight {
+  from { transform: translateX(8px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@media (forced-colors: active) {
+  [data-scheduler-block] {
+    outline: 2px solid CanvasText;
+    outline-offset: 1px;
+  }
+}
+

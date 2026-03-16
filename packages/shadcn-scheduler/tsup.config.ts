@@ -1,4 +1,5 @@
 import { defineConfig } from "tsup"
+import { copyFileSync } from "fs"
 
 export default defineConfig({
   entry: {
@@ -35,4 +36,7 @@ export default defineConfig({
   ],
   treeshake: true,
   minify: false,
+  onSuccess: async () => {
+    copyFileSync("src/scheduler-tokens.css", "dist/scheduler-tokens.css")
+  },
 })
