@@ -9,6 +9,3 @@ packages/shadcn-scheduler/dist/
 # Next.js
 apps/web/.next/
 apps/web/out/
-
-# Old GitHub Pages output — delete this folder entirely
-docs/

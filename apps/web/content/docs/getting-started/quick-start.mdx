@@ -1,0 +1,66 @@
+---
+title: Quick start
+description: Minimum code to get a working scheduler on screen in 5 minutes.
+---
+
+# Quick start
+
+This guide shows the **smallest possible setup** to render a working scheduler
+on screen in a few minutes.
+
+## 1. Define your data
+
+Start with a couple of categories, employees, and shifts:
+
+```tsx
+const categories = [
+  { id: 'front-desk', name: 'Front Desk', kind: 'category', colorIdx: 0 },
+];
+
+const employees = [
+  { id: 'e1', name: 'Alex', kind: 'employee', categoryId: 'front-desk', colorIdx: 0 },
+];
+
+const initialShifts = [
+  {
+    id: 's1',
+    categoryId: 'front-desk',
+    employeeId: 'e1',
+    date: '2026-03-16',
+    startH: 9,
+    endH: 17,
+    employee: 'Alex',
+    status: 'published',
+  },
+];
+```
+
+## 2. Render the scheduler
+
+```tsx
+import { useState } from 'react';
+import { Scheduler } from '@sushill/shadcn-scheduler';
+
+export default function QuickStartPage() {
+  const [shifts, setShifts] = useState(initialShifts);
+
+  return (
+    <div className="h-[600px]">
+      <Scheduler
+        categories={categories}
+        employees={employees}
+        shifts={shifts}
+        onShiftsChange={setShifts}
+        initialView="week"
+      />
+    </div>
+  );
+}
+```
+
+This gives you a working **week** view with drag-and-drop and basic editing.
+From here you can:
+
+- Switch to a preset domain (e.g. `<Scheduler.roster />`)
+- Enable more views (day, month, year, timeline, list)
+- Start customising render slots and callbacks.

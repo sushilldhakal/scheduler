@@ -1,0 +1,35 @@
+---
+title: Introduction
+description: What shadcn-scheduler is, who it's for, and how it compares to other schedulers.
+---
+
+# Introduction
+
+`shadcn-scheduler` is a **flexible, production-ready scheduler component for React**.
+It ships with a domain-aware data model, multiple calendar views, and a render-slot
+API so you can drop it into real products without rebuilding the basics.
+
+## Who it's for
+
+- **Product teams** building scheduling into SaaS apps: workforce, TV, conferences,
+  events, healthcare, project planning, or bookings.
+- **Design systems teams** who want a single, themeable scheduler that matches
+  the rest of their shadcn/ui + Tailwind stack.
+- **Internal tools engineers** who need powerful scheduling UX without adopting
+  a whole new framework.
+
+## How it differs from other schedulers
+
+- **Versus FullCalendar**: FullCalendar is a calendar-first library with its own
+  styling system. `shadcn-scheduler` is built on **shadcn/ui + Tailwind**, and
+  is focused on **resource + time scheduling** (rosters, TV guides, etc.) rather
+  than just events on a calendar.
+- **Versus Planby**: Planby is optimised for EPG/TV timelines. `shadcn-scheduler`
+  supports that domain too, but also ships presets for **rosters, conferences,
+  festivals, healthcare, Gantt charts, and venue bookings**.
+- **Domain presets**: instead of giving you a single generic grid, you can start
+  from `<Scheduler.roster />`, `<Scheduler.tv />`, `<Scheduler.conference />` and
+  others, each with vocabulary, labels, and sensible defaults.
+
+If you already use shadcn/ui and Tailwind, `shadcn-scheduler` should feel like
+another native building block in your design system.

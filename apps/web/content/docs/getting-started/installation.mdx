@@ -1,0 +1,76 @@
+---
+title: Installation
+description: Installing shadcn-scheduler, peer dependencies, and Tailwind configuration.
+---
+
+# Installation
+
+You can install `shadcn-scheduler` either via the **shadcn/ui registry** or as a
+plain npm package. The registry flow is recommended if you're already using
+shadcn/ui components.
+
+## 1. Install from the shadcn registry
+
+```bash
+npx shadcn@latest add scheduler
+```
+
+This will:
+
+- Copy the scheduler source files into your repo
+- Register the component in your `components.json`
+- Ensure required Tailwind and CSS imports are in place
+
+After that, you can import from your local components, e.g.
+
+```tsx
+import { Scheduler } from '@/components/scheduler';
+```
+
+## 2. Install from npm
+
+If you prefer to consume the package directly:
+
+```bash
+npm install @sushill/shadcn-scheduler
+# or
+pnpm add @sushill/shadcn-scheduler
+```
+
+Then import the component from the package:
+
+```tsx
+import { Scheduler } from '@sushill/shadcn-scheduler';
+```
+
+## 3. Peer dependencies
+
+`sadchn-scheduler` expects the following peers in your project:
+
+- `react`, `react-dom`
+- `next` (for Next.js apps)
+- `tailwindcss` and a Tailwind config
+- `shadcn/ui` (if you're using the registry variant)
+
+Make sure these are installed and up to date before using the scheduler.
+
+## 4. Tailwind configuration
+
+Add the scheduler paths to your Tailwind `content` array so classes are not
+purged during build. For a typical Next app:
+
+```ts
+// tailwind.config.ts
+export default {
+  content: [
+    './pages/**/*.{ts,tsx}',
+    './app/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './components/scheduler/**/*.{ts,tsx}', // wherever the scheduler lives
+  ],
+  // ...rest of config
+};
+```
+
+Finally, ensure your global CSS imports the base styles used by the scheduler
+and Fumadocs UI (if you are using this docs site setup).

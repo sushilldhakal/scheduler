@@ -1,0 +1,47 @@
+---
+title: Upgrade guide
+description: Breaking changes from 0.x to 1.0 and how to migrate.
+---
+
+# Upgrade guide
+
+This page highlights the main breaking changes when upgrading from `0.x` to
+`1.0` of `shadcn-scheduler` and how to migrate safely.
+
+## Type renames
+
+- `Shift` → `Block<TMeta>`
+- `Staff` / `Employee` models → `Resource<TMeta>` with `kind: 'employee'`
+- Category models → `Resource<TMeta>` with `kind: 'category'`
+
+Search your codebase for old names and replace them with the new `Block` and
+`Resource` types.
+
+## Dates as ISO strings
+
+Older versions sometimes used `Date` objects. In `1.0`, all block dates are
+**ISO date strings** (e.g. `"2026-03-16"`). Use the helpers:
+
+- `toDateISO(date: Date)` – convert a `Date` to an ISO string
+- `parseBlockDate(block)` – get a `Date` back when needed
+
+Update any code that passes `Date` directly into blocks to use ISO strings.
+
+## Centralised config
+
+`1.0` introduces `createSchedulerConfig`, which replaces scattered boolean props
+for things like presets, labels, views, and settings. Instead of:
+
+```tsx
+<Scheduler showYearView defaultView="week" rosterPreset />
+```
+
+prefer:
+
+```tsx
+const config = createSchedulerConfig({ preset: 'roster' });
+
+<Scheduler config={config} />
+```
+
+This makes it easier to share config between pages and keep behaviour consistent.
