@@ -9,6 +9,8 @@ interface StaffPanelProps {
   onDragStaff: (empId: string, categoryId: string) => void
   anchorRect: DOMRect | null
   onClose: () => void
+  /** When "drawer", render as slide-in panel from right (tablet). */
+  variant?: "popover" | "drawer"
 }
 
 export function StaffPanel({
@@ -18,6 +20,7 @@ export function StaffPanel({
   onDragStaff,
   anchorRect,
   onClose,
+  variant = "popover",
 }: StaffPanelProps): React.ReactElement | null {
   const { employees, getColor, labels } = useSchedulerContext()
   const scheduledIds = new Set(
@@ -38,7 +41,7 @@ export function StaffPanel({
     return () => document.removeEventListener("mousedown", h)
   }, [onClose])
 
-  if (!anchorRect) return null
+  if (variant === "popover" && !anchorRect) return null
 
   const handleDragStart =
     (emp: (typeof employees)[0]) => (e: React.DragEvent<HTMLDivElement>): void => {
@@ -55,23 +58,40 @@ export function StaffPanel({
     e.currentTarget.style.background = "transparent"
   }
 
+  const isDrawer = variant === "drawer"
   return (
     <div
       ref={ref}
-      style={{
-        position: "fixed",
-        top: anchorRect.bottom + 4,
-        left: anchorRect.left,
-        zIndex: 8888,
-        background: "hsl(var(--background))",
-        border: `1.5px solid ${c.bg}30`,
-        borderRadius: 10,
-        boxShadow: "0 8px 32px hsl(var(--foreground) / 0.12)",
-        minWidth: 190,
-        maxHeight: 240,
-        overflowY: "auto",
-        padding: "6px 0",
-      }}
+      style={
+        isDrawer
+          ? {
+              position: "fixed",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: 280,
+              zIndex: 8888,
+              background: "hsl(var(--background))",
+              borderLeft: `1px solid hsl(var(--border))`,
+              boxShadow: "-8px 0 24px hsl(var(--foreground) / 0.08)",
+              overflowY: "auto",
+              padding: "12px 0",
+            }
+          : {
+              position: "fixed",
+              top: anchorRect!.bottom + 4,
+              left: anchorRect!.left,
+              zIndex: 8888,
+              background: "hsl(var(--background))",
+              border: `1.5px solid ${c.bg}30`,
+              borderRadius: 10,
+              boxShadow: "0 8px 32px hsl(var(--foreground) / 0.12)",
+              minWidth: 190,
+              maxHeight: 240,
+              overflowY: "auto",
+              padding: "6px 0",
+            }
+      }
     >
       <div
         style={{
@@ -83,9 +103,30 @@ export function StaffPanel({
           letterSpacing: 0.5,
           borderBottom: `1px solid ${c.bg}20`,
           marginBottom: 4,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
         }}
       >
-        Drag to schedule · {category.name}
+        <span>Drag to schedule · {category.name}</span>
+        {isDrawer && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close panel"
+            style={{
+              padding: 4,
+              border: "none",
+              background: "transparent",
+              cursor: "pointer",
+              color: "hsl(var(--muted-foreground))",
+              fontSize: 18,
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        )}
       </div>
 
       {unscheduled.length === 0 && (

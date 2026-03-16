@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useEffect } from "react"
 import type { Block, Resource } from "../../types"
-import { get3Weeks, getWeeksForBuffer } from "../../constants"
+import { get3Weeks, getWeeksForBuffer, clamp } from "../../constants"
+import { useSchedulerContext } from "../../context"
+import { useIsMobile } from "../../hooks/useMediaQuery"
 import { GridView } from "../GridView"
 
 interface DayViewProps {
@@ -14,12 +16,18 @@ interface DayViewProps {
   copiedShift?: Block | null
   setCopiedShift?: React.Dispatch<React.SetStateAction<Block | null>>
   zoom?: number
+  setZoom?: React.Dispatch<React.SetStateAction<number>>
   bufferDays?: number
   onVisibleRangeChange?: (visibleStartDate: Date, visibleEndDate: Date) => void
   prefetchThreshold?: number
   onDeleteShift?: (shiftId: string) => void
   scrollToNowRef?: React.MutableRefObject<(() => void) | null>
   initialScrollToNow?: boolean
+  onSwipeNavigate?: (dir: number) => void
+  isLoading?: boolean
+  onNavigate?: (dir: number) => void
+  onBlockMoved?: (block: import("../../types").Block, newDate: string, newStartH: number, newEndH: number) => void
+  onFocusedBlockChange?: (blockId: string | null) => void
 }
 
 export function DayView({
@@ -39,8 +47,17 @@ export function DayView({
   onDeleteShift,
   scrollToNowRef,
   initialScrollToNow,
+  onSwipeNavigate,
+  setZoom,
+  isLoading,
+  onNavigate,
+  onBlockMoved,
+  onFocusedBlockChange,
 }: DayViewProps): React.ReactElement {
+  const { categories } = useSchedulerContext()
+  const isMobile = useIsMobile()
   const [centerDate, setCenterDate] = useState(date)
+  const [mobileResourceIndex, setMobileResourceIndex] = useState(0)
 
   let currentCenter = centerDate
   if (Math.abs(date.getTime() - centerDate.getTime()) > 1000 * 60 * 60 * 24 * 5) {
@@ -78,6 +95,18 @@ export function DayView({
       onDeleteShift={onDeleteShift}
       scrollToNowRef={scrollToNowRef}
       initialScrollToNow={initialScrollToNow}
+      onSwipeNavigate={onSwipeNavigate}
+      setZoom={setZoom}
+      isLoading={isLoading}
+      mobileResourceIndex={isMobile ? mobileResourceIndex : undefined}
+      onMobileResourceChange={
+        isMobile
+          ? (dir) => setMobileResourceIndex((i) => clamp(i + dir, 0, categories.length - 1))
+          : undefined
+      }
+      onNavigate={onNavigate}
+      onBlockMoved={onBlockMoved}
+      onFocusedBlockChange={onFocusedBlockChange}
     />
   )
 }
@@ -102,6 +131,12 @@ interface WeekViewProps {
   onDeleteShift?: (shiftId: string) => void
   scrollToNowRef?: React.MutableRefObject<(() => void) | null>
   initialScrollToNow?: boolean
+  onSwipeNavigate?: (dir: number) => void
+  setZoom?: React.Dispatch<React.SetStateAction<number>>
+  isLoading?: boolean
+  onNavigate?: (dir: number) => void
+  onBlockMoved?: (block: import("../../types").Block, newDate: string, newStartH: number, newEndH: number) => void
+  onFocusedBlockChange?: (blockId: string | null) => void
 }
 
 export function WeekView({
@@ -123,6 +158,12 @@ export function WeekView({
   onDeleteShift,
   scrollToNowRef,
   initialScrollToNow,
+  onSwipeNavigate,
+  setZoom,
+  isLoading,
+  onNavigate,
+  onBlockMoved,
+  onFocusedBlockChange,
 }: WeekViewProps): React.ReactElement {
   const bufferWeeks = Math.max(1, Math.ceil(bufferDays / 7))
   const allDates = useMemo(
@@ -150,6 +191,12 @@ export function WeekView({
       onDeleteShift={onDeleteShift}
       scrollToNowRef={scrollToNowRef}
       initialScrollToNow={initialScrollToNow}
+      onSwipeNavigate={onSwipeNavigate}
+      setZoom={setZoom}
+      isLoading={isLoading}
+      onNavigate={onNavigate}
+      onBlockMoved={onBlockMoved}
+      onFocusedBlockChange={onFocusedBlockChange}
     />
   )
 }

@@ -26,7 +26,7 @@ interface TimelineViewProps {
 
 const HOUR_W = 88
 
-export function TimelineView({
+function TimelineViewInner({
   date,
   shifts,
   setShifts,
@@ -256,3 +256,5 @@ export function TimelineView({
     </div>
   )
 }
+
+export const TimelineView = React.memo(TimelineViewInner)

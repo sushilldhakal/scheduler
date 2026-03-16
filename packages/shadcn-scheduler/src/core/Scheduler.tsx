@@ -1,16 +1,17 @@
-"use client"
-
 import React, { useState, useCallback, useContext, useRef } from "react"
 import type { Block, Resource, Settings, SchedulerSlots } from "./types"
 import { Button } from "./components/ui/button"
 import { Plus, ZoomIn, ZoomOut } from "lucide-react"
 import { SchedulerProvider, nextUid, SchedulerContext } from "./context"
 import { getWeekDates, sameDay, toDateISO } from "./constants"
+import { findConflicts } from "./utils/packing"
 import { TodayButton, DateNavigator } from "./components/DateNavigator"
 import { ViewTabs } from "./components/ViewTabs"
 import { UserSelect } from "./components/UserSelect"
 import { AddShiftModal } from "./components/modals/AddShiftModal"
 import { ShiftModal } from "./components/modals/ShiftModal"
+import { BottomSheet } from "./components/ui/BottomSheet"
+import { useIsMobile } from "./hooks/useMediaQuery"
 import { DayView, WeekView } from "./components/views/DayWeekViews"
 import { MonthView } from "./components/views/MonthView"
 import { YearView } from "./components/views/YearView"
@@ -64,6 +65,16 @@ export interface SchedulerProps {
    * Omitted slots fall back to the default engine rendering.
    */
   slots?: Partial<SchedulerSlots>
+  /** P12-13: When true, show skeleton blocks instead of real data. */
+  isLoading?: boolean
+  /** P14-11: When true, disable drag, resize, click-to-add, and modal interactions; blocks are view-only. */
+  readOnly?: boolean
+  /** P14-12: Webhook-style callbacks with full Block payload. */
+  onBlockCreate?: (block: Block) => void
+  onBlockDelete?: (block: Block) => void
+  onBlockMove?: (block: Block) => void
+  onBlockResize?: (block: Block) => void
+  onBlockPublish?: (block: Block) => void
 }
 
 export interface SchedulerHeaderActions {
@@ -87,6 +98,13 @@ export function Scheduler({
   onVisibleRangeChange,
   prefetchThreshold = 0.8,
   slots: slotsProp,
+  isLoading = false,
+  readOnly = false,
+  onBlockCreate,
+  onBlockDelete,
+  onBlockMove,
+  onBlockResize,
+  onBlockPublish,
 }: SchedulerProps): React.ReactElement {
   const parentCtx = useContext(SchedulerContext)
   const slots = slotsProp ?? {}
@@ -102,15 +120,36 @@ export function Scheduler({
   const setShifts = useCallback(
     (updater: React.SetStateAction<Block[]>) => {
       const next = typeof updater === "function" ? updater(shifts) : updater
+      historyRef.current = [shifts, ...historyRef.current].slice(0, HISTORY_MAX)
       onShiftsChange(next)
     },
     [shifts, onShiftsChange]
   )
 
+  const handleUndo = useCallback(() => {
+    const prev = historyRef.current.pop()
+    if (prev) onShiftsChange(prev)
+  }, [onShiftsChange])
+
   const [view, setView] = useState<string>(initialView)
+  /** P12-03: visible view after transition (lagged by 150ms on change). */
+  const [visibleView, setVisibleView] = useState<string>(initialView)
   const [currentDate, setCurrentDate] = useState<Date>(initialDate ?? new Date())
   /** Week view: header shows this when scrolling; buffer stays on currentDate. Null = use currentDate. */
   const [displayDateForWeekView, setDisplayDateForWeekView] = useState<Date | null>(null)
+  /** P12-03: opacity for view transition. */
+  const [viewOpacity, setViewOpacity] = useState(1)
+  /** P12-04: direction for DateNavigator animation. */
+  const [navDirection, setNavDirection] = useState<"prev" | "next" | null>(null)
+  React.useEffect(() => {
+    if (view === visibleView) return
+    setViewOpacity(0)
+    const t = setTimeout(() => {
+      setVisibleView(view)
+      setViewOpacity(1)
+    }, 150)
+    return () => clearTimeout(t)
+  }, [view, visibleView])
   const [selShift, setSelShift] = useState<Block | null>(null)
   const [selCategory, setSelCategory] = useState<Resource | null>(null)
   const [addCtx, setAddCtx] = useState<AddContext | null>(null)
@@ -120,7 +159,13 @@ export function Scheduler({
   )
   const [copiedShift, setCopiedShift] = useState<Block | null>(null)
   const [zoom, setZoom] = useState<number>(1)
+  const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null)
+  const [announcement, setAnnouncement] = useState<string>("")
   const scrollToNowRef = useRef<(() => void) | null>(null)
+  const schedulerContainerRef = useRef<HTMLDivElement>(null)
+  const isMobile = useIsMobile()
+  const historyRef = useRef<Block[][]>([])
+  const HISTORY_MAX = 20
 
   const handleZoomIn = () => setZoom((z) => Math.min(z + 0.25, 2))
   const handleZoomOut = () => setZoom((z) => Math.max(z - 0.25, 0.5))
@@ -139,9 +184,14 @@ export function Scheduler({
 
   const publishShifts = useCallback(
     (...ids: string[]): void =>
-      setShifts((prev) =>
-        prev.map((s) => (ids.includes(s.id) ? { ...s, status: "published" } : s))
-      ),
+      setShifts((prev) => {
+        const conflictIds = findConflicts(prev)
+        const allowedIds = ids.filter((id) => !conflictIds.has(id))
+        if (allowedIds.length === 0) return prev
+        return prev.map((s) =>
+          allowedIds.includes(s.id) ? { ...s, status: "published" } : s
+        )
+      }),
     [setShifts]
   )
 
@@ -161,6 +211,8 @@ export function Scheduler({
     })
 
   const navigate = (dir: number): void => {
+    setNavDirection(dir < 0 ? "prev" : "next")
+    setTimeout(() => setNavDirection(null), 200)
     const d = new Date(currentDate)
     const b = view.replace("list", "") || "day"
     if (b === "day") d.setDate(d.getDate() + dir)
@@ -192,8 +244,8 @@ export function Scheduler({
     ])
   }
 
-  const isListView = view.startsWith("list")
-  const baseView = view.replace("list", "") || "day"
+  const isListView = visibleView.startsWith("list")
+  const baseView = visibleView.replace("list", "") || "day"
   const draftCount = shifts.filter((s) => s.status === "draft").length
 
   const handleDeleteShift = useCallback(
@@ -201,6 +253,14 @@ export function Scheduler({
       setShifts((prev) => prev.filter((s) => s.id !== id))
       setSelShift(null)
       setSelCategory(null)
+    },
+    [setShifts]
+  )
+
+  const handleShiftUpdate = useCallback(
+    (updated: Block): void => {
+      setShifts((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
+      setSelShift(updated)
     },
     [setShifts]
   )
@@ -214,6 +274,61 @@ export function Scheduler({
     },
   }
 
+  const handleBlockMoved = useCallback(
+    (block: Block, newDate: string, newStartH: number, newEndH: number) => {
+      const dayName = new Date(newDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" })
+      const startStr = newStartH < 12 ? `${Math.floor(newStartH)}am` : newStartH === 12 ? "12pm" : `${Math.floor(newStartH) - 12}pm`
+      const endStr = newEndH < 12 ? `${Math.floor(newEndH)}am` : newEndH === 12 ? "12pm" : `${Math.floor(newEndH) - 12}pm`
+      setAnnouncement(`${block.employee} moved to ${dayName} ${startStr}–${endStr}`)
+      setTimeout(() => setAnnouncement(""), 3000)
+    },
+    []
+  )
+
+  React.useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        setSelShift(null)
+        setSelCategory(null)
+        setAddCtx(null)
+        return
+      }
+      if (e.ctrlKey && e.key === "z") {
+        e.preventDefault()
+        handleUndo()
+        return
+      }
+      if (e.ctrlKey && e.key === "c") {
+        if (focusedBlockId) {
+          const block = shifts.find((s) => s.id === focusedBlockId)
+          if (block) {
+            e.preventDefault()
+            setCopiedShift(block)
+          }
+        }
+        return
+      }
+      if (e.ctrlKey && e.key === "v") {
+        if (focusedBlockId && copiedShift) {
+          e.preventDefault()
+          const at = shifts.find((s) => s.id === focusedBlockId)
+          if (at) {
+            const newBlock: Block = {
+              ...copiedShift,
+              id: nextUid(),
+              date: at.date,
+              categoryId: at.categoryId,
+            }
+            setShifts((prev) => [...prev, newBlock])
+          }
+        }
+        return
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [focusedBlockId, copiedShift, shifts, handleUndo, setShifts])
+
   const sharedGridProps = {
     shifts,
     setShifts,
@@ -223,12 +338,19 @@ export function Scheduler({
     copiedShift,
     setCopiedShift,
     zoom,
+    setZoom,
     bufferDays,
     onVisibleRangeChange,
     prefetchThreshold,
     onDeleteShift: handleDeleteShift,
     scrollToNowRef,
     initialScrollToNow: mergedConfig.initialScrollToNow ?? false,
+    onSwipeNavigate: navigate,
+    onNavigate: navigate,
+    onBlockMoved: handleBlockMoved,
+    onFocusedBlockChange: setFocusedBlockId,
+    isLoading,
+    readOnly,
   }
 
   const handleSetDate = useCallback((action: React.SetStateAction<Date>) => {
@@ -281,11 +403,23 @@ export function Scheduler({
 
   const content = (
       <div
+        ref={schedulerContainerRef}
         className="flex h-screen flex-col overflow-hidden bg-background text-foreground"
         style={{
           fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
         }}
+        dir={mergedConfig?.isRTL ? "rtl" : "ltr"}
       >
+        <div
+          aria-live="polite"
+          aria-atomic
+          className="sr-only"
+          role="status"
+        >
+          {announcement}
+        </div>
         {draftCount > 0 && (
           <div className="flex shrink-0 items-center justify-between border-b border-border bg-accent px-5 py-1.5">
             <span className="text-xs font-semibold text-accent-foreground">
@@ -302,73 +436,114 @@ export function Scheduler({
           </div>
         )}
 
-        <div className="flex flex-col gap-4 border-b border-border bg-background p-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3">
-            <DateNavigator
-              view={view}
-              currentDate={view === "week" ? (displayDateForWeekView ?? currentDate) : currentDate}
-              onDateChange={handleSetDate}
-              onNavigate={navigate}
-              shifts={shifts}
-              slotAbove={<TodayButton onToday={handleTodayClick} />}
-            />
-          </div>
-
-          <div className="flex flex-col items-center gap-1.5 sm:flex-row sm:justify-between">
-          {(view === "day" || view === "week" || view === "timeline") && (
-                <div className="flex items-center gap-1 mr-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      handleTodayClick()
-                      scrollToNowRef.current?.()
-                    }}
-                  >
-                    Now
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={handleZoomOut} disabled={zoom <= 0.5}>
-                    <ZoomOut size={16} />
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={handleZoomIn} disabled={zoom >= 2}>
-                    <ZoomIn size={16} />
-                  </Button>
-                </div>
-              )}
-            <div className="flex w-full items-center gap-2">
+        {isMobile ? (
+          <>
+            <div className="flex shrink-0 items-center justify-between border-b border-border bg-background p-3">
+              <DateNavigator
+                view={view}
+                currentDate={view === "week" ? (displayDateForWeekView ?? currentDate) : currentDate}
+                onDateChange={handleSetDate}
+                onNavigate={navigate}
+                shifts={shifts}
+                navDirection={navDirection}
+                slotAbove={<TodayButton onToday={handleTodayClick} />}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  handleTodayClick()
+                  scrollToNowRef.current?.()
+                }}
+                className="shrink-0"
+              >
+                Today
+              </Button>
+            </div>
+            <div
+              className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center gap-2 border-t border-border bg-background p-2"
+              style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+            >
               <ViewTabs view={view} setView={setView} views={mergedConfig.views} />
-              <UserSelect
-                selEmps={selEmps}
-                onToggle={toggleEmp}
-                onAll={handleAllEmployees}
-                onNone={handleNoEmployees}
+              <Button onClick={handleAddShiftButton} size="sm">
+                <Plus size={16} />
+                Add
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col gap-4 border-b border-border bg-background p-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <DateNavigator
+                view={view}
+                currentDate={view === "week" ? (displayDateForWeekView ?? currentDate) : currentDate}
+                onDateChange={handleSetDate}
+                onNavigate={navigate}
+                shifts={shifts}
+                navDirection={navDirection}
+                slotAbove={<TodayButton onToday={handleTodayClick} />}
               />
             </div>
 
-            <div className="flex w-full items-center gap-2 sm:w-auto">
-              {footerSlot && footerSlot({ onSettingsChange: handleSettingsChange })}
-              {typeof headerActions === "function"
-                ? headerActions({
-                    copyLastWeek,
-                    publishAllDrafts: handlePublishAllDrafts,
-                    draftCount,
-                  })
-                : headerActions}
-             
-              <Button onClick={handleAddShiftButton} className="w-full sm:w-auto">
-                <Plus size={16} />
-                Add Shift
-              </Button>
+            <div className="flex flex-col items-center gap-1.5 sm:flex-row sm:justify-between">
+            {(view === "day" || view === "week" || view === "timeline") && (
+                  <div className="flex items-center gap-1 mr-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        handleTodayClick()
+                        scrollToNowRef.current?.()
+                      }}
+                    >
+                      Now
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={handleZoomOut} disabled={zoom <= 0.5}>
+                      <ZoomOut size={16} />
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={handleZoomIn} disabled={zoom >= 2}>
+                      <ZoomIn size={16} />
+                    </Button>
+                  </div>
+                )}
+              <div className="flex w-full items-center gap-2">
+                <ViewTabs view={view} setView={setView} views={mergedConfig.views} />
+                <UserSelect
+                  selEmps={selEmps}
+                  onToggle={toggleEmp}
+                  onAll={handleAllEmployees}
+                  onNone={handleNoEmployees}
+                />
+              </div>
+
+              <div className="flex w-full items-center gap-2 sm:w-auto">
+                {footerSlot && footerSlot({ onSettingsChange: handleSettingsChange, containerRef: schedulerContainerRef, shifts })}
+                {typeof headerActions === "function"
+                  ? headerActions({
+                      copyLastWeek,
+                      publishAllDrafts: handlePublishAllDrafts,
+                      draftCount,
+                    })
+                  : headerActions}
+               
+                <Button onClick={handleAddShiftButton} className="w-full sm:w-auto">
+                  <Plus size={16} />
+                  Add Shift
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         <div
+          className="transition-opacity duration-150"
           style={{
             flex: 1,
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
+            opacity: viewOpacity,
+            paddingBottom: isMobile ? 56 : 0,
           }}
         >
           {!isListView && baseView === "day" && (
@@ -430,6 +605,7 @@ export function Scheduler({
               onShiftClick={onShiftClick}
               onPublish={publishShifts}
               onUnpublish={unpublishShift}
+              onAddShift={onAddShift}
               currentDate={currentDate}
               view={view}
             />
@@ -446,14 +622,32 @@ export function Scheduler({
           />
         )}
 
-        <ShiftModal
-          shift={selShift}
-          category={selCategory}
-          onClose={handleCloseShiftModal}
-          onPublish={handleShiftModalPublish}
-          onUnpublish={handleShiftModalUnpublish}
-          onDelete={handleDeleteShift}
-        />
+        {selShift && selCategory && isMobile ? (
+          <BottomSheet open onClose={handleCloseShiftModal}>
+            <ShiftModal
+              shift={selShift}
+              category={selCategory}
+              onClose={handleCloseShiftModal}
+              onPublish={handleShiftModalPublish}
+              onUnpublish={handleShiftModalUnpublish}
+              onDelete={handleDeleteShift}
+              variant="sheet"
+              allShifts={shifts}
+              onUpdate={handleShiftUpdate}
+            />
+          </BottomSheet>
+        ) : (
+          <ShiftModal
+            shift={selShift}
+            category={selCategory}
+            onClose={handleCloseShiftModal}
+            onPublish={handleShiftModalPublish}
+            onUnpublish={handleShiftModalUnpublish}
+            onDelete={handleDeleteShift}
+            allShifts={shifts}
+            onUpdate={handleShiftUpdate}
+          />
+        )}
       </div>
   )
 

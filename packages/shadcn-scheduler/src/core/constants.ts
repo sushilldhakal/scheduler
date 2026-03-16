@@ -13,6 +13,16 @@ export const ADD_BTN_H = 32
 /** Horizontal scroll buffer (px) for day view - scroll into buffer to navigate prev/next day */
 export const DAY_SCROLL_BUFFER = 400
 
+/** Phase 11 — Touch & mobile */
+export const BREAKPOINT_MOBILE_PX = 768
+export const BREAKPOINT_TABLET_PX = 1200
+export const LONG_PRESS_DELAY_MS = 500
+export const LONG_PRESS_MOVE_THRESHOLD_PX = 8
+export const SWIPE_MIN_DELTA_X_PX = 50
+export const SWIPE_MAX_DELTA_Y_PX = 30
+export const RESIZE_HANDLE_MIN_TOUCH_PX = 20
+export const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const
+
 export const HOURS: readonly number[] = Array.from({ length: 24 }, (_, i) => i)
 
 export const DAY_NAMES: readonly string[] = [
@@ -81,6 +91,11 @@ export const DEFAULT_SETTINGS: Settings = {
 }
 
 export const snapH = (v: number): number => Math.round(v / SNAP) * SNAP
+
+/** Snap to nearest interval given snap in fractional hours (e.g. 0.25 = 15 min). Used when context.snapMinutes is set. */
+export function snapToInterval(v: number, snapHours: number): number {
+  return Math.round(v / snapHours) * snapHours
+}
 export const clamp = (v: number, lo: number, hi: number): number =>
   Math.max(lo, Math.min(hi, v))
 
@@ -132,14 +147,19 @@ export function fmtHourOpt(h: number): string {
   return h < 12 ? `${h} AM` : `${h - 12} PM`
 }
 
-export function getWeekDates(date: Date): Date[] {
+/** firstDay: 1 = Monday first (default), 0 = Sunday first. */
+export function getWeekDates(date: Date, firstDay: 0 | 1 = 1): Date[] {
   const d = new Date(date),
     day = d.getDay()
-  const mon = new Date(d)
-  mon.setDate(d.getDate() + (day === 0 ? -6 : 1 - day))
+  const start = new Date(d)
+  if (firstDay === 1) {
+    start.setDate(d.getDate() + (day === 0 ? -6 : 1 - day))
+  } else {
+    start.setDate(d.getDate() - day)
+  }
   return Array.from({ length: 7 }, (_, i) => {
-    const dd = new Date(mon)
-    dd.setDate(mon.getDate() + i)
+    const dd = new Date(start)
+    dd.setDate(start.getDate() + i)
     return dd
   })
 }

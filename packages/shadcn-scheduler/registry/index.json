@@ -1,0 +1,29 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.js",
+    "css": "app/globals.css",
+    "baseColor": "slate",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  },
+  "registries": [
+    "scheduler.json",
+    "scheduler-tv.json",
+    "scheduler-conference.json",
+    "scheduler-festival.json",
+    "scheduler-healthcare.json",
+    "scheduler-gantt.json",
+    "scheduler-venue.json"
+  ]
+}

@@ -2,4 +2,13 @@ node_modules
 dist
 *.log
 .DS_Store
-packages/shadcn-scheduler/dist
+
+# Built output — never commit
+packages/shadcn-scheduler/dist/
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+
+# Old GitHub Pages output — delete this folder entirely
+docs/

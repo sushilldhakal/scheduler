@@ -47,6 +47,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `SchedulerConference`, `SchedulerFestival`, `SchedulerHealthcare`, `SchedulerGantt`, `SchedulerVenue`; subpath exports `@sushill/shadcn-scheduler/conference`, `/festival`, `/healthcare`, `/gantt`, `/venue`.
 - **Slots in views (Task 7)**  
   - TimelineView, MonthView, YearView, ListView read `slots` from context. `renderBlock`, `renderResourceHeader`, `renderEmptyState` apply in Timeline and List/Year empty states.
+- **Phase 13 — Performance**  
+  - `onVisibleRangeChange` is debounced by 100ms (P13-09) to avoid excessive calls during scroll.  
+  - GridView, TimelineView, MonthView, ListView, YearView are wrapped in `React.memo` for fewer re-renders (P13-08).  
+  - tsup build uses `splitting: true` for code splitting across entries (P13-11).  
+  - Bundle sizes (ESM, approximate): main ~268 KB, domain entries ~255 KB each; target &lt;50 KB gzipped per entry with tree-shaking (P13-10).
+- **Phase 14 — i18n &amp; Export**  
+  - **Config**: `timezone?`, `locale?`, `isRTL?`, `firstDay?: 0 | 1` on SchedulerConfig. `getWeekDates(date, firstDay)` supports Sunday/Monday start.  
+  - **Timezone**: `formatInTimezone(isoDate, hour, tz, locale?)` and `formatTimeInTimezone` in `core/utils/timezone.ts` (Intl, no extra deps).  
+  - **Export**: `exportToCSV(blocks, filename)` in `core/utils/export.ts`; flattens meta columns; no dependency.  
+  - **readOnly**: When `readOnly={true}`, drag, resize, and add are disabled; blocks are view-only.  
+  - **Callbacks**: `onBlockCreate`, `onBlockDelete`, `onBlockMove`, `onBlockResize`, `onBlockPublish` on SchedulerProps (full Block payload).  
+  - **useAuditTrail**: Hook `useAuditTrail(onAuditEvent?)` returns `{ log, clearLog, append }` for audit entries (create/delete/move/resize/publish).
+- **Phase 15 — Testing &amp; DX**  
+  - **Vitest**: `vitest.config.ts` with jsdom; `npm run test` and `npm run test:watch`.  
+  - **Unit tests**: `packing.test.ts` (packShifts, findConflicts, getCategoryRowHeight), `constants.test.ts` (fmt12, toDateISO, parseBlockDate, sameDay, getWeekDates, snapH), `config.test.ts` (createSchedulerConfig, presets, overrides).
 
 ### Breaking
 

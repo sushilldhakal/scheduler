@@ -31,7 +31,7 @@ interface StaffPanelState {
   anchorRect: DOMRect
 }
 
-export function MonthView({
+function MonthViewInner({
   date,
   shifts,
   setShifts,
@@ -246,11 +246,12 @@ export function MonthView({
                   }])
                 }
               }}
+              className={dayShifts.length === 0 && !today ? "bg-muted/30 hover:bg-muted/50" : undefined}
               style={{
                 borderRight: "1px solid hsl(var(--border))",
                 borderBottom: "1px solid hsl(var(--border))",
                 padding: "5px 4px",
-                background: isOver ? "hsl(var(--accent))" : today ? "hsl(var(--accent))" : closed ? "hsl(var(--muted))" : "hsl(var(--background))",
+                background: isOver ? "hsl(var(--accent))" : today ? "hsl(var(--accent))" : closed ? "hsl(var(--muted))" : dayShifts.length === 0 ? "hsl(var(--muted) / 0.3)" : "hsl(var(--background))",
                 display: "flex",
                 flexDirection: "column",
                 gap: 2,
@@ -522,3 +523,5 @@ export function MonthView({
     </div>
   )
 }
+
+export const MonthView = React.memo(MonthViewInner)

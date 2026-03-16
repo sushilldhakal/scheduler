@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode, RefObject } from "react"
 
 // ─── Core Data Types ─────────────────────────────────────────────────────────
 
@@ -96,10 +96,22 @@ export interface SchedulerConfig {
   showLiveIndicator?: boolean
   /** Snap grid in fractional hours (e.g. 0.5 = 30 min). If absent, uses engine default. */
   snapMinutes?: number
+  /** IANA timezone (e.g. America/New_York). When set, time display uses Intl with this timezone. */
+  timezone?: string
+  /** Locale for date/time formatting (e.g. en-US). Affects toLocaleDateString and Intl formatters. */
+  locale?: string
+  /** When true, root container gets dir="rtl" and layout mirrors for RTL. */
+  isRTL?: boolean
+  /** 0 = Sunday first, 1 = Monday first. Default 1. Passed to getWeekDates. */
+  firstDay?: 0 | 1
 }
 
 export interface SchedulerSettingsContext {
   onSettingsChange: (partial: Partial<Settings>) => void
+  /** Ref to the main scheduler container for PDF/Image export. */
+  containerRef?: React.RefObject<HTMLElement | null>
+  /** Current shifts for CSV export. */
+  shifts?: Block[]
 }
 
 // ─── Render slots (Step 5: override any visual surface) ───────────────────────

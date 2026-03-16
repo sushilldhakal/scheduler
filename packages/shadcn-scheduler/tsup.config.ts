@@ -13,7 +13,7 @@ export default defineConfig({
   },
   format: ["cjs", "esm"],
   dts: true,
-  splitting: false,
+  splitting: true,
   sourcemap: true,
   clean: true,
   external: [
@@ -30,6 +30,8 @@ export default defineConfig({
     "class-variance-authority",
     "clsx",
     "tailwind-merge",
+    "html2canvas",
+    "jspdf",
   ],
   treeshake: true,
   minify: false,

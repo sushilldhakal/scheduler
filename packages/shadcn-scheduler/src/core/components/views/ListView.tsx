@@ -4,11 +4,11 @@ import { useSchedulerContext } from "../../context"
 import {
   sameDay,
   isToday,
-  fmt12,
   DAY_NAMES,
   MONTHS_SHORT,
   getWeekDates,
 } from "../../constants"
+import { Plus } from "lucide-react"
 
 interface ListViewProps {
   shifts: Block[]
@@ -16,6 +16,7 @@ interface ListViewProps {
   onShiftClick: (block: Block, resource: Resource) => void
   onPublish: (...shiftIds: string[]) => void
   onUnpublish: (shiftId: string) => void
+  onAddShift?: (date: Date, categoryId?: string | null, empId?: string | null) => void
   currentDate: Date
   view: string
 }
@@ -34,16 +35,17 @@ interface GroupedDay {
   shifts: Block[]
 }
 
-export function ListView({
+function ListViewInner({
   shifts,
   setShifts,
   onShiftClick,
   onPublish,
   onUnpublish,
+  onAddShift,
   currentDate,
   view,
 }: ListViewProps): React.ReactElement {
-  const { categories, getColor, labels, slots } = useSchedulerContext()
+  const { categories, getColor, labels, slots, getTimeLabel } = useSchedulerContext()
   const base = view.replace("list", "") || "day"
   const categoryMap: Record<string, Resource> = Object.fromEntries(
     categories.map((c) => [c.id, c])
@@ -124,17 +126,20 @@ export function ListView({
       )
     }
     return (
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "hsl(var(--muted-foreground))",
-          fontSize: 14,
-        }}
-      >
-        No shifts in this period
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+        <p className="text-sm text-muted-foreground">
+          No {labels.shift}s in this period
+        </p>
+        {onAddShift && (
+          <button
+            type="button"
+            onClick={() => onAddShift(currentDate)}
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors duration-150 hover:bg-primary/90"
+          >
+            <Plus size={16} />
+            Add {labels.shift}
+          </button>
+        )}
       </div>
     )
   }
@@ -251,6 +256,7 @@ export function ListView({
                   data-drop-date={dateStr}
                   onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onIPD(e, shift)}
                   onClick={() => handleShiftClick(shift, category!)}
+                  className="transition-colors duration-150 hover:bg-accent"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -317,7 +323,7 @@ export function ListView({
                       )}
                     </div>
                     <div style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", marginTop: 1 }}>
-                      {category?.name} · {fmt12(shift.startH)} – {fmt12(shift.endH)} · {shift.endH - shift.startH}h
+                      {category?.name} · {getTimeLabel(shift.date, shift.startH)} – {getTimeLabel(shift.date, shift.endH)} · {shift.endH - shift.startH}h
                     </div>
                   </div>
                   <div
@@ -366,10 +372,12 @@ export function ListView({
                 whiteSpace: "nowrap",
               }}
             >
-              {s.employee} · {fmt12(s.startH)}–{fmt12(s.endH)}
+              {s.employee} · {getTimeLabel(s.date, s.startH)}–{getTimeLabel(s.date, s.endH)}
             </div>
           )
         })()}
     </div>
   )
 }
+
+export const ListView = React.memo(ListViewInner)

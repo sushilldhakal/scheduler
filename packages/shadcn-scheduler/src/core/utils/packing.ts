@@ -2,6 +2,21 @@ import type { Block } from "../types"
 import { ROLE_HDR, SHIFT_H, ADD_BTN_H } from "../constants"
 
 /**
+ * Returns true if moving a block to the given position would create a conflict
+ * (same employee, same date, overlapping [startH, endH) with another block).
+ */
+export function wouldConflictAt(
+  blocks: Block[],
+  movingId: string,
+  patch: { date: string; categoryId: string; startH: number; endH: number }
+): boolean {
+  const next = blocks.map((b) =>
+    b.id === movingId ? { ...b, ...patch } : b
+  )
+  return findConflicts(next).has(movingId)
+}
+
+/**
  * Returns the set of block IDs that are part of at least one conflict.
  * A conflict is two or more blocks for the same employee on the same date with overlapping [startH, endH).
  */
@@ -28,6 +43,18 @@ export function findConflicts(blocks: Block[]): Set<string> {
     }
   }
   return conflictIds
+}
+
+/** Returns how many other blocks overlap the given block (same employee, same date). */
+export function getConflictCount(blocks: Block[], blockId: string): number {
+  const block = blocks.find((b) => b.id === blockId)
+  if (!block) return 0
+  const sameEmployeeDay = blocks.filter(
+    (b) => b.id !== blockId && b.employeeId === block.employeeId && b.date === block.date
+  )
+  return sameEmployeeDay.filter(
+    (b) => b.startH < block.endH && b.endH > block.startH
+  ).length
 }
 
 export function packShifts(blocks: Block[]): number[] {

@@ -9,7 +9,7 @@ interface YearViewProps {
   onMonthClick: (year: number, month: number) => void
 }
 
-export function YearView({ date, shifts, onMonthClick }: YearViewProps): React.ReactElement {
+function YearViewInner({ date, shifts, onMonthClick }: YearViewProps): React.ReactElement {
   const { slots } = useSchedulerContext()
   const year = date.getFullYear()
 
@@ -130,16 +130,14 @@ export function YearView({ date, shifts, onMonthClick }: YearViewProps): React.R
                   justifyContent: "space-between",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <div className="flex items-center gap-1">
                   <div
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
                     style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: "50%",
-                      background: ms.length > 0 ? "hsl(var(--primary))" : "hsl(var(--border))",
+                      background: ms.length > 0 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
                     }}
                   />
-                  <span style={{ fontSize: 10, color: "hsl(var(--muted-foreground))" }}>{ms.length} shifts</span>
+                  <span className={ms.length > 0 ? "text-foreground" : "text-muted-foreground"} style={{ fontSize: 10 }}>{ms.length} shifts</span>
                 </div>
                 {ms.filter((s) => s.status === "draft").length > 0 && (
                   <span style={{ fontSize: 9, color: "hsl(var(--accent-foreground))", fontWeight: 600 }}>
@@ -154,3 +152,5 @@ export function YearView({ date, shifts, onMonthClick }: YearViewProps): React.R
     </div>
   )
 }
+
+export const YearView = React.memo(YearViewInner)

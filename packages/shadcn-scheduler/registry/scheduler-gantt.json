@@ -1,0 +1,9 @@
+{
+  "name": "scheduler-gantt",
+  "description": "Scheduler preset for Gantt-style project scheduling",
+  "type": "components:ui",
+  "dependencies": ["@sushill/shadcn-scheduler", "lucide-react"],
+  "registryDependencies": ["scheduler"],
+  "files": [],
+  "packages": [{ "name": "@sushill/shadcn-scheduler", "type": "registry:package", "path": "gantt" }]
+}

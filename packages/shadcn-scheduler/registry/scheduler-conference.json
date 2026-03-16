@@ -1,0 +1,9 @@
+{
+  "name": "scheduler-conference",
+  "description": "Scheduler preset for events and conferences",
+  "type": "components:ui",
+  "dependencies": ["@sushill/shadcn-scheduler", "lucide-react"],
+  "registryDependencies": ["scheduler"],
+  "files": [],
+  "packages": [{ "name": "@sushill/shadcn-scheduler", "type": "registry:package", "path": "conference" }]
+}

@@ -1,5 +1,3 @@
-"use client"
-
 import React from "react"
 import { Scheduler } from "../../core/Scheduler"
 import { createSchedulerConfig } from "../../core/config"

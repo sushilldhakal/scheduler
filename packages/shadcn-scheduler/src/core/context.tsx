@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useMemo } from "react"
 import type { Resource, SchedulerConfig, CategoryColor, Settings, SchedulerSlots } from "./types"
-import { DEFAULT_SETTINGS, DEFAULT_CATEGORY_COLORS, getCategoryColor } from "./constants"
+import { DEFAULT_SETTINGS, DEFAULT_CATEGORY_COLORS, getCategoryColor, fmt12 } from "./constants"
+import { formatInTimezone } from "./utils/timezone"
 
 const DEFAULT_LABELS = {
   category: "Category",
@@ -28,6 +29,18 @@ export interface SchedulerContextValue {
   nextUid: () => string
   /** Optional render slots (block, resourceHeader, etc.). Used by engine when provided. */
   slots: Partial<SchedulerSlots>
+  /** Snap grid in fractional hours (e.g. 0.25 = 15 min). From config; undefined = use SNAP constant. */
+  snapMinutes?: number
+  /** IANA timezone (e.g. America/New_York). When set, time display uses Intl with this timezone. */
+  timezone?: string
+  /** Locale for date/time formatting (e.g. en-US). */
+  locale?: string
+  /** When true, root gets dir="rtl" and layout mirrors. */
+  isRTL?: boolean
+  /** Format time for display. When timezone is set uses Intl in that zone; else fmt12(h). */
+  getTimeLabel: (isoDate: string, hour: number) => string
+  /** Format date for display. Uses locale when set. */
+  getDateLabel: (date: Date, options?: Intl.DateTimeFormatOptions) => string
 }
 
 export const SchedulerContext = createContext<SchedulerContextValue | null>(null)
@@ -73,6 +86,21 @@ export function SchedulerProvider({
     [categoryColors]
   )
 
+  const getTimeLabel = useMemo(
+    () =>
+      config?.timezone
+        ? (isoDate: string, hour: number) =>
+            formatInTimezone(isoDate, hour, config.timezone!, config?.locale)
+        : (isoDate: string, hour: number) => fmt12(hour),
+    [config?.timezone, config?.locale]
+  )
+
+  const getDateLabel = useMemo(
+    () => (date: Date, options?: Intl.DateTimeFormatOptions) =>
+      date.toLocaleDateString(config?.locale ?? "en-US", options),
+    [config?.locale]
+  )
+
   const value: SchedulerContextValue = useMemo(
     () => ({
       categories,
@@ -82,8 +110,14 @@ export function SchedulerProvider({
       settings,
       nextUid: nextUidFn ?? nextUid,
       slots,
+      snapMinutes: config?.snapMinutes,
+      timezone: config?.timezone,
+      locale: config?.locale,
+      isRTL: config?.isRTL,
+      getTimeLabel,
+      getDateLabel,
     }),
-    [categories, employees, labels, getColor, settings, nextUidFn, slots]
+    [categories, employees, labels, getColor, settings, nextUidFn, slots, config?.snapMinutes, config?.timezone, config?.locale, config?.isRTL, getTimeLabel, getDateLabel]
   )
 
   return (

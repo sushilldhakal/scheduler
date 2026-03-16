@@ -1,0 +1,54 @@
+/* Phase 12 — Visual Polish: keyframes and high-contrast */
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Date navigator direction-based slide (use with data-direction="prev"|"next") */
+@keyframes slideInFromLeft {
+  from {
+    transform: translateX(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* High contrast / Windows High Contrast Mode */
+@media (forced-colors: active) {
+  [data-scheduler-block] {
+    outline: 2px solid CanvasText;
+    outline-offset: 1px;
+  }
+  [data-scheduler-block]:focus-visible,
+  [data-scheduler-block][data-focus-visible] {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+  [data-scheduler-resize-handle] {
+    border: 1px solid CanvasText;
+  }
+  [data-scheduler-now-line] {
+    outline: 2px solid CanvasText;
+  }
+}

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react"
 import type { Block } from "../types"
+import { useSchedulerContext } from "../context"
 import { Button } from "./ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { Calendar } from "./ui/calendar"
@@ -34,6 +35,8 @@ interface DateNavigatorProps {
   onDateChange: (date: Date) => void
   onNavigate: (direction: number) => void
   shifts: Block[]
+  /** P12-04: "prev" | "next" for date label translate-x animation */
+  navDirection?: "prev" | "next" | null
   /** Renders above the prev/calendar/next controls (e.g. Today button) */
   slotAbove?: React.ReactNode
 }
@@ -44,8 +47,10 @@ export function DateNavigator({
   onDateChange,
   onNavigate,
   shifts,
+  navDirection = null,
   slotAbove,
 }: DateNavigatorProps): React.ReactElement {
+  const { getDateLabel } = useSchedulerContext()
   const [open, setOpen] = useState<boolean>(false)
   const base = view.replace("list", "") || "day"
 
@@ -69,23 +74,23 @@ export function DateNavigator({
   const rangeText = useMemo((): string => {
     const y = currentDate.getFullYear()
     if (base === "day") {
-      return currentDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      return getDateLabel(currentDate, { month: "short", day: "numeric", year: "numeric" })
     }
     if (base === "week") {
       const wd = getWeekDates(currentDate)
-      const start = `${MONTHS_SHORT[wd[0].getMonth()]} ${wd[0].getDate()}, ${y}`
-      const end = `${MONTHS_SHORT[wd[6].getMonth()]} ${wd[6].getDate()}, ${y}`
+      const start = `${getDateLabel(wd[0], { month: "short" })} ${wd[0].getDate()}, ${y}`
+      const end = `${getDateLabel(wd[6], { month: "short" })} ${wd[6].getDate()}, ${y}`
       return wd[0].getMonth() === wd[6].getMonth()
-        ? `${MONTHS_SHORT[wd[0].getMonth()]} ${wd[0].getDate()} - ${wd[6].getDate()}, ${y}`
+        ? `${getDateLabel(wd[0], { month: "short" })} ${wd[0].getDate()} - ${wd[6].getDate()}, ${y}`
         : `${start} - ${end}`
     }
     if (base === "month") {
       const m = currentDate.getMonth()
       const lastDay = new Date(y, m + 1, 0).getDate()
-      return `${MONTHS_SHORT[m]} 1 - ${MONTHS_SHORT[m]} ${lastDay}, ${y}`
+      return `${getDateLabel(currentDate, { month: "short" })} 1 - ${getDateLabel(currentDate, { month: "short" })} ${lastDay}, ${y}`
     }
-    return `Jan 1, ${y} - Dec 31, ${y}`
-  }, [base, currentDate])
+    return `${getDateLabel(new Date(y, 0, 1), { month: "short" })} 1, ${y} - ${getDateLabel(new Date(y, 11, 31), { month: "short" })} 31, ${y}`
+  }, [base, currentDate, getDateLabel])
 
   const handleDateSelect = (date: Date | undefined): void => {
     if (date) {
@@ -111,7 +116,8 @@ export function DateNavigator({
           <Button
             variant="outline"
             size="sm"
-            className="h-7 min-w-0 border-transparent bg-transparent px-2 text-sm font-normal shadow-none hover:bg-muted/50 hover:text-foreground"
+            className="h-7 min-w-0 border-transparent bg-transparent px-2 text-sm font-normal shadow-none hover:bg-muted/50 hover:text-foreground data-[direction=prev]:animate-[slideInFromLeft_150ms_ease-out] data-[direction=next]:animate-[slideInFromRight_150ms_ease-out]"
+            data-direction={navDirection ?? undefined}
             title="Pick a date"
           >
             {rangeText}
