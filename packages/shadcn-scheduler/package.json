@@ -1,6 +1,6 @@
 {
   "name": "@sushill/shadcn-scheduler",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A flexible shift scheduling component for React with shadcn UI, Tailwind CSS, and lucide-react icons",
   "type": "module",
   "main": "./dist/index.cjs",
