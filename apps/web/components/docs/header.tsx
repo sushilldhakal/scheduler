@@ -6,27 +6,12 @@ import Link from 'next/link'
 import { Sun, Moon, Maximize2, Minimize2, Github, Search } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useWidth } from '@/components/docs/width-context'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 
 const GITHUB_URL = 'https://github.com/sushilldhakal/scheduler'
 
 const NAV_LINKS = [
   { text: 'Docs', url: '/docs' },
   { text: 'Demo', url: '/demo' },
-]
-
-const INSTALL_STEPS = [
-  { step: 1, title: 'Install via shadcn', code: 'npx shadcn@latest add scheduler' },
-  { step: 2, title: 'Or install via npm', code: 'npm install @sushill/shadcn-scheduler' },
-  { step: 3, title: 'Add CSS variables', code: 'import "@sushill/shadcn-scheduler/tokens"' },
-  { step: 4, title: 'Use in your app', code: '<Scheduler.roster shifts={shifts} />' },
 ]
 
 export function Header() {
@@ -138,46 +123,13 @@ export function Header() {
               </button>
             )}
 
-            {/* Get Started dialog */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button size="sm" className="ml-2 hidden inline-flex">
-                  Get Started
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Get started with shadcn-scheduler</DialogTitle>
-                </DialogHeader>
-                <div className="mt-2 space-y-4">
-                  {INSTALL_STEPS.map(({ step, title, code }) => (
-                    <div key={step} className="flex gap-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                        {step}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground mb-1">
-                          {title}
-                        </p>
-                        <code className="block w-full rounded-md bg-muted px-3 py-2 text-xs font-mono text-muted-foreground break-all">
-                          {code}
-                        </code>
-                      </div>
-                    </div>
-                  ))}
-                  <p className="text-xs text-muted-foreground pt-2">
-                    For full setup instructions, see the{' '}
-                    <Link
-                      href="/docs/getting-started/installation"
-                      className="underline underline-offset-2 hover:text-foreground transition-colors"
-                    >
-                      installation guide
-                    </Link>
-                    .
-                  </p>
-                </div>
-              </DialogContent>
-            </Dialog>
+            {/* Get Started → Installation page */}
+            <Link
+              href="/docs/getting-started/installation"
+              className="ml-2 hidden sm:inline-flex items-center justify-center rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              Get Started
+            </Link>
           </div>
         </div>
       </div>

@@ -1,320 +1,307 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, CalendarClock, Grid3X3, Network } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import {
+  Scheduler,
+  createSchedulerConfig,
+  type Block,
+} from '@sushill/shadcn-scheduler'
+import { categories, employees, testShifts } from '@/lib/demo/testData'
+import { ArrowRight, Github, Check } from 'lucide-react'
 import { useWidth } from '@/components/docs/width-context'
 
+const config = createSchedulerConfig({ initialScrollToNow: true })
+
+const domains = [
+  { name: 'Roster', tag: 'Workforce', color: 'bg-blue-500' },
+  { name: 'TV Guide', tag: 'Broadcasting', color: 'bg-violet-500' },
+  { name: 'Conference', tag: 'Events', color: 'bg-emerald-500' },
+  { name: 'Festival', tag: 'Music', color: 'bg-amber-500' },
+  { name: 'Healthcare', tag: 'Rotas', color: 'bg-red-500' },
+  { name: 'Gantt', tag: 'Projects', color: 'bg-cyan-500' },
+  { name: 'Venue', tag: 'Bookings', color: 'bg-pink-500' },
+]
+
+const features = [
+  'Drag & drop shifts across days and resources',
+  'Conflict detection with red border warnings',
+  'Scroll-to-now with live pulsing indicator',
+  'Day / Week / Month / Year / List / Timeline views',
+  'Draft & publish workflow with status banners',
+  'Zoom levels from 15min to 2hr slots',
+  'Fully typed with generic meta: TMeta extension',
+  'Render slots for every surface — blocks, headers, tooltips',
+  'Dark mode via shadcn CSS variables',
+]
+
 export default function HomePage() {
+  const [mounted, setMounted] = useState(false)
+  const [shifts, setShifts] = useState<Block[]>(testShifts)
+  const demoRef = useRef<HTMLDivElement>(null)
   const { fullWidth } = useWidth()
   const containerClass = fullWidth
     ? 'mx-auto w-full px-4 sm:px-6'
     : 'mx-auto max-w-7xl px-4 sm:px-6'
+  useEffect(() => { setMounted(true) }, [])
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground">
+    <div className="relative min-h-screen bg-background text-foreground py-16 sm:py-20">
 
-      <main className="flex-1">
-        {/* Hero */}
-        <section className="relative overflow-hidden border-b border-border/60 bg-gradient-to-br from-background via-background to-muted/70">
-          <div className="pointer-events-none absolute inset-0 opacity-60">
-            <div className="absolute -left-40 top-10 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
-            <div className="absolute right-[-80px] bottom-[-80px] h-80 w-80 rounded-full bg-accent/20 blur-3xl" />
-          </div>
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section className= "relative border-b border-border overflow-hidden">
+        {/* subtle grid background */}
+        <div className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: 'linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px)',
+            backgroundSize: '64px 64px',
+            opacity: 0.4,
+          }}
+        />
+        <div className={containerClass + ' relative pt-20 pb-0'}>
+          <div className="flex flex-col items-center text-center gap-6 mb-12">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Open source · MIT · shadcn native
+            </div>
 
-          <div className={containerClass + ' relative py-16 sm:py-20'}>
-            <div className="grid gap-10 md:grid-cols-[minmax(0,1.3fr),minmax(0,1fr)] items-start">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground mb-4 backdrop-blur">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  <span>Open source · Headless · MIT licensed</span>
-                </div>
+            <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight text-foreground max-w-4xl leading-[1.05]">
+              The scheduling grid
+              <br />
+              <span className="text-muted-foreground">for everything.</span>
+            </h1>
 
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-foreground">
-                  Scheduling infrastructure
-                  <br className="hidden sm:block" />
-                  <span className="block text-primary mt-1">
-                    for product teams that ship.
-                  </span>
-                </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl leading-relaxed">
+              One React component. Seven domain presets. Rosters, TV guides, conferences,
+              festivals, healthcare rotas, Gantt charts, and venue bookings — all powered
+              by your existing shadcn/ui tokens.
+            </p>
 
-                <p className="mt-4 max-w-2xl text-sm sm:text-base text-muted-foreground leading-relaxed">
-                  <strong className="font-semibold text-foreground">shadcn-scheduler</strong> gives you
-                  a production-ready scheduling grid for React. Build rosters, TV timelines, healthcare
-                  shifts, or Gantt-style plans – all powered by your existing shadcn/ui + Tailwind
-                  design tokens.
-                </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/docs/getting-started/installation"
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                Get started <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href="/demo"
+                className="inline-flex items-center gap-2 rounded-md border border-border px-5 py-2.5 text-sm font-semibold text-foreground hover:bg-accent transition-colors"
+              >
+                Live demo
+              </Link>
+              <a
+                href="https://github.com/sushilldhakal/scheduler"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-md border border-border px-5 py-2.5 text-sm font-semibold text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              >
+                <Github className="h-4 w-4" /> GitHub
+              </a>
+            </div>
 
-                <div className="mt-6 flex flex-wrap items-center gap-3">
-                  <Link
-                    href="/docs/getting-started/installation"
-                    className="inline-flex items-center justify-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
-                  >
-                    Get started
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                  <Link
-                    href="/demo"
-                    className="inline-flex items-center justify-center rounded-md border border-border bg-background/80 px-4 py-2 text-sm font-medium text-foreground hover:bg-accent/60 hover:text-foreground transition-colors"
-                  >
-                    Open live demo
-                  </Link>
-                  <a
-                    href="https://github.com/sushilldhakal/scheduler"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center rounded-md border border-border bg-background/70 px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-accent/30 hover:text-foreground transition-colors"
-                  >
-                    View on GitHub
-                  </a>
-                </div>
-
-                <div className="mt-8 grid gap-4 sm:grid-cols-4 text-xs text-muted-foreground">
-                  <div>
-                    <p className="text-lg font-semibold text-foreground">6+</p>
-                    <p>Preset domains (roster, TV, conference, healthcare, Gantt, venue)</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-foreground">100%</p>
-                    <p>Tailwind utilities – no custom CSS framework</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-foreground">Minutes</p>
-                    <p>To plug into an existing shadcn/ui app</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-foreground">MIT</p>
-                    <p>License – self-host, fork, extend</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Visual teaser card */}
-              <div className="relative">
-                <div className="rounded-xl border border-border/70 bg-background/90 shadow-[0_18px_60px_rgba(15,23,42,0.35)] backdrop-blur-sm overflow-hidden">
-                  <div className="flex items-center justify-between border-b border-border/70 bg-muted/60 px-3 py-2 text-[11px] text-muted-foreground">
-                    <span className="font-mono text-[10px] text-foreground/80">
-                      SchedulerDefault &middot; Week view
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      Live timeline
-                    </span>
-                  </div>
-                  <div className="p-3 space-y-3 text-[10px] sm:text-[11px]">
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <span className="font-medium text-foreground">Kitchen roster · Week 32</span>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5">
-                        <CalendarClock className="h-3 w-3" />
-                        Auto scroll-to-now
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 text-[10px]">
-                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
-                        <div
-                          key={d}
-                          className="rounded-md border border-border/80 bg-background/80 px-1.5 py-1.5 flex flex-col gap-1"
-                        >
-                          <span className="text-[10px] text-muted-foreground">{d}</span>
-                          <div className="h-1.5 rounded-full bg-primary/20" />
-                          <div className="h-1.5 rounded-full bg-primary/40" />
-                        </div>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">
-                      Drag shifts between days, resize to change duration, and let the engine handle
-                      scrolling, zoom, and conflict detection.
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="font-mono text-xs text-muted-foreground bg-muted border border-border rounded-lg px-4 py-2.5 select-all">
+              npx shadcn@latest add scheduler
             </div>
           </div>
-        </section>
 
-        {/* Product strip */}
-        <section className="border-b border-border/60 bg-background">
-          <div className={containerClass + ' py-10 flex flex-wrap items-center justify-between gap-6'}>
-            <div className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                Built for product teams
-              </p>
-              <p className="text-xs sm:text-sm text-muted-foreground max-w-xl">
-                The same scheduler core powers rosters, TV guides, healthcare shifts, and Gantt-style
-                resource planning – without dictating your backend or data model.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1">
-                <Grid3X3 className="h-3 w-3" />
-                Day / Week / Month / Year
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1">
-                <CalendarClock className="h-3 w-3" />
-                Scroll-to-now &amp; zoom
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1">
-                <Network className="h-3 w-3" />
-                Presets for TV, conference, healthcare
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* Feature grid */}
-        <section className="bg-background border-b border-border/60">
-          <div className={containerClass + ' py-12 space-y-8'}>
-            <div>
-              <h2 className="text-sm font-semibold text-foreground mb-2">
-                Everything your scheduler needs.
-              </h2>
-              <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
-                From multi-view timelines to drag-and-drop roster editing – shadcn-scheduler gives you
-                the building blocks for serious workforce applications.
-              </p>
-            </div>
-
-            <div className="grid gap-6 sm:grid-cols-3">
-              <div className="rounded-lg border border-border/70 bg-muted/40 p-4">
-                <h3 className="text-sm font-semibold text-foreground mb-1">
-                  Multi-view engine
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Day, week, month, year, list, and TV timeline views sharing a common core. Scroll buffers
-                  and prefetch hooks keep large rosters smooth.
-                </p>
-              </div>
-              <div className="rounded-lg border border-border/70 bg-muted/40 p-4">
-                <h3 className="text-sm font-semibold text-foreground mb-1">
-                  Real-world shifts
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Drag-and-drop placement, resize handles, conflict detection, draft vs published states,
-                  and working-hours rules baked in.
-                </p>
-              </div>
-              <div className="rounded-lg border border-border/70 bg-muted/40 p-4">
-                <h3 className="text-sm font-semibold text-foreground mb-1">
-                  Tailwind-first theming
-                </h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Uses shadcn-style HSL tokens and Tailwind utilities like{' '}
-                  <code className="font-mono text-[11px]">bg-primary</code>,{' '}
-                  <code className="font-mono text-[11px]">text-muted-foreground</code>, and{' '}
-                  <code className="font-mono text-[11px]">border-border</code> so it matches your UI kit.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Quick start & stack */}
-        <section className="bg-muted/40 border-b border-border/60">
+          {/* Live scheduler embedded in hero */}
           <div
-            className={
-              containerClass +
-              ' py-12 grid gap-8 md:grid-cols-[minmax(0,1.4fr),minmax(0,1fr)] items-start'
-            }
+            ref={demoRef}
+            className="scheduler-wrapper rounded-t-xl border border-b-0 border-border overflow-hidden shadow-2xl"
+            style={{ height: '420px' } as React.CSSProperties}
           >
-            <div>
-              <h2 className="text-sm font-semibold text-foreground mb-2">
-                Running in under 5 minutes.
-              </h2>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-4">
-                The docs site doubles as a live demo. Clone the repo, build the scheduler package, and
-                you&apos;re ready to explore real-world presets and examples.
-              </p>
-              <ol className="space-y-3 text-xs text-muted-foreground">
-                <li>
-                  <span className="font-semibold text-foreground">01 · Clone &amp; install</span>
-                  <pre className="mt-1 rounded-md bg-background px-3 py-2 overflow-x-auto text-[11px]">
-                    <code>
-                      git clone https://github.com/sushilldhakal/scheduler.git{'\n'}
-                      cd scheduler && npm install
+            {mounted ? (
+              <Scheduler
+                categories={categories}
+                employees={employees}
+                shifts={shifts}
+                onShiftsChange={setShifts}
+                initialView="week"
+                config={config}
+              />
+            ) : (
+              <div className="w-full h-full bg-muted animate-pulse" />
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Domain presets ───────────────────────────────────── */}
+      <section className="border-b border-border bg-muted/30">
+        <div className={containerClass + ' py-14'}>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-6">
+            Seven domain presets — one engine
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {domains.map((d) => (
+              <div
+                key={d.name}
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground"
+              >
+                <span className={`h-2 w-2 rounded-full ${d.color}`} />
+                {d.name}
+                <span className="text-muted-foreground text-xs">/ {d.tag}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Features ─────────────────────────────────────────── */}
+      <section className="border-b border-border">
+        <div className={containerClass + ' py-16 grid md:grid-cols-2 gap-12 items-center'}>
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground mb-4">
+              Everything a production scheduler needs.
+            </h2>
+            <p className="text-muted-foreground leading-relaxed mb-8">
+              Not a toy demo. Not a stripped-down calendar. A full scheduling engine
+              built for real applications — with the flexibility of shadcn and the
+              power of a dedicated scheduling library.
+            </p>
+            <ul className="space-y-3">
+              {features.map((f) => (
+                <li key={f} className="flex items-start gap-3 text-sm text-muted-foreground">
+                  <Check className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-xl border border-border overflow-hidden bg-muted/30">
+            <div className="border-b border-border px-4 py-2.5 flex items-center gap-2 bg-background">
+              <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
+              <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+              <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+              <span className="ml-2 text-xs text-muted-foreground font-mono">scheduler.tsx</span>
+            </div>
+            <pre className="p-5 text-xs font-mono text-foreground leading-relaxed overflow-x-auto">
+{`import { Scheduler } from '@sushill/shadcn-scheduler'
+
+// Roster preset
+<Scheduler.roster
+  categories={categories}
+  employees={employees}
+  shifts={shifts}
+  onShiftsChange={setShifts}
+  initialView="week"
+/>
+
+// TV guide — same component
+<Scheduler.tv
+  channels={channels}
+  programs={programs}
+  initialView="timeline"
+/>
+
+// Healthcare rota
+<Scheduler.healthcare
+  wards={wards}
+  staff={staff}
+  rotas={rotas}
+/>`}
+            </pre>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Stats ────────────────────────────────────────────── */}
+      <section className="border-b border-border bg-muted/30">
+        <div className={containerClass + ' py-14 grid grid-cols-2 md:grid-cols-4 gap-8'}>
+          {[
+            { value: '7', label: 'Domain presets' },
+            { value: '6+', label: 'View types' },
+            { value: '100%', label: 'TypeScript' },
+            { value: 'MIT', label: 'License' },
+          ].map((s) => (
+            <div key={s.label} className="text-center">
+              <div className="text-4xl font-bold text-foreground mb-1">{s.value}</div>
+              <div className="text-sm text-muted-foreground">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Quick install ─────────────────────────────────────── */}
+      <section className="border-b border-border">
+        <div className={containerClass + ' py-16 grid md:grid-cols-2 gap-12 items-start'}>
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground mb-4">
+              Running in minutes.
+            </h2>
+            <p className="text-muted-foreground leading-relaxed mb-6">
+              If you're already on shadcn/ui, the scheduler uses your existing CSS
+              variables and Tailwind setup. No new design system to learn.
+            </p>
+            <div className="space-y-4">
+              {[
+                { step: '01', title: 'Install via shadcn', code: 'npx shadcn@latest add scheduler' },
+                { step: '02', title: 'Or install via npm', code: 'npm install @sushill/shadcn-scheduler' },
+                { step: '03', title: 'Import the tokens', code: 'import "@sushill/shadcn-scheduler/tokens"' },
+                { step: '04', title: 'Add to your page', code: '<Scheduler.roster shifts={shifts} />' },
+              ].map(({ step, title, code }) => (
+                <div key={step} className="flex gap-4">
+                  <span className="text-xs font-mono text-muted-foreground w-6 pt-0.5 shrink-0">{step}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground mb-1">{title}</p>
+                    <code className="block rounded-md bg-muted border border-border px-3 py-2 text-xs font-mono text-muted-foreground truncate">
+                      {code}
                     </code>
-                  </pre>
-                </li>
-                <li>
-                  <span className="font-semibold text-foreground">02 · Build the scheduler</span>
-                  <pre className="mt-1 rounded-md bg-background px-3 py-2 overflow-x-auto text-[11px]">
-                    <code>npm run build -w @sushill/shadcn-scheduler</code>
-                  </pre>
-                </li>
-                <li>
-                  <span className="font-semibold text-foreground">03 · Start the docs site</span>
-                  <pre className="mt-1 rounded-md bg-background px-3 py-2 overflow-x-auto text-[11px]">
-                    <code>npm run dev:web # http://localhost:3000</code>
-                  </pre>
-                </li>
-              </ol>
-            </div>
-            <div className="rounded-lg border border-dashed border-border/70 bg-background p-4 text-xs text-muted-foreground space-y-3">
-              <p className="text-[11px] font-mono text-foreground/80">
-                Built with
-              </p>
-              <ul className="space-y-1">
-                <li>
-                  <span className="font-semibold text-foreground">Next.js 16</span>{' '}
-                  <span className="text-muted-foreground">· App Router + Turbopack</span>
-                </li>
-                <li>
-                  <span className="font-semibold text-foreground">shadcn/ui</span>{' '}
-                  <span className="text-muted-foreground">· Headless components + design tokens</span>
-                </li>
-                <li>
-                  <span className="font-semibold text-foreground">Tailwind CSS</span>{' '}
-                  <span className="text-muted-foreground">· Utility classes for every pixel</span>
-                </li>
-                <li>
-                  <span className="font-semibold text-foreground">@radix-ui/react</span>{' '}
-                  <span className="text-muted-foreground">
-                    · Accessible primitives for dialogs, popovers, tabs
-                  </span>
-                </li>
-                <li>
-                  <span className="font-semibold text-foreground">TypeScript</span>{' '}
-                  <span className="text-muted-foreground">
-                    · End-to-end types for blocks, resources, and config
-                  </span>
-                </li>
-              </ul>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        </section>
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Built on your stack</h3>
+            {[
+              { name: 'shadcn/ui', desc: 'Design tokens, components, and registry' },
+              { name: 'Tailwind CSS v3/v4', desc: 'Utility classes — no extra CSS framework' },
+              { name: 'Radix UI', desc: 'Accessible dialogs, popovers, and tooltips' },
+              { name: 'React 18+', desc: 'Client components with hooks-based state' },
+              { name: 'TypeScript', desc: 'End-to-end types for blocks and resources' },
+            ].map(({ name, desc }) => (
+              <div key={name} className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <Check className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">{name}</p>
+                  <p className="text-xs text-muted-foreground">{desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-        {/* Final CTA */}
-        <section className="bg-background">
-          <div
-            className={
-              containerClass +
-              ' py-10 border-t border-border/60 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'
-            }
-          >
-            <div>
-              <h2 className="text-sm font-semibold text-foreground mb-1">
-                Ready to build your scheduler?
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Explore the docs, browse the presets, and drop the scheduler into your next project.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/docs"
-                className="inline-flex items-center justify-center rounded-md bg-foreground px-4 py-2 text-xs font-medium text-background shadow-sm hover:bg-foreground/90 transition-colors"
-              >
-                Read the docs
-              </Link>
-              <Link
-                href="/docs/examples/full-roster"
-                className="inline-flex items-center justify-center rounded-md border border-border px-4 py-2 text-xs font-medium text-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
-              >
-                View examples
-              </Link>
-            </div>
+      {/* ── CTA ──────────────────────────────────────────────── */}
+      <section className="bg-foreground text-background">
+        <div className={containerClass + ' py-16 flex flex-col md:flex-row items-center justify-between gap-8'}>
+          <div>
+            <h2 className="text-3xl font-bold mb-2">
+              Ready to ship your scheduler?
+            </h2>
+            <p className="text-background/70">
+              MIT licensed. No lock-in. Works with your existing shadcn setup.
+            </p>
           </div>
-        </section>
-      </main>
+          <div className="flex flex-wrap gap-3 shrink-0">
+            <Link
+              href="/docs/getting-started/installation"
+              className="inline-flex items-center gap-2 rounded-md bg-background text-foreground px-5 py-2.5 text-sm font-semibold hover:bg-background/90 transition-colors"
+            >
+              Read the docs <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/demo"
+              className="inline-flex items-center gap-2 rounded-md border border-background/30 text-background px-5 py-2.5 text-sm font-semibold hover:bg-background/10 transition-colors"
+            >
+              Live demo
+            </Link>
+          </div>
+        </div>
+      </section>
+
     </div>
   )
 }
-
