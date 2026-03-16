@@ -1,11 +1,10 @@
-import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
-import { FullWidthToggleNav } from '@/components/docs/FullWidthToggleNav';
+import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared'
 
 export const gitConfig = {
   user: 'sushilldhakal',
   repo: 'scheduler',
   branch: 'main',
-};
+}
 
 export function baseOptions(): BaseLayoutProps {
   return {
@@ -28,13 +27,6 @@ export function baseOptions(): BaseLayoutProps {
         url: '/docs/examples/full-roster',
         active: 'nested-url',
       },
-      {
-        type: 'custom',
-        on: 'nav',
-        children: <FullWidthToggleNav />,
-      },
     ],
-  };
+  }
 }
-
-
