@@ -624,22 +624,6 @@ function GridViewInner({
 
   const conflictIds = useMemo(() => findConflicts(visibleShifts), [visibleShifts])
 
-  // Log conflicts only for the current visible range (week/day) to avoid overwhelming output.
-  useEffect(() => {
-    if (conflictIds.size === 0) return
-    const conflicting = visibleShifts.filter((s) => conflictIds.has(s.id))
-    console.log("[scheduler] conflicts detected in visible range:", conflictIds.size, "blocks", conflicting.map((s) => ({
-      id: s.id,
-      employee: s.employee,
-      employeeId: s.employeeId,
-      date: s.date,
-      startH: s.startH,
-      endH: s.endH,
-      categoryId: s.categoryId,
-    })))
-  }, [visibleShifts, conflictIds])
-
-
   const orderedBlockIds = useMemo((): string[] => {
     const ids: string[] = []
     CATEGORIES.forEach((cat) => {
@@ -2401,7 +2385,18 @@ function GridViewInner({
                       }
                       onDoubleClick={(e) => {
                         e.stopPropagation()
-                        if (!dragId) onShiftClick(shift, cat)
+                        if (!dragId) {
+                          // Debug: track why double click triggers
+                          // eslint-disable-next-line no-console
+                          console.log("[Scheduler] Block double-click", {
+                            id: shift.id,
+                            employee: shift.employee,
+                            date: shift.date,
+                            startH: shift.startH,
+                            endH: shift.endH,
+                          })
+                          onShiftClick(shift, cat)
+                        }
                       }}
                       className={cn(
                         "group/block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -2583,6 +2578,15 @@ function GridViewInner({
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={(e) => {
                             e.stopPropagation()
+                            // Debug: track delete clicks
+                            // eslint-disable-next-line no-console
+                            console.log("[Scheduler] Delete shift click", {
+                              id: shift.id,
+                              employee: shift.employee,
+                              date: shift.date,
+                              startH: shift.startH,
+                              endH: shift.endH,
+                            })
                             setShiftToDeleteConfirm(shift)
                           }}
                           style={{

@@ -16,9 +16,6 @@ export const categories: Resource[] = [
   { id: "c3", name: "Manager", colorIdx: 2, kind: "category" },
   { id: "c4", name: "Delivery", colorIdx: 3, kind: "category" },
   { id: "c5", name: "Security", colorIdx: 4, kind: "category" },
-  { id: "c6", name: "Housekeeping", colorIdx: 5, kind: "category" },
-  { id: "c7", name: "Bar", colorIdx: 6, kind: "category" },
-  { id: "c8", name: "Maintenance", colorIdx: 7, kind: "category" },
 ]
 
 const CATEGORY_IDS = categories.map((c) => c.id)
@@ -43,10 +40,7 @@ function generateEmployees(count: number): Resource[] {
   return list
 }
 
-export const employees: Resource[] = [
-  ...generateEmployees(80),
-  { id: "4", name: "Paul P.", categoryId: "c7", avatar: "PP", colorIdx: 6, kind: "employee" as const },
-]
+export const employees: Resource[] = generateEmployees(20)
 
 const SHIFT_HOURS = [
   [8, 16], [9, 17], [10, 18], [11, 19], [12, 20], [14, 22],
@@ -64,7 +58,7 @@ export function generateShifts(options?: {
   daysAhead?: number
   shiftsPerDay?: number
 }): Block[] {
-  const { daysBack = 60, daysAhead = 90, shiftsPerDay = 12 } = options ?? {}
+  const { daysBack = 0, daysAhead = 6, shiftsPerDay = 8 } = options ?? {}
   const shifts: Block[] = []
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -100,7 +94,7 @@ const conflictScenarioShifts: Block[] = [
 ]
 
 export const testShifts: Block[] = [
-  ...generateShifts({ daysBack: 60, daysAhead: 90, shiftsPerDay: 14 }),
+  ...generateShifts({ daysBack: 0, daysAhead: 6, shiftsPerDay: 8 }),
   ...conflictScenarioShifts,
 ]
 

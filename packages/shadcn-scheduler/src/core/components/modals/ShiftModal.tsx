@@ -31,8 +31,8 @@ export function ShiftModal({
   allShifts,
   onUpdate,
 }: ShiftModalProps): React.ReactElement | null {
-  const { getColor, labels, categories, settings, getTimeLabel } = useSchedulerContext()
   if (!shift || !category) return null
+  const { getColor, labels, categories, settings, getTimeLabel } = useSchedulerContext()
 
   const c = getColor(category.colorIdx)
   const isDraft = shift.status === "draft"
