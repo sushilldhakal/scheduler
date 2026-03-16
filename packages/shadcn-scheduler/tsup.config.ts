@@ -34,7 +34,7 @@ export default defineConfig({
     "html2canvas",
     "jspdf",
   ],
-  treeshake: true,
+  treeshake: false,
   minify: false,
   onSuccess: async () => {
     copyFileSync("src/scheduler-tokens.css", "dist/scheduler-tokens.css")
