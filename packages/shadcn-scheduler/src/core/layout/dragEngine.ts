@@ -1,4 +1,4 @@
-import { clamp, snapToInterval, sameDay, toDateISO } from "../constants"
+import { clamp, snapToInterval, sameDay, toDateISO, fmt12 } from "../constants"
 import type { Block, Resource } from "../types"
 import { wouldConflictAt } from "../utils/packing"
 import { ghostRect, xToHour, xToDateIndex, type GridConfig } from "./geometry"
@@ -86,6 +86,7 @@ export class DragEngine {
   // ── Pointer handlers (attach to document during drag) ───────
 
   startMove(e: PointerEvent, block: Block): void {
+    if (block.draggable === false) return
     const { x, y } = this.getXY(e.clientX, e.clientY)
     this.gridRect = this.opts.scrollEl?.getBoundingClientRect() ?? null  // cache once
     this.active = {
@@ -101,6 +102,7 @@ export class DragEngine {
   }
 
   startResizeRight(e: PointerEvent, block: Block): void {
+    if (block.resizable === false) return
     const { x } = this.getXY(e.clientX, e.clientY)
     this.gridRect = this.opts.scrollEl?.getBoundingClientRect() ?? null
     this.active = {
@@ -114,6 +116,7 @@ export class DragEngine {
   }
 
   startResizeLeft(e: PointerEvent, block: Block): void {
+    if (block.resizable === false) return
     const { x } = this.getXY(e.clientX, e.clientY)
     this.gridRect = this.opts.scrollEl?.getBoundingClientRect() ?? null
     this.active = {
@@ -150,8 +153,9 @@ export class DragEngine {
       const di1     = xToDateIndex(x, cfg, dates.length)
       const delta   = di1 - di0
       const pxPerH  = cfg.isWeekView ? cfg.pxWeek : cfg.hourW
-      const offset  = delta !== 0 ? 0 : snap((x - d.sx) / pxPerH)
-      const ns      = snap(clamp(d.startH + offset, 0, 24 - d.dur))
+      const ns      = delta !== 0
+        ? snap(clamp(xToHour(x, di1, cfg), 0, 24 - d.dur))
+        : snap(clamp(d.startH + snap((x - d.sx) / pxPerH), 0, 24 - d.dur))
       const orig    = shifts.find(s => s.id === d.id)
       const origIdx = orig ? dates.findIndex(dt => sameDay(dt, orig.date)) : 0
       const newIdx  = clamp(origIdx + delta, 0, dates.length - 1)
@@ -210,8 +214,9 @@ export class DragEngine {
       const di1    = xToDateIndex(x, cfg, dates.length)
       const delta  = di1 - di0
       const pxPerH = cfg.isWeekView ? cfg.pxWeek : cfg.hourW
-      const offset = delta !== 0 ? 0 : snap((x - d.sx) / pxPerH)
-      ns      = snap(clamp(d.startH + offset, 0, 24 - d.dur))
+      ns      = delta !== 0
+        ? snap(clamp(xToHour(x, di1, cfg), 0, 24 - d.dur))
+        : snap(clamp(d.startH + snap((x - d.sx) / pxPerH), 0, 24 - d.dur))
       ne      = ns + d.dur
       dateIdx = di1
     } else if (d.type === "resize-right") {

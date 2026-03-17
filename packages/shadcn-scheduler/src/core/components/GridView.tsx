@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import type { Block, Resource } from "../types"
 import { useSchedulerContext } from "../context"
+import { useVirtualizer } from "@tanstack/react-virtual"
 import {
   SNAP,
   SIDEBAR_W,
@@ -102,6 +103,12 @@ interface GridViewProps {
   onFocusedBlockChange?: (blockId: string | null) => void
   /** When true, disable drag, resize, click-to-add; view-only. */
   readOnly?: boolean
+  /** P14-12: Webhook-style callbacks with full Block payload. */
+  onBlockCreate?: (block: Block) => void
+  onBlockDelete?: (block: Block) => void
+  onBlockMove?: (block: Block) => void
+  onBlockResize?: (block: Block) => void
+  onBlockPublish?: (block: Block) => void
 }
 
 interface StaffPanelState {
@@ -164,6 +171,11 @@ function GridViewInner({
   onNavigate,
   onBlockMoved,
   onFocusedBlockChange,
+  onBlockCreate,
+  onBlockDelete,
+  onBlockMove,
+  onBlockResize,
+  onBlockPublish,
 }: GridViewProps): React.ReactElement {
   const { categories, employees, nextUid, getColor, labels, settings, slots, snapMinutes, getTimeLabel } = useSchedulerContext()
   const CATEGORIES =
@@ -192,7 +204,9 @@ function GridViewInner({
   const lastReportedRangeRef = useRef<{ start: number; end: number } | null>(null)
 
   const [staffPanel, setStaffPanel] = useState<StaffPanelState | null>(null)
+  const staffDragRef = useRef<{ empId: string; fromCategoryId: string; empName: string; pointerId: number } | null>(null)
   const [dragEmpId, setDragEmpId] = useState<string | null>(null)
+  const [isStaffDragging, setIsStaffDragging] = useState(false)
   const [dropHover, setDropHover] = useState<DropHoverState | null>(null)
   const [categoryWarn, setCategoryWarn] = useState<CategoryWarnState | null>(null)
   const [addPrompt, setAddPrompt] = useState<AddPromptState | null>(null)
@@ -660,10 +674,14 @@ function GridViewInner({
     return map
   }, [shiftIndex])
 
-  const totalH = useMemo(
-    (): number => CATEGORIES.reduce((s, c) => s + categoryHeights[c.id], 0),
-    [categoryHeights, CATEGORIES]
-  )
+  const rowVirtualizer = useVirtualizer({
+    count: CATEGORIES.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (i) => categoryHeights[CATEGORIES[i]?.id] ?? ROLE_HDR,
+    overscan: 6,
+  })
+
+  const totalHVirtual = rowVirtualizer.getTotalSize()
 
   const ds = useRef<DragState | null>(null)
   const ghostRef = useRef<HTMLDivElement | null>(null)
@@ -764,9 +782,139 @@ function GridViewInner({
     if (pinchPointersRef.current.size < 2) initialPinchDistRef.current = null
   }, [clearLongPress])
 
+  const clearStaffDrag = useCallback(() => {
+    staffDragRef.current = null
+    setIsStaffDragging(false)
+    setDragEmpId(null)
+    setDropHover(null)
+    if (ghostRef.current) ghostRef.current.style.display = "none"
+  }, [])
+
+  const commitStaffDropAtClientXY = useCallback(
+    (clientX: number, clientY: number) => {
+      const drag = staffDragRef.current
+      if (!drag) return
+      const { x, y } = getGridXY(clientX, clientY)
+      const newCat = getCategoryAtY(y)
+      const di = getDateIdx(x)
+      const hour = getHourAtX(x, di)
+      const date = dates[di] ?? dates[0]
+      if (!date) return
+      const startH = Math.floor(hour)
+      const endH = Math.min(startH + 4, 23)
+      const emp = ALL_EMPLOYEES.find((x) => x.id === drag.empId)
+      const fromCategoryId = drag.fromCategoryId
+
+      if (fromCategoryId !== newCat.id) {
+        const fromCategory = CATEGORIES.find((c) => c.id === fromCategoryId)
+        const toCategory = CATEGORIES.find((c) => c.id === newCat.id)
+        setCategoryWarn({
+          empName: emp?.name ?? drag.empName,
+          fromCategory,
+          toCategory,
+          onConfirmAction: () =>
+            setShifts((prev) => [
+              ...prev,
+              (() => {
+                const created: Block = {
+                  id: nextUid(),
+                  categoryId: newCat.id,
+                  employeeId: drag.empId,
+                  date: toDateISO(date),
+                  startH,
+                  endH,
+                  employee: emp?.name || drag.empName || "?",
+                  status: "draft",
+                }
+                onBlockCreate?.(created)
+                return created
+              })(),
+            ]),
+        })
+      } else {
+        setShifts((prev) => [
+          ...prev,
+          (() => {
+            const created: Block = {
+              id: nextUid(),
+              categoryId: newCat.id,
+              employeeId: drag.empId,
+              date: toDateISO(date),
+              startH,
+              endH,
+              employee: emp?.name || drag.empName || "?",
+              status: "draft",
+            }
+            onBlockCreate?.(created)
+            return created
+          })(),
+        ])
+      }
+    },
+    [getGridXY, getCategoryAtY, getDateIdx, getHourAtX, dates, ALL_EMPLOYEES, CATEGORIES, nextUid, setShifts, onBlockCreate]
+  )
+
+  const onStaffPointerMove = useCallback(
+    (e: PointerEvent) => {
+      const drag = staffDragRef.current
+      if (!drag) return
+      const { x, y } = getGridXY(e.clientX, e.clientY)
+      const cat = getCategoryAtY(y)
+      const di = getDateIdx(x)
+      const hour = getHourAtX(x, di)
+      setDropHover({ categoryId: cat.id, di, hour })
+
+      const ghostEl = ghostRef.current
+      if (!ghostEl) return
+      ghostEl.style.display = "flex"
+      ghostEl.style.left = "0"
+      ghostEl.style.top = "0"
+      ghostEl.style.width = `160px`
+      ghostEl.style.height = `26px`
+      ghostEl.style.borderRadius = "999px"
+      ghostEl.style.transform = `translate(${x + 8}px, ${y + 8}px)`
+      ghostEl.style.background = "hsl(var(--primary))"
+      ghostEl.style.borderColor = "hsl(var(--primary))"
+      const label = ghostEl.querySelector("[data-ghost-label]") as HTMLElement | null
+      if (label) {
+        label.textContent = drag.empName
+        label.style.color = "hsl(var(--primary-foreground))"
+        label.style.background = "transparent"
+      }
+    },
+    [getGridXY, getCategoryAtY, getDateIdx, getHourAtX]
+  )
+
+  const onStaffPointerUp = useCallback(
+    (e: PointerEvent) => {
+      if (!staffDragRef.current) return
+      commitStaffDropAtClientXY(e.clientX, e.clientY)
+      clearStaffDrag()
+    },
+    [commitStaffDropAtClientXY, clearStaffDrag]
+  )
+
+  const onStaffPointerCancel = useCallback(() => {
+    if (!staffDragRef.current) return
+    clearStaffDrag()
+  }, [clearStaffDrag])
+
+  useEffect(() => {
+    if (!isStaffDragging) return
+    document.addEventListener("pointermove", onStaffPointerMove, { capture: true })
+    document.addEventListener("pointerup", onStaffPointerUp, { capture: true })
+    document.addEventListener("pointercancel", onStaffPointerCancel, { capture: true })
+    return () => {
+      document.removeEventListener("pointermove", onStaffPointerMove, { capture: true })
+      document.removeEventListener("pointerup", onStaffPointerUp, { capture: true })
+      document.removeEventListener("pointercancel", onStaffPointerCancel, { capture: true })
+    }
+  }, [isStaffDragging, onStaffPointerMove, onStaffPointerUp, onStaffPointerCancel])
+
   const onBD = useCallback(
     (e: React.PointerEvent<HTMLDivElement>, shift: Block): void => {
       if (readOnly) return
+      if (shift.draggable === false) return
       if ((e.target as HTMLElement).dataset.resize) return
       if (gridPointerIdsRef.current.size >= 2) return
       e.stopPropagation()
@@ -853,10 +1001,7 @@ function GridViewInner({
       if (e.key === "Delete" || e.key === "Backspace") {
         if (readOnly) return
         e.preventDefault()
-        if (onDeleteShift && window.confirm("Remove this block?")) {
-          onDeleteShift(shift.id)
-          setFocusedBlockId(null)
-        }
+        if (onDeleteShift) setShiftToDeleteConfirm(shift)
         return
       }
       if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
@@ -872,6 +1017,7 @@ function GridViewInner({
           )
         )
         onBlockMoved?.(shift, shift.date, newStart, newEnd)
+        onBlockMove?.({ ...shift, startH: newStart, endH: newEnd })
         return
       }
       if (e.key === "ArrowUp" || e.key === "ArrowDown") {
@@ -888,6 +1034,7 @@ function GridViewInner({
           )
         )
         onBlockMoved?.(shift, shift.date, shift.startH, shift.endH)
+        onBlockMove?.({ ...shift, categoryId: nextCat.id })
         return
       }
     },
@@ -902,6 +1049,7 @@ function GridViewInner({
       categories,
       onBlockMoved,
       readOnly,
+      onBlockMove,
     ]
   )
 
@@ -961,15 +1109,13 @@ function GridViewInner({
         const di0 = isWeekView || isDayViewMultiDay ? getDateIdx(d.sx) : 0
         const di1 = getDateIdx(x)
         dayDelta = di1 - di0
-        const hourOffset =
+        ns =
           dayDelta !== 0
-            ? 0
-            : isWeekView
-              ? snapH(dx / PX_WEEK)
-              : isDayViewMultiDay
-                ? snapH(dx / HOUR_W)
-                : snapH(dx / HOUR_W)
-        ns = snapH(clamp(d.startH + hourOffset, 0, 24 - d.dur))
+            ? snapH(clamp(getHourAtX(x, di1), 0, 24 - d.dur))
+            : (() => {
+                const hourOffset = isWeekView ? snapH(dx / PX_WEEK) : snapH(dx / HOUR_W)
+                return snapH(clamp(d.startH + hourOffset, 0, 24 - d.dur))
+              })()
         ne = ns + d.dur
         categoryId = newCat.id
       } else if (d.type === "resize-right") {
@@ -1064,15 +1210,16 @@ function GridViewInner({
         const di0 = isWeekView || isDayViewMultiDay ? getDateIdx(d.sx) : 0
         const di1 = getDateIdx(x)
         const dayDelta = di1 - di0
-        const hourOffset =
+        const ns =
           dayDelta !== 0
-            ? 0
-            : isWeekView
-              ? snapLocal((x - d.sx) / PX_WEEK)
-              : isDayViewMultiDay
-                ? snapLocal((x - d.sx) / HOUR_W)
-                : snapLocal((x - d.sx) / HOUR_W)
-        const ns = snapLocal(clamp(d.startH + hourOffset, 0, 24 - d.dur))
+            ? snapLocal(clamp(getHourAtX(x, di1), 0, 24 - d.dur))
+            : snapLocal(
+                clamp(
+                  d.startH + (isWeekView ? snapLocal((x - d.sx) / PX_WEEK) : snapLocal((x - d.sx) / HOUR_W)),
+                  0,
+                  24 - d.dur
+                )
+              )
         const origShift = shifts.find((x) => x.id === d.id)
         const newDateIdx = origShift
           ? clamp(dates.findIndex((dt) => sameDay(dt, origShift.date)) + dayDelta, 0, dates.length - 1)
@@ -1099,13 +1246,16 @@ function GridViewInner({
             const di0 = isWeekView || isDayViewMultiDay ? getDateIdx(d.sx) : 0
             const di1 = getDateIdx(x)
             const dayDelta = di1 - di0
-            const hourOffset =
+            const ns =
               dayDelta !== 0
-                ? 0
-                : isWeekView
-                  ? snapLocal((x - d.sx) / PX_WEEK)
-                  : snapLocal((x - d.sx) / HOUR_W)
-            const ns = snapLocal(clamp(d.startH + hourOffset, 0, 24 - d.dur))
+                ? snapLocal(clamp(getHourAtX(x, di1), 0, 24 - d.dur))
+                : snapLocal(
+                    clamp(
+                      d.startH + (isWeekView ? snapLocal((x - d.sx) / PX_WEEK) : snapLocal((x - d.sx) / HOUR_W)),
+                      0,
+                      24 - d.dur
+                    )
+                  )
             const origDateIdx = dates.findIndex((dt) => sameDay(dt, s.date))
             const newDateIdx = clamp(origDateIdx + dayDelta, 0, dates.length - 1)
             const newDate =
@@ -1115,17 +1265,23 @@ function GridViewInner({
               setCategoryWarn({ shift: s, newCategoryId: newCat.id, ns, ne: ns + d.dur, newDate })
               return s
             }
-            return { ...s, startH: ns, endH: ns + d.dur, categoryId: newCat.id, date: newDate }
+            const updated = { ...s, startH: ns, endH: ns + d.dur, categoryId: newCat.id, date: newDate }
+            onBlockMove?.(updated)
+            return updated
           } else if (d.type === "resize-right") {
             const ne = snapLocal(
               clamp(d.endH + (x - d.sx) / (isWeekView ? PX_WEEK : HOUR_W), d.startH + snapHours, 24)
             )
-            return { ...s, endH: ne }
+            const updated = { ...s, endH: ne }
+            onBlockResize?.(updated)
+            return updated
           } else {
             const ns = snapLocal(
               clamp(d.startH + (x - d.sx) / (isWeekView ? PX_WEEK : HOUR_W), 0, d.endH - snapHours)
             )
-            return { ...s, startH: ns }
+            const updated = { ...s, startH: ns }
+            onBlockResize?.(updated)
+            return updated
           }
         })
         if (d.type === "move") {
@@ -1152,6 +1308,9 @@ function GridViewInner({
       snapLocal,
       snapHours,
       onBlockMoved,
+      onBlockMove,
+      onBlockResize,
+      getHourAtX,
     ]
   )
 
@@ -1243,60 +1402,6 @@ function GridViewInner({
       document.removeEventListener("pointercancel", pc, { capture: true })
     }
   }, [dragId])
-
-  const onCellDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>, categoryId: string, dateIdx: number, hour: number): void => {
-      e.preventDefault()
-      const empId = e.dataTransfer.getData("empId")
-      const fromCategoryId = e.dataTransfer.getData("categoryId")
-      if (!empId) return
-      const emp = ALL_EMPLOYEES.find((x) => x.id === empId)
-      const date = dates[dateIdx]
-      const startH = Math.floor(hour)
-      const endH = Math.min(startH + 4, 23)
-
-      if (fromCategoryId !== categoryId) {
-        const fromCategory = CATEGORIES.find((c) => c.id === fromCategoryId)
-        const toCategory = CATEGORIES.find((c) => c.id === categoryId)
-        setCategoryWarn({
-          empName: emp?.name,
-          fromCategory,
-          toCategory,
-          onConfirmAction: () =>
-            setShifts((prev) => [
-              ...prev,
-              {
-                id: nextUid(),
-                categoryId,
-                employeeId: empId,
-                date: toDateISO(date),
-                startH,
-                endH,
-                employee: emp?.name || "?",
-                status: "draft",
-              },
-            ]),
-        })
-      } else {
-        setShifts((prev) => [
-          ...prev,
-          {
-            id: nextUid(),
-            categoryId,
-            employeeId: empId,
-            date: toDateISO(date),
-            startH,
-            endH,
-            employee: emp?.name || "?",
-            status: "draft",
-          },
-        ])
-      }
-      setDropHover(null)
-      setDragEmpId(null)
-    },
-    [dates, setShifts, ALL_EMPLOYEES, CATEGORIES, nextUid]
-  )
 
   const [nowH, setNowH] = useState(
     () => new Date().getHours() + new Date().getMinutes() / 60
@@ -1704,142 +1809,151 @@ function GridViewInner({
             if (isDev) {
               const refLabel = refDate.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" })
             }
-            return CATEGORIES.map((cat) => {
-              const c = getColor(cat.colorIdx)
-              const h = categoryHeights[cat.id]
-              const catShifts = baseShifts.filter((s) => s.categoryId === cat.id)
-              const scheduled = catShifts.length
-              const totalHours = catShifts.reduce((sum, s) => sum + (s.endH - s.startH), 0)
-              return (
-              <div
-                key={cat.id}
-                title={scheduled > 0 ? `${scheduled} block${scheduled !== 1 ? "s" : ""}, ${totalHours.toFixed(1)}h in this period` : undefined}
-                style={{
-                  height: h,
-                  borderBottom: "1px solid var(--border))",
-                  background: "var(--muted))",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "flex-start",
-                  flexShrink: 0,
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    height: ROLE_HDR,
-                    display: "flex",
-                    alignItems: "center",
-                    padding: "0 10px",
-                    gap: 6,
-                    flexShrink: 0,
-                  }}
-                >
-                  {slots.resourceHeader ? (
-                    slots.resourceHeader({
-                      resource: cat,
-                      scheduledCount: scheduled,
-                      isCollapsed: collapsed.has(cat.id),
-                      onToggleCollapse: () => toggleCollapse(cat.id),
-                    })
-                  ) : (
-                    <>
-                  <div
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: c.bg,
-                      flexShrink: 0,
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: "var(--foreground)",
-                      flex: 1,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {cat.name}
-                  </span>
-                  {scheduled > 0 && (
-                    <span
-                      title="Scheduled in this view"
+            return (
+              <div style={{ position: "relative", height: totalHVirtual }}>
+                {rowVirtualizer.getVirtualItems().map((vr) => {
+                  const cat = CATEGORIES[vr.index]
+                  if (!cat) return null
+                  const c = getColor(cat.colorIdx)
+                  const catShifts = baseShifts.filter((s) => s.categoryId === cat.id)
+                  const scheduled = catShifts.length
+                  const totalHours = catShifts.reduce((sum, s) => sum + (s.endH - s.startH), 0)
+                  return (
+                    <div
+                      key={cat.id}
+                      title={scheduled > 0 ? `${scheduled} block${scheduled !== 1 ? "s" : ""}, ${totalHours.toFixed(1)}h in this period` : undefined}
                       style={{
-                        fontSize: 10,
-                        color: c.bg,
-                        fontWeight: 700,
-                        background: c.light,
-                        borderRadius: 8,
-                        padding: "1px 5px",
+                        position: "absolute",
+                        top: vr.start,
+                        left: 0,
+                        right: 0,
+                        height: vr.size,
+                        borderBottom: "1px solid var(--border))",
+                        background: "var(--muted))",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "flex-start",
+                        flexShrink: 0,
+                        overflow: "hidden",
                       }}
                     >
-                      {scheduled}
-                    </span>
-                  )}
-                  <button
-                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                      e.stopPropagation()
-                      toggleCollapse(cat.id)
-                    }}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      padding: 4,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "var(--muted-foreground)",
-                      transform: collapsed.has(cat.id) ? "rotate(-90deg)" : "none",
-                      transition: "transform 0.2s",
-                    }}
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                      const rect = e.currentTarget.getBoundingClientRect()
-                      setStaffPanel((p) =>
-                        p?.categoryId === cat.id ? null : { categoryId: cat.id, anchorRect: rect }
-                      )
-                    }}
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 600,
-                      color: c.text,
-                      background: c.light,
-                      border: `1px solid ${c.border}`,
-                      borderRadius: 5,
-                      padding: "2px 6px",
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {labels.staff}
-                  </button>
-                    </>
-                  )}
-                </div>
+                      <div
+                        style={{
+                          height: ROLE_HDR,
+                          display: "flex",
+                          alignItems: "center",
+                          padding: "0 10px",
+                          gap: 6,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {slots.resourceHeader ? (
+                          slots.resourceHeader({
+                            resource: cat,
+                            scheduledCount: scheduled,
+                            isCollapsed: collapsed.has(cat.id),
+                            onToggleCollapse: () => toggleCollapse(cat.id),
+                          })
+                        ) : (
+                          <>
+                            <div
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                background: c.bg,
+                                flexShrink: 0,
+                              }}
+                            />
+                            <span
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: "var(--foreground)",
+                                flex: 1,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {cat.name}
+                            </span>
+                            {scheduled > 0 && (
+                              <span
+                                title="Scheduled in this view"
+                                style={{
+                                  fontSize: 10,
+                                  color: c.bg,
+                                  fontWeight: 700,
+                                  background: c.light,
+                                  borderRadius: 8,
+                                  padding: "1px 5px",
+                                }}
+                              >
+                                {scheduled}
+                              </span>
+                            )}
+                            <button
+                              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                                e.stopPropagation()
+                                toggleCollapse(cat.id)
+                              }}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: 4,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "var(--muted-foreground)",
+                                transform: collapsed.has(cat.id) ? "rotate(-90deg)" : "none",
+                                transition: "transform 0.2s",
+                              }}
+                            >
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="6 9 12 15 18 9" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                                const rect = e.currentTarget.getBoundingClientRect()
+                                setStaffPanel((p) =>
+                                  p?.categoryId === cat.id ? null : { categoryId: cat.id, anchorRect: rect }
+                                )
+                              }}
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 600,
+                                color: c.text,
+                                background: c.light,
+                                border: `1px solid ${c.border}`,
+                                borderRadius: 5,
+                                padding: "2px 6px",
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {labels.staff}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-            );
-            });
+            )
           })()}
         </div>
 
@@ -1873,7 +1987,7 @@ function GridViewInner({
                 style={{
                   position: "relative",
                   width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
-                  height: totalH,
+                  height: totalHVirtual,
                   minHeight: "100%",
                   contain: "layout style",
                   willChange: dragId ? "contents" : "auto",
@@ -1911,9 +2025,11 @@ function GridViewInner({
                 }}
               />
             </div>
-            {CATEGORIES.map((cat) => {
-              const top = categoryTops[cat.id]
-              const rowH = categoryHeights[cat.id]
+            {rowVirtualizer.getVirtualItems().map((vr) => {
+              const cat = CATEGORIES[vr.index]
+              if (!cat) return null
+              const top = vr.start
+              const rowH = vr.size
               return dates.map((date, di) => {
                 const closed = settings.workingHours[date.getDay()] === null
                 const today = isToday(date)
@@ -1934,11 +2050,10 @@ function GridViewInner({
                           background: dashed ? DASHED_BG : hourBg(h, settings, date.getDay()),
                           borderRight: "1px solid var(--sch-b-60)",
                         }}
-                        onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
-                          e.preventDefault()
+                        onPointerEnter={() => {
+                          if (!dragEmpId) return
                           setDropHover({ categoryId: cat.id, di, hour: h })
                         }}
-                        onDrop={(e: React.DragEvent<HTMLDivElement>) => onCellDrop(e, cat.id, di, h)}
                       />
                     )
                   })
@@ -1959,13 +2074,10 @@ function GridViewInner({
                         borderRight: "1px solid var(--border))",
                         borderBottom: "1px solid var(--border))",
                       }}
-                      onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
-                        e.preventDefault()
+                      onPointerEnter={() => {
+                        if (!dragEmpId) return
                         setDropHover({ categoryId: cat.id, di })
                       }}
-                      onDrop={(e: React.DragEvent<HTMLDivElement>) =>
-                        onCellDrop(e, cat.id, di, settings.visibleFrom)
-                      }
                     >
                       {Array.from(
                         { length: settings.visibleTo - settings.visibleFrom + 1 },
@@ -2008,31 +2120,34 @@ function GridViewInner({
                       background: dashed ? DASHED_BG : hourBg(h, settings, date.getDay()),
                       borderRight: "1px solid var(--sch-b-60)",
                     }}
-                    onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
-                      e.preventDefault()
+                    onPointerEnter={() => {
+                      if (!dragEmpId) return
                       setDropHover({ categoryId: cat.id, hour: h })
                     }}
-                    onDrop={(e: React.DragEvent<HTMLDivElement>) => onCellDrop(e, cat.id, 0, h)}
                   />
                 )})
               })
             })}
 
-            {CATEGORIES.map((cat) => (
-              <div
-                key={`sep-${cat.id}`}
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  top: categoryTops[cat.id] + categoryHeights[cat.id] - 1,
-                  width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
-                  height: 2,
-                  background: "var(--sch-fg-12))",
-                  zIndex: 3,
-                  pointerEvents: "none",
-                }}
-              />
-            ))}
+            {rowVirtualizer.getVirtualItems().map((vr) => {
+              const cat = CATEGORIES[vr.index]
+              if (!cat) return null
+              return (
+                <div
+                  key={`sep-${cat.id}`}
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: vr.start + vr.size - 1,
+                    width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
+                    height: 2,
+                    background: "var(--sch-fg-12))",
+                    zIndex: 3,
+                    pointerEvents: "none",
+                  }}
+                />
+              )
+            })}
 
             {(!isWeekView || isDayViewMultiDay) &&
               (isDayViewMultiDay
@@ -2045,7 +2160,7 @@ function GridViewInner({
                           left: di * DAY_WIDTH + (h - settings.visibleFrom) * HOUR_W,
                           top: 0,
                           width: 1,
-                          height: totalH,
+                          height: totalHVirtual,
                           background: "var(--sch-fg-12))",
                           zIndex: 1,
                           pointerEvents: "none",
@@ -2061,7 +2176,7 @@ function GridViewInner({
                         left: (h - settings.visibleFrom) * HOUR_W,
                         top: 0,
                         width: 1,
-                        height: totalH,
+                        height: totalHVirtual,
                         background: "var(--sch-fg-12))",
                         zIndex: 1,
                         pointerEvents: "none",
@@ -2075,14 +2190,14 @@ function GridViewInner({
               nowH < settings.visibleTo ? (
                 <div
                   key={`now-${di}`}
-                  className="pointer-events-none absolute top-0 z-[15] h-full w-0.5 bg-destructive/80 shadow-[0_0_6px_var(--destructive)/0.4]"
+                  className="pointer-events-none absolute top-0 z-15 h-full w-0.5 bg-destructive/80 shadow-[0_0_6px_var(--destructive)/0.4]"
                   style={{
                     left: isWeekView
                       ? di * COL_W_WEEK + (nowH - settings.visibleFrom) * PX_WEEK
                       : isDayViewMultiDay
                         ? di * DAY_WIDTH + (nowH - settings.visibleFrom) * HOUR_W
                         : (nowH - settings.visibleFrom) * HOUR_W,
-                    height: totalH,
+                    height: totalHVirtual,
                   }}
                 >
                   <div className="absolute -left-1 top-0 h-2.5 w-2.5 rounded-full border border-border bg-destructive/90" />
@@ -2090,10 +2205,11 @@ function GridViewInner({
               ) : null
             )}
 
-            {CATEGORIES.map((cat) => {
-              if (collapsed.has(cat.id)) return null
-              const top = categoryTops[cat.id]
-              const rowH = categoryHeights[cat.id]
+            {rowVirtualizer.getVirtualItems().map((vr) => {
+              const cat = CATEGORIES[vr.index]
+              if (!cat || collapsed.has(cat.id)) return null
+              const top = vr.start
+              const rowH = vr.size
               const addBtnTop = top + rowH - ADD_BTN_H + (ADD_BTN_H - 20) / 2
               if (isWeekView || isDayViewMultiDay) {
                 const colW = isDayViewMultiDay ? DAY_WIDTH : COL_W_WEEK
@@ -2268,9 +2384,10 @@ function GridViewInner({
                 )
               })()}
 
-            {CATEGORIES.map((cat) => {
-              if (collapsed.has(cat.id)) return null
-              const catTop = categoryTops[cat.id]
+            {rowVirtualizer.getVirtualItems().map((vr) => {
+              const cat = CATEGORIES[vr.index]
+              if (!cat || collapsed.has(cat.id)) return null
+              const catTop = vr.start
               return dates.map((date, di) => {
                 const dayShifts = shiftIndex.get(`${cat.id}:${toDateISO(date)}`) ?? []
                 const sorted = [...dayShifts].sort((a, b) => a.startH - b.startH)
@@ -2337,8 +2454,12 @@ function GridViewInner({
                     width = Math.max((ce - cs) * HOUR_W - 4, 18)
                   }
                   const variant = settings.badgeVariant ?? "both"
-                  const canDrag = variant === "drag" || variant === "both"
-                  const showResize = !readOnly && (variant === "resize" || variant === "both") && width >= 48
+                  const canDrag = (variant === "drag" || variant === "both") && shift.draggable !== false
+                  const showResize =
+                    !readOnly &&
+                    (variant === "resize" || variant === "both") &&
+                    width >= 48 &&
+                    shift.resizable !== false
                   const isLive =
                     sameDay(shift.date, new Date()) &&
                     nowH >= shift.startH &&
@@ -2756,8 +2877,10 @@ function GridViewInner({
               dayShifts={dayShifts}
               anchorRect={isTablet ? null : staffPanel.anchorRect}
               variant={isTablet ? "drawer" : "popover"}
-              onDragStaff={(empId: string, categoryId: string) => {
+              onDragStaff={({ empId, categoryId, empName, pointerId }) => {
+                staffDragRef.current = { empId, fromCategoryId: categoryId, empName, pointerId }
                 setDragEmpId(empId)
+                setIsStaffDragging(true)
               }}
               onClose={() => setStaffPanel(null)}
             />
@@ -2816,6 +2939,7 @@ function GridViewInner({
                 type="button"
                 onClick={() => {
                   const id = shiftToDeleteConfirm.id
+                  onBlockDelete?.(shiftToDeleteConfirm)
                   setShiftToDeleteConfirm(null)
                   setDeletingIds((prev) => new Set([...prev, id]))
                   setTimeout(() => {

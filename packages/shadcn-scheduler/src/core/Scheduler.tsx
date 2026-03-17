@@ -179,8 +179,10 @@ export function Scheduler({
     categoryId?: string | null,
     empId?: string | null
   ): void => setAddCtx({ date, categoryId, empId })
-  const handleAdd = (block: Block): void =>
+  const handleAdd = (block: Block): void => {
+    onBlockCreate?.(block)
     setShifts((prev) => [...prev, block])
+  }
 
   const publishShifts = useCallback(
     (...ids: string[]): void =>
@@ -188,11 +190,18 @@ export function Scheduler({
         const conflictIds = findConflicts(prev)
         const allowedIds = ids.filter((id) => !conflictIds.has(id))
         if (allowedIds.length === 0) return prev
-        return prev.map((s) =>
-          allowedIds.includes(s.id) ? { ...s, status: "published" } : s
+        const next = prev.map((s) =>
+          allowedIds.includes(s.id) ? { ...s, status: "published" as const } : s
         )
+        if (onBlockPublish) {
+          for (const id of allowedIds) {
+            const updated = next.find((s) => s.id === id)
+            if (updated) onBlockPublish(updated)
+          }
+        }
+        return next
       }),
-    [setShifts]
+    [setShifts, onBlockPublish]
   )
 
   const unpublishShift = useCallback(
@@ -250,19 +259,33 @@ export function Scheduler({
 
   const handleDeleteShift = useCallback(
     (id: string) => {
+      const removed = shifts.find((s) => s.id === id)
+      if (removed) onBlockDelete?.(removed)
       setShifts((prev) => prev.filter((s) => s.id !== id))
       setSelShift(null)
       setSelCategory(null)
     },
-    [setShifts]
+    [setShifts, shifts, onBlockDelete]
   )
 
   const handleShiftUpdate = useCallback(
     (updated: Block): void => {
+      const prev = shifts.find((s) => s.id === updated.id)
+      if (prev) {
+        const moved =
+          prev.date !== updated.date ||
+          prev.categoryId !== updated.categoryId ||
+          prev.employeeId !== updated.employeeId
+        const timeChanged = prev.startH !== updated.startH || prev.endH !== updated.endH
+        const resized = timeChanged && (prev.endH - prev.startH) !== (updated.endH - updated.startH)
+        if (moved || (timeChanged && !resized)) onBlockMove?.(updated)
+        if (resized) onBlockResize?.(updated)
+        if (prev.status !== "published" && updated.status === "published") onBlockPublish?.(updated)
+      }
       setShifts((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
       setSelShift(updated)
     },
-    [setShifts]
+    [setShifts, shifts, onBlockMove, onBlockResize, onBlockPublish]
   )
 
   const mergedConfig: SchedulerConfig = {
@@ -319,6 +342,7 @@ export function Scheduler({
               date: at.date,
               categoryId: at.categoryId,
             }
+            onBlockCreate?.(newBlock)
             setShifts((prev) => [...prev, newBlock])
           }
         }
@@ -327,7 +351,19 @@ export function Scheduler({
     }
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
-  }, [focusedBlockId, copiedShift, shifts, handleUndo, setShifts])
+  }, [focusedBlockId, copiedShift, shifts, handleUndo, setShifts, onBlockCreate])
+
+  const debouncedVisibleRangeChangeRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const debouncedOnVisibleRangeChange = useCallback(
+    (start: Date, end: Date) => {
+      if (!onVisibleRangeChange) return
+      if (debouncedVisibleRangeChangeRef.current) clearTimeout(debouncedVisibleRangeChangeRef.current)
+      debouncedVisibleRangeChangeRef.current = setTimeout(() => {
+        onVisibleRangeChange(start, end)
+      }, 150)
+    },
+    [onVisibleRangeChange]
+  )
 
   const sharedGridProps = {
     shifts,
@@ -340,7 +376,7 @@ export function Scheduler({
     zoom,
     setZoom,
     bufferDays,
-    onVisibleRangeChange,
+    onVisibleRangeChange: debouncedOnVisibleRangeChange,
     prefetchThreshold,
     onDeleteShift: handleDeleteShift,
     scrollToNowRef,
@@ -351,6 +387,11 @@ export function Scheduler({
     onFocusedBlockChange: setFocusedBlockId,
     isLoading,
     readOnly,
+    onBlockCreate,
+    onBlockDelete,
+    onBlockMove,
+    onBlockResize,
+    onBlockPublish,
   }
 
   const handleSetDate = useCallback((action: React.SetStateAction<Date>) => {
@@ -374,7 +415,17 @@ export function Scheduler({
       ...shifts.filter((s) => s.status === "draft").map((s) => s.id)
     )
   const handlePublishAllFromBanner = (): void =>
-    setShifts((prev) => prev.map((s) => ({ ...s, status: "published" })))
+    setShifts((prev) => {
+      const next = prev.map((s) => ({ ...s, status: "published" as const }))
+      if (onBlockPublish) {
+        for (let i = 0; i < prev.length; i++) {
+          if (prev[i]?.status !== "published" && next[i]?.status === "published") {
+            onBlockPublish(next[i]!)
+          }
+        }
+      }
+      return next
+    })
   const handleAddShiftButton = (): void => onAddShift(new Date(), null, null)
   const handleMonthClick = (y: number, m: number): void => {
     handleSetDate(new Date(y, m, 1))

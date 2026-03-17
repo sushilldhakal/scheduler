@@ -6,7 +6,7 @@ interface StaffPanelProps {
   category: Resource
   date: Date
   dayShifts: Block[]
-  onDragStaff: (empId: string, categoryId: string) => void
+  onDragStaff: (args: { empId: string; categoryId: string; empName: string; pointerId: number }) => void
   anchorRect: DOMRect | null
   onClose: () => void
   /** When "drawer", render as slide-in panel from right (tablet). */
@@ -42,13 +42,6 @@ export function StaffPanel({
   }, [onClose])
 
   if (variant === "popover" && !anchorRect) return null
-
-  const handleDragStart =
-    (emp: (typeof employees)[0]) => (e: React.DragEvent<HTMLDivElement>): void => {
-      e.dataTransfer.setData("empId", emp.id)
-      e.dataTransfer.setData("categoryId", category.id)
-      onDragStaff(emp.id, category.id)
-    }
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>): void => {
     e.currentTarget.style.background = "var(--accent)"
@@ -138,8 +131,12 @@ export function StaffPanel({
       {unscheduled.map((emp) => (
         <div
           key={emp.id}
-          draggable
-          onDragStart={handleDragStart(emp)}
+          onPointerDown={(e) => {
+            e.stopPropagation()
+            // Capture pointer so we get move/up events even if the finger leaves the row.
+            e.currentTarget.setPointerCapture(e.pointerId)
+            onDragStaff({ empId: emp.id, categoryId: category.id, empName: emp.name, pointerId: e.pointerId })
+          }}
           style={{
             display: "flex",
             alignItems: "center",
@@ -147,6 +144,7 @@ export function StaffPanel({
             padding: "7px 12px",
             cursor: "grab",
             userSelect: "none",
+            touchAction: "none",
           }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}

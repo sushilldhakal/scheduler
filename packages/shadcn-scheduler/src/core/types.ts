@@ -14,6 +14,16 @@ export interface Block<TMeta = Record<string, unknown>> {
   date: string
   startH: number
   endH: number
+  /**
+   * When false, this block cannot be dragged to move it.
+   * Defaults to true when omitted.
+   */
+  draggable?: boolean
+  /**
+   * When false, this block cannot be resized (left or right).
+   * Defaults to true when omitted.
+   */
+  resizable?: boolean
   employee: string
   status: "draft" | "published"
   /** Optional domain-specific payload. Fully typed when you use Block<YourMeta>. */

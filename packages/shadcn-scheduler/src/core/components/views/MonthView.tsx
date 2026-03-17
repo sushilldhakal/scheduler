@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from "react"
+import React, { useRef, useState, useCallback, useEffect } from "react"
 import type { Block, Resource } from "../../types"
 import { useSchedulerContext } from "../../context"
 import { sameDay, isToday, fmt12, getDIM, getFirst, DOW_MON_FIRST, toDateISO } from "../../constants"
@@ -63,11 +63,60 @@ function MonthViewInner({
   const [dropT, setDropT] = useState<string | null>(null)
   const [gPos, setGPos] = useState<GhostPosition | null>(null)
   const [staffPanel, setStaffPanel] = useState<StaffPanelState | null>(null)
+  const staffDragRef = useRef<{ empId: string; categoryId: string; empName: string; pointerId: number } | null>(null)
+  const [isStaffDragging, setIsStaffDragging] = useState(false)
 
   const getCD = useCallback((cx: number, cy: number): string | null => {
     const el = document.elementFromPoint(cx, cy)
     return el?.closest("[data-cell-date]")?.getAttribute("data-cell-date") ?? null
   }, [])
+
+  const clearStaffDrag = useCallback(() => {
+    staffDragRef.current = null
+    setIsStaffDragging(false)
+    setDropT(null)
+  }, [])
+
+  useEffect(() => {
+    if (!isStaffDragging) return
+    const onMove = (e: PointerEvent) => {
+      setDropT(getCD(e.clientX, e.clientY))
+    }
+    const onUp = (e: PointerEvent) => {
+      const drag = staffDragRef.current
+      if (!drag) return
+      const ymd = getCD(e.clientX, e.clientY)
+      if (ymd) {
+        const emp = employees.find((x) => x.id === drag.empId)
+        setShifts((prev) => [
+          ...prev,
+          {
+            id: nextUid(),
+            categoryId: drag.categoryId,
+            employeeId: drag.empId,
+            date: ymd,
+            startH: 12,
+            endH: 20,
+            employee: emp?.name || drag.empName || "?",
+            status: "draft",
+          },
+        ])
+      }
+      clearStaffDrag()
+    }
+    const onCancel = () => {
+      if (!staffDragRef.current) return
+      clearStaffDrag()
+    }
+    document.addEventListener("pointermove", onMove, { capture: true })
+    document.addEventListener("pointerup", onUp, { capture: true })
+    document.addEventListener("pointercancel", onCancel, { capture: true })
+    return () => {
+      document.removeEventListener("pointermove", onMove, { capture: true })
+      document.removeEventListener("pointerup", onUp, { capture: true })
+      document.removeEventListener("pointercancel", onCancel, { capture: true })
+    }
+  }, [isStaffDragging, getCD, employees, nextUid, setShifts, clearStaffDrag])
 
   const onSPD = useCallback((e: React.PointerEvent<HTMLDivElement>, shift: Block): void => {
     e.stopPropagation()
@@ -222,30 +271,6 @@ function MonthViewInner({
             <div
               key={d.toISOString()}
               data-cell-date={ck}
-              onDragOver={(e) => {
-                e.preventDefault()
-                setDropT(ck)
-              }}
-              onDragLeave={() => setDropT(null)}
-              onDrop={(e) => {
-                e.preventDefault()
-                setDropT(null)
-                const empId = e.dataTransfer.getData("empId")
-                const categoryId = e.dataTransfer.getData("categoryId")
-                if (empId && categoryId) {
-                  const emp = employees.find(e => e.id === empId)
-                  setShifts(prev => [...prev, {
-                    id: nextUid(),
-                    categoryId,
-                    employeeId: empId,
-                    date: toDateISO(d),
-                    startH: 12,
-                    endH: 20,
-                    employee: emp?.name || "?",
-                    status: "draft",
-                  }])
-                }
-              }}
               className={dayShifts.length === 0 && !today ? "bg-muted/30 hover:bg-muted/50" : undefined}
               style={{
                 borderRight: "1px solid var(--border))",
@@ -513,8 +538,9 @@ function MonthViewInner({
           category={categoryMap[staffPanel.categoryId]!}
           date={date}
           dayShifts={[]}
-          onDragStaff={(empId, categoryId) => {
-            // Dragging handled by HTML5 drag and drop
+          onDragStaff={({ empId, categoryId, empName, pointerId }) => {
+            staffDragRef.current = { empId, categoryId, empName, pointerId }
+            setIsStaffDragging(true)
           }}
           anchorRect={staffPanel.anchorRect}
           onClose={() => setStaffPanel(null)}
