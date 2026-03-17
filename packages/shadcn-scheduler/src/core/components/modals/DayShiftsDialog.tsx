@@ -85,7 +85,7 @@ export function DayShiftsDialog({
                         className="rounded-lg px-3 py-2 text-[13px] font-semibold"
                         style={{
                           background: isDraft ? c.light : c.bg,
-                          color: isDraft ? c.text : "hsl(var(--background))",
+                          color: isDraft ? c.text : "var(--background)",
                           border: isDraft ? `1.5px dashed ${c.border}` : "none",
                           cursor: onShiftClick ? "pointer" : "default",
                         }}

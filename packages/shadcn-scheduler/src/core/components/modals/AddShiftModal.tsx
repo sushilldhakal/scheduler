@@ -7,18 +7,18 @@ const LBL: React.CSSProperties = {
   display: "block",
   fontSize: 11,
   fontWeight: 600,
-  color: "hsl(var(--muted-foreground))",
+  color: "var(--muted-foreground)",
   marginTop: 10,
   marginBottom: 3,
 }
 const SEL: React.CSSProperties = {
   width: "100%",
   padding: "6px 8px",
-  border: "1px solid hsl(var(--border))",
+  border: "1px solid var(--border))",
   borderRadius: 7,
   fontSize: 12,
-  color: "hsl(var(--foreground))",
-  background: "hsl(var(--background))",
+  color: "var(--foreground)",
+  background: "var(--background)",
   cursor: "pointer",
   outline: "none",
 }
@@ -107,7 +107,7 @@ export function AddShiftModal({
       <div
         onClick={handleModalClick}
         style={{
-          background: "hsl(var(--background))",
+          background: "var(--background)",
           borderRadius: 16,
           padding: "22px 24px",
           boxShadow: "0 24px 64px rgba(0,0,0,0.2)",
@@ -115,10 +115,10 @@ export function AddShiftModal({
           borderTop: `4px solid ${c.bg}`,
         }}
       >
-        <div style={{ fontSize: 15, fontWeight: 800, color: "hsl(var(--foreground))", marginBottom: 4 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "var(--foreground)", marginBottom: 4 }}>
           {labels.addShift}
         </div>
-        <div style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 16 }}>
           {date.toLocaleDateString("en-AU", {
             weekday: "long",
             day: "numeric",
@@ -186,7 +186,7 @@ export function AddShiftModal({
               flex: 1,
               padding: "9px",
               background: c.bg,
-              color: "hsl(var(--background))",
+              color: "var(--background)",
               border: "none",
               borderRadius: 9,
               fontSize: 13,
@@ -200,8 +200,8 @@ export function AddShiftModal({
             onClick={onClose}
             style={{
               padding: "9px 14px",
-              background: "hsl(var(--border))",
-              color: "hsl(var(--foreground))",
+              background: "var(--border))",
+              color: "var(--foreground)",
               border: "none",
               borderRadius: 9,
               fontSize: 13,

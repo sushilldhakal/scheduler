@@ -57,9 +57,9 @@ function YearViewInner({ date, shifts, onMonthClick }: YearViewProps): React.Rea
               key={m}
               onClick={() => onMonthClick(year, m)}
               style={{
-                background: "hsl(var(--background))",
+                background: "var(--background)",
                 borderRadius: 12,
-                border: "1px solid hsl(var(--border))",
+                border: "1px solid var(--border))",
                 padding: "12px",
                 cursor: "pointer",
                 transition: "box-shadow 0.15s,transform 0.15s",
@@ -68,7 +68,7 @@ function YearViewInner({ date, shifts, onMonthClick }: YearViewProps): React.Rea
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
             >
-              <div style={{ fontSize: 13, fontWeight: 700, color: "hsl(var(--foreground))", marginBottom: 8 }}>{mName}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", marginBottom: 8 }}>{mName}</div>
 
               <div
                 style={{
@@ -83,7 +83,7 @@ function YearViewInner({ date, shifts, onMonthClick }: YearViewProps): React.Rea
                     style={{
                       textAlign: "center",
                       fontSize: 8,
-                      color: "hsl(var(--muted-foreground))",
+                      color: "var(--muted-foreground)",
                       fontWeight: 700,
                     }}
                   >
@@ -110,8 +110,8 @@ function YearViewInner({ date, shifts, onMonthClick }: YearViewProps): React.Rea
                         textAlign: "center",
                         fontSize: 9,
                         fontWeight: tod || has ? 700 : 400,
-                        color: tod ? "hsl(var(--background))" : has ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))",
-                        background: tod ? "hsl(var(--primary))" : has ? "hsl(var(--primary))" : "transparent",
+                        color: tod ? "var(--background)" : has ? "var(--primary-foreground)" : "var(--muted-foreground)",
+                        background: tod ? "var(--primary)" : has ? "var(--primary)" : "transparent",
                         borderRadius: 2,
                         lineHeight: "16px",
                       }}
@@ -134,13 +134,13 @@ function YearViewInner({ date, shifts, onMonthClick }: YearViewProps): React.Rea
                   <div
                     className="h-1.5 w-1.5 shrink-0 rounded-full"
                     style={{
-                      background: ms.length > 0 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                      background: ms.length > 0 ? "var(--primary)" : "var(--muted-foreground)",
                     }}
                   />
                   <span className={ms.length > 0 ? "text-foreground" : "text-muted-foreground"} style={{ fontSize: 10 }}>{ms.length} shifts</span>
                 </div>
                 {ms.filter((s) => s.status === "draft").length > 0 && (
-                  <span style={{ fontSize: 9, color: "hsl(var(--accent-foreground))", fontWeight: 600 }}>
+                  <span style={{ fontSize: 9, color: "var(--accent-foreground)", fontWeight: 600 }}>
                     {ms.filter((s) => s.status === "draft").length} draft
                   </span>
                 )}

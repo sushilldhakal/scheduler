@@ -1,6 +1,6 @@
 {
   "name": "@sushill/shadcn-scheduler",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A flexible shift scheduling component for React with shadcn UI, Tailwind CSS, and lucide-react icons",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -109,7 +109,9 @@
     "@tanstack/react-virtual": ">=3.0.0"
   },
   "peerDependenciesMeta": {
-    "@tanstack/react-virtual": { "optional": true }
+    "@tanstack/react-virtual": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@tanstack/react-virtual": "^3.0.0",

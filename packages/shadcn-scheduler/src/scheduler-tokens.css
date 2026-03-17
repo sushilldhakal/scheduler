@@ -2,20 +2,16 @@
 /* Add this once to your app's global CSS */
 
 :root {
-  --sch-bg: var(--background);
-  --sch-bg-muted: var(--muted);
-  --sch-bg-hover: var(--accent);
-  --sch-border: var(--border);
-  --sch-border-light: var(--border);
-  --sch-text: var(--foreground);
-  --sch-text-muted: var(--muted-foreground);
-  --sch-text-light: var(--muted-foreground);
-  --sch-today-bg: var(--accent);
-  --sch-today-text: var(--accent-foreground);
-  --sch-closed-bg: var(--muted);
-  --sch-closed-text: var(--muted-foreground);
-  --sch-bg-alpha: hsl(var(--background) / 0.95);
-  --sch-black-alpha: hsl(var(--foreground) / 0.13);
+  --sch-bg-95:    color-mix(in oklch, var(--background) 95%, transparent);
+  --sch-fg-08:    color-mix(in oklch, var(--foreground) 8%, transparent);
+  --sch-fg-12:    color-mix(in oklch, var(--foreground) 12%, transparent);
+  --sch-b-12:   color-mix(in oklch, var(--border) 12%, transparent);
+  --sch-b-60:   color-mix(in oklch, var(--border) 60%, transparent);
+  --sch-fg-13:    color-mix(in oklch, var(--foreground) 13%, transparent);
+  --sch-muted-30: color-mix(in oklch, var(--muted) 30%, transparent);
+  --sch-primary-40:   color-mix(in oklch, var(--primary) 40%, transparent);
+  --sch-destr-04: color-mix(in oklch, var(--destructive) 4%, transparent);
+  --sch-destr-40: color-mix(in oklch, var(--destructive) 40%, transparent);
 }
 
 @keyframes scaleIn {
@@ -31,6 +27,16 @@
 @keyframes slideInFromRight {
   from { transform: translateX(8px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
+}
+
+/* CSS containment: isolate scheduler as a rendering island */
+[data-scheduler-block] {
+  contain: layout style paint;
+}
+
+[data-scheduler-ghost] {
+  contain: layout style paint;
+  will-change: transform;
 }
 
 @media (forced-colors: active) {

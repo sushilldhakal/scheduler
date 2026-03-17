@@ -49,12 +49,12 @@ export function RoleWarningModal({
       <div
         onClick={handleModalClick}
         style={{
-          background: "hsl(var(--background))",
+          background: "var(--background)",
           borderRadius: 14,
           padding: "22px 24px",
           maxWidth: 360,
           boxShadow: "0 24px 64px rgba(0,0,0,0.2)",
-          borderTop: "4px solid hsl(var(--primary))",
+          borderTop: "4px solid var(--primary)",
         }}
       >
         <div
@@ -70,7 +70,7 @@ export function RoleWarningModal({
               width: 32,
               height: 32,
               borderRadius: 8,
-              background: "hsl(var(--accent))",
+              background: "var(--accent)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -78,18 +78,18 @@ export function RoleWarningModal({
           >
             <AlertTriangle size={16} />
           </div>
-          <span style={{ fontSize: 14, fontWeight: 800, color: "hsl(var(--foreground))" }}>
+          <span style={{ fontSize: 14, fontWeight: 800, color: "var(--foreground)" }}>
             {labels.category} Mismatch
           </span>
         </div>
 
-        <p style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", lineHeight: 1.5, margin: "0 0 6px" }}>
+        <p style={{ fontSize: 13, color: "var(--muted-foreground)", lineHeight: 1.5, margin: "0 0 6px" }}>
           <strong>{emp.name}</strong> is assigned to{" "}
           <span style={{ color: fc.bg, fontWeight: 700 }}>{fromCategory.name}</span>. You're
           moving this shift to{" "}
           <span style={{ color: tc.bg, fontWeight: 700 }}>{toCategory.name}</span>.
         </p>
-        <p style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", margin: "0 0 18px" }}>
+        <p style={{ fontSize: 12, color: "var(--muted-foreground)", margin: "0 0 18px" }}>
           This is allowed as fill-in cover. The shift {labels.category.toLowerCase()} will be
           updated.
         </p>
@@ -100,8 +100,8 @@ export function RoleWarningModal({
             style={{
               flex: 1,
               padding: "9px",
-              background: "hsl(var(--primary))",
-              color: "hsl(var(--background))",
+              background: "var(--primary)",
+              color: "var(--background)",
               border: "none",
               borderRadius: 9,
               fontSize: 13,
@@ -115,8 +115,8 @@ export function RoleWarningModal({
             onClick={onCancel}
             style={{
               padding: "9px 14px",
-              background: "hsl(var(--border))",
-              color: "hsl(var(--foreground))",
+              background: "var(--border))",
+              color: "var(--foreground)",
               border: "none",
               borderRadius: 9,
               fontSize: 13,

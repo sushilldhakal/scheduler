@@ -121,7 +121,7 @@ export function ShiftModal({
     <div
       onClick={variant === "modal" ? handleModalClick : undefined}
       style={{
-        background: "hsl(var(--background))",
+        background: "var(--background)",
         borderRadius: variant === "sheet" ? 0 : 16,
         padding: "24px 28px",
         boxShadow: variant === "modal" ? "0 24px 64px rgba(0,0,0,0.22)" : undefined,
@@ -154,7 +154,7 @@ export function ShiftModal({
               display: "flex",
               alignItems: "center",
               gap: 5,
-              background: isDraft ? "hsl(var(--accent))" : "hsl(var(--accent))",
+              background: isDraft ? "var(--accent)" : "var(--accent)",
               borderRadius: 20,
               padding: "3px 10px",
             }}
@@ -164,14 +164,14 @@ export function ShiftModal({
                 width: 6,
                 height: 6,
                 borderRadius: "50%",
-                background: isDraft ? "hsl(var(--primary))" : "hsl(var(--primary))",
+                background: isDraft ? "var(--primary)" : "var(--primary)",
               }}
             />
             <span
               style={{
                 fontSize: 10,
                 fontWeight: 700,
-                color: isDraft ? "hsl(var(--accent-foreground))" : "hsl(var(--primary))",
+                color: isDraft ? "var(--accent-foreground)" : "var(--primary)",
               }}
             >
               {isDraft ? labels.draft : labels.published}
@@ -185,10 +185,10 @@ export function ShiftModal({
               marginTop: 16,
               padding: 10,
               borderRadius: 8,
-              border: "1px solid hsl(var(--destructive))",
-              background: "hsl(var(--destructive)/0.04)",
+              border: "1px solid var(--destructive)",
+              background: "(var(--destructive)/0.04)",
               fontSize: 12,
-              color: "hsl(var(--destructive-foreground))",
+              color: "var(--destructive-foreground)",
             }}
           >
             <div style={{ fontWeight: 700, marginBottom: 6 }}>
@@ -210,14 +210,14 @@ export function ShiftModal({
                   style={{
                     padding: 6,
                     borderRadius: 6,
-                    background: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
+                    background: "var(--background)",
+                    border: "1px solid var(--border))",
                   }}
                 >
                   <div style={{ fontWeight: 600 }}>
                     {getTimeLabel(b.date, b.startH)} – {getTimeLabel(b.date, b.endH)}
                   </div>
-                  <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                     Category: {b.categoryId} · Status: {b.status}
                   </div>
                 </div>
@@ -226,10 +226,10 @@ export function ShiftModal({
           </div>
         )}
 
-        <div style={{ fontSize: 20, fontWeight: 800, color: "hsl(var(--foreground))", marginBottom: 4 }}>
+        <div style={{ fontSize: 20, fontWeight: 800, color: "var(--foreground)", marginBottom: 4 }}>
           {draft.employee}
         </div>
-        <div style={{ fontSize: 13, color: "hsl(var(--muted-foreground))" }}>
+        <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>
           {new Date(draft.date + "T12:00:00").toLocaleDateString("en-AU", {
             weekday: "long",
             day: "numeric",
@@ -240,7 +240,7 @@ export function ShiftModal({
         <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 12 }}>
           {/* Date picker */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4, color: "hsl(var(--muted-foreground))" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4, color: "var(--muted-foreground)" }}>
               Date
             </div>
             <Calendar
@@ -254,7 +254,7 @@ export function ShiftModal({
               }}
             />
             {errors.date && (
-              <div style={{ fontSize: 11, color: "hsl(var(--destructive))", marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: "var(--destructive)", marginTop: 4 }}>
                 {errors.date}
               </div>
             )}
@@ -262,7 +262,7 @@ export function ShiftModal({
 
           {/* Time + duration */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4, color: "hsl(var(--muted-foreground))" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4, color: "var(--muted-foreground)" }}>
               Time
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -275,7 +275,7 @@ export function ShiftModal({
                   setDraft(next)
                   validate(next)
                 }}
-                style={{ flex: 1, padding: "4px 8px", fontSize: 13, borderRadius: 6, border: "1px solid hsl(var(--border))" }}
+                style={{ flex: 1, padding: "4px 8px", fontSize: 13, borderRadius: 6, border: "1px solid var(--border))" }}
               >
                 {hourOptions.map((h) => (
                   <option key={h} value={h}>
@@ -283,7 +283,7 @@ export function ShiftModal({
                   </option>
                 ))}
               </select>
-              <span style={{ fontSize: 12, color: "hsl(var(--muted-foreground))" }}>to</span>
+              <span style={{ fontSize: 12, color: "var(--muted-foreground)" }}>to</span>
               <select
                 value={draft.endH}
                 onChange={(e) => {
@@ -292,7 +292,7 @@ export function ShiftModal({
                   setDraft(next)
                   validate(next)
                 }}
-                style={{ flex: 1, padding: "4px 8px", fontSize: 13, borderRadius: 6, border: "1px solid hsl(var(--border))" }}
+                style={{ flex: 1, padding: "4px 8px", fontSize: 13, borderRadius: 6, border: "1px solid var(--border))" }}
               >
                 {hourOptions
                   .filter((h) => h > draft.startH)
@@ -303,11 +303,11 @@ export function ShiftModal({
                   ))}
               </select>
             </div>
-            <div style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", marginTop: 4 }}>
+            <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 4 }}>
               {getTimeLabel(draft.date, draft.startH)} – {getTimeLabel(draft.date, draft.endH)} · {draft.endH - draft.startH}h
             </div>
             {(errors.startH || errors.endH) && (
-              <div style={{ fontSize: 11, color: "hsl(var(--destructive))", marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: "var(--destructive)", marginTop: 4 }}>
                 {errors.startH || errors.endH}
               </div>
             )}
@@ -315,7 +315,7 @@ export function ShiftModal({
 
           {/* Category selector */}
           <div>
-            <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4, color: "hsl(var(--muted-foreground))" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4, color: "var(--muted-foreground)" }}>
               Category
             </div>
             <select
@@ -325,7 +325,7 @@ export function ShiftModal({
                 setDraft(next)
                 validate(next)
               }}
-              style={{ width: "100%", padding: "4px 8px", fontSize: 13, borderRadius: 6, border: "1px solid hsl(var(--border))" }}
+              style={{ width: "100%", padding: "4px 8px", fontSize: 13, borderRadius: 6, border: "1px solid var(--border))" }}
             >
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
@@ -344,10 +344,10 @@ export function ShiftModal({
                 flex: 1,
                 minWidth: 80,
                 padding: "9px",
-                background: hasConflict ? "hsl(var(--muted))" : "hsl(var(--primary))",
+                background: hasConflict ? "var(--muted))" : "var(--primary)",
                 color: hasConflict
-                  ? "hsl(var(--muted-foreground))"
-                  : "hsl(var(--primary-foreground))",
+                  ? "var(--muted-foreground)"
+                  : "var(--primary-foreground)",
                 border: "none",
                 borderRadius: 9,
                 fontSize: 13,
@@ -365,8 +365,8 @@ export function ShiftModal({
                 flex: 1,
                 minWidth: 80,
                 padding: "9px",
-                background: "hsl(var(--border))",
-                color: "hsl(var(--foreground))",
+                background: "var(--border))",
+                color: "var(--foreground)",
                 border: "none",
                 borderRadius: 9,
                 fontSize: 13,
@@ -385,8 +385,8 @@ export function ShiftModal({
               }}
               style={{
                 padding: "9px 14px",
-                background: "hsl(var(--destructive))",
-                color: "hsl(var(--destructive-foreground))",
+                background: "var(--destructive)",
+                color: "var(--destructive-foreground)",
                 border: "none",
                 borderRadius: 9,
                 fontSize: 13,
@@ -401,8 +401,8 @@ export function ShiftModal({
             onClick={handleSave}
             style={{
               padding: "9px 16px",
-              background: "hsl(var(--border))",
-              color: "hsl(var(--foreground))",
+              background: "var(--border))",
+              color: "var(--foreground)",
               border: "none",
               borderRadius: 9,
               fontSize: 13,

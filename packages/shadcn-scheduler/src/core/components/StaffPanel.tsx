@@ -51,7 +51,7 @@ export function StaffPanel({
     }
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>): void => {
-    e.currentTarget.style.background = "hsl(var(--accent))"
+    e.currentTarget.style.background = "var(--accent)"
   }
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>): void => {
@@ -71,9 +71,9 @@ export function StaffPanel({
               bottom: 0,
               width: 280,
               zIndex: 8888,
-              background: "hsl(var(--background))",
-              borderLeft: `1px solid hsl(var(--border))`,
-              boxShadow: "-8px 0 24px hsl(var(--foreground) / 0.08)",
+              background: "var(--background)",
+              borderLeft: `1px solid var(--border))`,
+              boxShadow: "-8px 0 24px var(--sch-fg-08)",
               overflowY: "auto",
               padding: "12px 0",
             }
@@ -82,10 +82,10 @@ export function StaffPanel({
               top: anchorRect!.bottom + 4,
               left: anchorRect!.left,
               zIndex: 8888,
-              background: "hsl(var(--background))",
+              background: "var(--background)",
               border: `1.5px solid ${c.bg}30`,
               borderRadius: 10,
-              boxShadow: "0 8px 32px hsl(var(--foreground) / 0.12)",
+              boxShadow: "0 8px 32px var(--sch-fg-12)",
               minWidth: 190,
               maxHeight: 240,
               overflowY: "auto",
@@ -119,7 +119,7 @@ export function StaffPanel({
               border: "none",
               background: "transparent",
               cursor: "pointer",
-              color: "hsl(var(--muted-foreground))",
+              color: "var(--muted-foreground)",
               fontSize: 18,
               lineHeight: 1,
             }}
@@ -130,7 +130,7 @@ export function StaffPanel({
       </div>
 
       {unscheduled.length === 0 && (
-        <div style={{ padding: "8px 12px", fontSize: 12, color: "hsl(var(--muted-foreground))" }}>
+        <div style={{ padding: "8px 12px", fontSize: 12, color: "var(--muted-foreground)" }}>
           All {labels.staff.toLowerCase()} scheduled
         </div>
       )}
@@ -165,8 +165,8 @@ export function StaffPanel({
           >
             <span style={{ fontSize: 8, fontWeight: 700, color: c.text }}>{emp.avatar}</span>
           </div>
-          <span style={{ fontSize: 12, fontWeight: 500, color: "hsl(var(--foreground))" }}>{emp.name}</span>
-          <span style={{ fontSize: 9, color: "hsl(var(--muted-foreground))", marginLeft: "auto" }}>drag →</span>
+          <span style={{ fontSize: 12, fontWeight: 500, color: "var(--foreground)" }}>{emp.name}</span>
+          <span style={{ fontSize: 9, color: "var(--muted-foreground)", marginLeft: "auto" }}>drag →</span>
         </div>
       ))}
     </div>

@@ -7,74 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.3.2] - 2026-03-17
+
 ### Added
 
-- **Block and Resource generics (Track A Step 2)**  
-  - `Block<TMeta = Record<string, unknown>>` and `Resource<TMeta = Record<string, unknown>>` now accept an optional generic for domain-specific data.  
-  - Optional `meta?: TMeta` on both types. Use `Block<YourMeta>` or `Resource<YourMeta>` for typed meta (e.g. money, episode numbers, qualification codes).
-- **Preset support in createSchedulerConfig (Track A Step 3)**  
-  - `createSchedulerConfig({ preset: 'default' | 'tv', ...overrides })` applies a preset then merges overrides.  
-  - **`default`**: Standard roster labels and 7–20h range.  
-  - **`tv`**: Channel/Program vocabulary, 24h range, `initialScrollToNow`, `showLiveIndicator`, `views: { year: false, list: false }`, 15‑min snap.
-  - New config options: `views?: Partial<Record<ViewKey, boolean>>` (per-view visibility), `showLiveIndicator?: boolean`, `snapMinutes?: number`.
-  - `ViewTabs` accepts `views` and hides tabs when `views[key] === false`.
-- **File structure: core/ and domains/ (Track A Step 4)**  
-  - Engine code lives under `core/` (types, constants, context, config, hooks, utils, components, Scheduler).  
-  - **Domain wrappers** under `domains/`: `SchedulerDefault` (default preset) and `SchedulerTV` (preset `"tv"`).  
-  - Import `Scheduler` for the raw engine; import `SchedulerDefault` or `SchedulerTV` for a preset-applied scheduler.  
-  - Main entry re-exports from core and domains.
-- **Render slots (Track A Step 5)**  
-  - `Scheduler` and `SchedulerProvider` accept optional **`slots`**: `Partial<SchedulerSlots>`.  
-  - **Slot types**: `block`, `resourceHeader`, `timeSlotLabel`, `emptyCell`, `emptyState`.  
-  - When a slot is provided, the engine uses it instead of the built-in UI for that surface; omitted slots use defaults.  
-  - **`block`**: `(props: BlockSlotProps) => ReactNode` — block content (block, resource, isDraft, isDragging, hasConflict, widthPx, onDoubleClick).  
-  - **`resourceHeader`**: `(props: ResourceHeaderSlotProps) => ReactNode` — category row header (resource, scheduledCount, isCollapsed, onToggleCollapse).  
-  - Other slot props: `TimeSlotLabelSlotProps`, `EmptyCellSlotProps`, `EmptyStateSlotProps` (hooks for future use).  
-  - Slot types are exported for custom renderers.
-- **Multiple entry points and per-domain registry (Track A Step 6)**  
-  - **Subpath exports**: `@sushill/shadcn-scheduler` (main), `@sushill/shadcn-scheduler/tv`, `@sushill/shadcn-scheduler/default` for smaller bundles when using only one domain.  
-  - **Registry**: `scheduler` (default block) and `scheduler-tv` (TV preset block) are in the shadcn registry. Add via URL or registry index so `npx shadcn add scheduler-tv` (or add by item URL) installs the TV block.
-- **Block date as ISO string (Phase 7 / P7-06)**  
-  - Helpers: `toDateISO(d: Date)` for creating `Block.date`, `parseBlockDate(block)` for parsing to `Date`, `sameDay` now accepts `Date | string`.  
-  - Exported from main entry for consumers.
-- **Scheduler namespace (P7-26)**  
-  - `Scheduler` is the core component with domain attachments: `Scheduler.roster`, `Scheduler.tv`, `Scheduler.conference`, `Scheduler.festival`, `Scheduler.healthcare`, `Scheduler.gantt`, `Scheduler.venue`. Use `<Scheduler />` for raw engine or `<Scheduler.roster />`, `<Scheduler.tv />`, etc.
-- **Config views (P7-27)**  
-  - `SchedulerConfig.views` is `Partial<Record<ViewKey, boolean>>` (ViewKey = 'day' | 'week' | 'month' | 'year' | 'timeline' | 'gantt' | 'list' | 'now'). Set `views: { year: false }` to hide a tab. Replaces `enabledViews`.
-- **Presets (P7-12)**  
-  - Added presets: `roster`, `default`, `tv`, `conference`, `festival`, `healthcare`, `gantt`, `venue`. Use `createSchedulerConfig({ preset: 'conference' })` etc.
-- **Domain wrappers (P7-21–25)**  
-  - `SchedulerConference`, `SchedulerFestival`, `SchedulerHealthcare`, `SchedulerGantt`, `SchedulerVenue`; subpath exports `@sushill/shadcn-scheduler/conference`, `/festival`, `/healthcare`, `/gantt`, `/venue`.
-- **Slots in views (Task 7)**  
-  - TimelineView, MonthView, YearView, ListView read `slots` from context. `renderBlock`, `renderResourceHeader`, `renderEmptyState` apply in Timeline and List/Year empty states.
-- **Phase 13 — Performance**  
-  - `onVisibleRangeChange` is debounced by 100ms (P13-09) to avoid excessive calls during scroll.  
-  - GridView, TimelineView, MonthView, ListView, YearView are wrapped in `React.memo` for fewer re-renders (P13-08).  
-  - tsup build uses `splitting: true` for code splitting across entries (P13-11).  
-  - Bundle sizes (ESM, approximate): main ~268 KB, domain entries ~255 KB each; target &lt;50 KB gzipped per entry with tree-shaking (P13-10).
-- **Phase 14 — i18n &amp; Export**  
-  - **Config**: `timezone?`, `locale?`, `isRTL?`, `firstDay?: 0 | 1` on SchedulerConfig. `getWeekDates(date, firstDay)` supports Sunday/Monday start.  
-  - **Timezone**: `formatInTimezone(isoDate, hour, tz, locale?)` and `formatTimeInTimezone` in `core/utils/timezone.ts` (Intl, no extra deps).  
-  - **Export**: `exportToCSV(blocks, filename)` in `core/utils/export.ts`; flattens meta columns; no dependency.  
-  - **readOnly**: When `readOnly={true}`, drag, resize, and add are disabled; blocks are view-only.  
-  - **Callbacks**: `onBlockCreate`, `onBlockDelete`, `onBlockMove`, `onBlockResize`, `onBlockPublish` on SchedulerProps (full Block payload).  
-  - **useAuditTrail**: Hook `useAuditTrail(onAuditEvent?)` returns `{ log, clearLog, append }` for audit entries (create/delete/move/resize/publish).
-- **Phase 15 — Testing &amp; DX**  
-  - **Vitest**: `vitest.config.ts` with jsdom; `npm run test` and `npm run test:watch`.  
-  - **Unit tests**: `packing.test.ts` (packShifts, findConflicts, getCategoryRowHeight), `constants.test.ts` (fmt12, toDateISO, parseBlockDate, sameDay, getWeekDates, snapH), `config.test.ts` (createSchedulerConfig, presets, overrides).
+- **Performance — Windowed data**: Day and week views now pre-filter shifts to only the visible date window before passing to GridView. With a 21-day buffer, ~6,000 shifts enter the grid instead of 104,000 for a full year — ~17× reduction.
+- **Performance — Shift index**: GridView builds a `Map<categoryId:dateISO, Block[]>` for O(1) lookups instead of scanning all shifts per cell. Per-cell cost drops from 104,000 iterations to a single `Map.get()`.
+- **Performance — Memoized displayShifts**: `displayShifts` is now memoized so it no longer invalidates `categoryHeights` and downstream useMemos on every render.
+- **Performance — DOM ghost during drag**: The drag preview ghost is updated via direct DOM manipulation instead of React state. Pointer move no longer triggers React re-renders; only drag start and drag end do. Combined with the above, drag stays smooth even with large datasets.
+- **Performance — CSS containment & GPU hints**: Grid container uses `contain: layout style` and `willChange: contents` during drag. Blocks use `contain: layout style paint` and `willChange: transform` when dragging. `scheduler-tokens.css` adds global rules for `[data-scheduler-block]` and `[data-scheduler-ghost]` for isolated rendering islands.
 
-### Breaking
+### Changed
 
-- **`enabledViews` replaced by `views` (P7-27)**  
-  - Config and ViewTabs now use `views?: Partial<Record<ViewKey, boolean>>`. Migrate `enabledViews: ['day','week','month']` to `views: { day: true, week: true, month: true, year: false, timeline: false, list: false }` (or omit to show all).
-- **Block.date is now string (P7-06)**  
-  - `Block.date` is an ISO date string (`YYYY-MM-DD`), not a `Date` object. Use `toDateISO(date)` when creating/updating blocks and `parseBlockDate(block)` or `sameDay(block.date, other)` when comparing.  
-  - **Migration**: Replace `date: someDate` with `date: toDateISO(someDate)`; replace `sameDay(s.date, d)` (no change, `sameDay` accepts string); replace any `s.date.getFullYear()` etc. with `parseBlockDate(s).getFullYear()` or `new Date(s.date + 'T12:00:00').getFullYear()`.
-- **Type renames (Track A Step 1)**  
-  - `Shift` → `Block`: All schedule items (shifts) are now typed as `Block`.  
-  - `Category` and `Employee` → `Resource`: Row headers (categories) and assignable staff (employees) are merged into a single `Resource` type with a `kind` discriminator: `kind: "category"` for row resources, `kind: "employee"` for staff.  
-  - **Migration**: Use `Block` instead of `Shift`; use `Resource` with `kind: "category"` for categories and `kind: "employee"` for employees. Add `kind` to every category/employee object.  
-  - Public props remain `shifts`, `onShiftsChange`, `categories`, `employees`; only the TypeScript types change.
+- **Hour grid borders**: Day and week view hour separators now use `--sch-b-12` for consistent, subtle borders.
+- **Demo data**: Demo page uses lighter test data (20 staff, 5 categories, 7 days) for faster load.
+
+### Fixed
+
+- Demo page now anchors to the current week on load and uses correct date range.
 
 ---
 

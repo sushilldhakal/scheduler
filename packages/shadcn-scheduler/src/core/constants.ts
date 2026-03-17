@@ -189,10 +189,10 @@ export function getWeeksForBuffer(date: Date, bufferWeeks: number): Date[] {
 export function hourBg(h: number, settings: Settings, dow: number): string {
   const wh = settings.workingHours[dow]
   const inV = h >= settings.visibleFrom && h < settings.visibleTo
-  if (!inV) return "hsl(var(--border))"
-  if (wh === null) return "hsl(var(--muted))"
-  if (h < wh.from || h >= wh.to) return "hsl(var(--muted))"
-  return "hsl(var(--background))"
+  if (!inV) return "var(--border))"
+  if (wh === null) return "var(--muted))"
+  if (h < wh.from || h >= wh.to) return "var(--muted))"
+  return "var(--background)"
 }
 
 /** Returns true if hour is outside working hours (for dashed background in week/day view) */
@@ -204,4 +204,4 @@ export function isOutsideWorkingHours(h: number, settings: Settings, dow: number
 
 /** CSS for dashed background (outside working hours) */
 export const DASHED_BG =
-  "repeating-linear-gradient(-45deg, hsl(var(--muted)), hsl(var(--muted)) 2px, hsl(var(--background)) 2px, hsl(var(--background)) 4px)"
+  "repeating-linear-gradient(-45deg, var(--muted)), var(--muted)) 2px, var(--background) 2px, var(--background) 4px)"

@@ -184,12 +184,12 @@ function ListViewInner({
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "12px 20px 8px",
-                background: isOT ? "hsl(var(--accent))" : "hsl(var(--muted))",
-                borderBottom: "1px solid hsl(var(--border))",
+                background: isOT ? "var(--accent)" : "var(--muted))",
+                borderBottom: "1px solid var(--border))",
                 position: "sticky",
                 top: 0,
                 zIndex: 5,
-                outline: isOT ? "2px solid hsl(var(--primary))" : "none",
+                outline: isOT ? "2px solid var(--primary)" : "none",
                 outlineOffset: -2,
               }}
             >
@@ -199,7 +199,7 @@ function ListViewInner({
                     width: 36,
                     height: 36,
                     borderRadius: "50%",
-                    background: isToday(date) ? "hsl(var(--primary))" : "hsl(var(--border))",
+                    background: isToday(date) ? "var(--primary)" : "var(--border))",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -210,18 +210,18 @@ function ListViewInner({
                     style={{
                       fontSize: 13,
                       fontWeight: 800,
-                      color: isToday(date) ? "hsl(var(--background))" : "hsl(var(--foreground))",
+                      color: isToday(date) ? "var(--background)" : "var(--foreground)",
                     }}
                   >
                     {date.getDate()}
                   </span>
                 </div>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "hsl(var(--foreground))" }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>
                     {DAY_NAMES[date.getDay()]}, {MONTHS_SHORT[date.getMonth()]} {date.getDate()},{" "}
                     {date.getFullYear()}
                   </div>
-                  <div style={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}>
+                  <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                     {ds_.length} shift{ds_.length !== 1 ? "s" : ""}
                     {drafts.length > 0 ? ` · ${drafts.length} draft` : ""}
                   </div>
@@ -233,8 +233,8 @@ function ListViewInner({
                   style={{
                     fontSize: 11,
                     fontWeight: 700,
-                    color: "hsl(var(--primary))",
-                    background: "hsl(var(--accent))",
+                    color: "var(--primary)",
+                    background: "var(--accent)",
                     border: "none",
                     borderRadius: 6,
                     padding: "4px 10px",
@@ -261,14 +261,14 @@ function ListViewInner({
                     display: "flex",
                     alignItems: "center",
                     padding: "10px 20px",
-                    borderBottom: "1px solid hsl(var(--border))",
+                    borderBottom: "1px solid var(--border))",
                     cursor: isDrag ? "grabbing" : "grab",
-                    background: isDrag ? "hsl(var(--accent))" : "hsl(var(--background))",
+                    background: isDrag ? "var(--accent)" : "var(--background)",
                     opacity: isDrag ? 0.5 : 1,
                     touchAction: "none",
                   }}
                 >
-                  <div style={{ marginRight: 10, color: "hsl(var(--muted-foreground))", fontSize: 14, flexShrink: 0 }}>⠿</div>
+                  <div style={{ marginRight: 10, color: "var(--muted-foreground)", fontSize: 14, flexShrink: 0 }}>⠿</div>
                   <div
                     style={{
                       width: 3,
@@ -306,14 +306,14 @@ function ListViewInner({
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "hsl(var(--foreground))" }}>{shift.employee}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{shift.employee}</span>
                       {isDraft && (
                         <span
                           style={{
                             fontSize: 9,
                             fontWeight: 700,
-                            background: "hsl(var(--accent))",
-                            color: "hsl(var(--accent-foreground))",
+                            background: "var(--accent)",
+                            color: "var(--accent-foreground)",
                             borderRadius: 4,
                             padding: "1px 5px",
                           }}
@@ -322,7 +322,7 @@ function ListViewInner({
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 12, color: "hsl(var(--muted-foreground))", marginTop: 1 }}>
+                    <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 1 }}>
                       {category?.name} · {getTimeLabel(shift.date, shift.startH)} – {getTimeLabel(shift.date, shift.endH)} · {shift.endH - shift.startH}h
                     </div>
                   </div>
@@ -331,8 +331,8 @@ function ListViewInner({
                     style={{
                       fontSize: 11,
                       fontWeight: 600,
-                      color: isDraft ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
-                      background: isDraft ? "hsl(var(--accent))" : "hsl(var(--border))",
+                      color: isDraft ? "var(--primary)" : "var(--muted-foreground)",
+                      background: isDraft ? "var(--accent)" : "var(--border))",
                       borderRadius: 6,
                       padding: "4px 10px",
                       flexShrink: 0,
@@ -361,7 +361,7 @@ function ListViewInner({
                 left: gPos.x + 14,
                 top: gPos.y - 12,
                 background: c.bg,
-                color: "hsl(var(--background))",
+                color: "var(--background)",
                 borderRadius: 6,
                 padding: "4px 10px",
                 fontSize: 11,

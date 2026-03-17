@@ -128,14 +128,14 @@ function MonthViewInner({
       onPointerUp={onPU}
       onPointerCancel={onPC}
     >
-      <div style={{ width: 180, flexShrink: 0, borderRight: "1px solid hsl(var(--border))", overflowY: "auto", background: "hsl(var(--muted))" }}>
+      <div style={{ width: 180, flexShrink: 0, borderRight: "1px solid var(--border))", overflowY: "auto", background: "var(--muted))" }}>
         {categories.map((cat) => {
           const c = getColor(cat.colorIdx)
           return (
-            <div key={cat.id} style={{ padding: "12px 16px", borderBottom: "1px solid hsl(var(--border))" }}>
+            <div key={cat.id} style={{ padding: "12px 16px", borderBottom: "1px solid var(--border))" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
-                <span style={{ fontSize: 13, fontWeight: 600, color: "hsl(var(--foreground))" }}>{cat.name}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{cat.name}</span>
               </div>
               <button
                 onClick={(e) => {
@@ -168,7 +168,7 @@ function MonthViewInner({
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(7,1fr)",
-            borderBottom: "2px solid hsl(var(--border))",
+            borderBottom: "2px solid var(--border))",
             flexShrink: 0,
           }}
         >
@@ -180,7 +180,7 @@ function MonthViewInner({
               padding: "8px 0",
               fontSize: 11,
               fontWeight: 700,
-              color: "hsl(var(--muted-foreground))",
+              color: "var(--muted-foreground)",
               textTransform: "uppercase",
               letterSpacing: 0.5,
             }}
@@ -205,9 +205,9 @@ function MonthViewInner({
               <div
                 key={`e${i}`}
                 style={{
-                  background: "hsl(var(--muted))",
-                  borderRight: "1px solid hsl(var(--border))",
-                  borderBottom: "1px solid hsl(var(--border))",
+                  background: "var(--muted))",
+                  borderRight: "1px solid var(--border))",
+                  borderBottom: "1px solid var(--border))",
                 }}
               />
             )
@@ -248,14 +248,14 @@ function MonthViewInner({
               }}
               className={dayShifts.length === 0 && !today ? "bg-muted/30 hover:bg-muted/50" : undefined}
               style={{
-                borderRight: "1px solid hsl(var(--border))",
-                borderBottom: "1px solid hsl(var(--border))",
+                borderRight: "1px solid var(--border))",
+                borderBottom: "1px solid var(--border))",
                 padding: "5px 4px",
-                background: isOver ? "hsl(var(--accent))" : today ? "hsl(var(--accent))" : closed ? "hsl(var(--muted))" : dayShifts.length === 0 ? "hsl(var(--muted) / 0.3)" : "hsl(var(--background))",
+                background: isOver ? "var(--accent)" : today ? "var(--accent)" : closed ? "var(--muted))" : dayShifts.length === 0 ? "var(--muted) / 0.3)" : "var(--background)",
                 display: "flex",
                 flexDirection: "column",
                 gap: 2,
-                outline: isOver ? "2px solid hsl(var(--primary))" : "none",
+                outline: isOver ? "2px solid var(--primary)" : "none",
                 outlineOffset: -2,
                 minHeight: 96,
                 position: "relative",
@@ -271,8 +271,8 @@ function MonthViewInner({
                   style={{
                     fontSize: 13,
                     fontWeight: today ? 700 : 500,
-                    color: today ? "hsl(var(--primary-foreground))" : closed ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))",
-                    background: today ? "hsl(var(--primary))" : "transparent",
+                    color: today ? "var(--primary-foreground)" : closed ? "var(--muted-foreground)" : "var(--foreground)",
+                    background: today ? "var(--primary)" : "transparent",
                     width: 24,
                     height: 24,
                     borderRadius: "50%",
@@ -286,7 +286,7 @@ function MonthViewInner({
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
                   {closed && (
-                    <span style={{ fontSize: 9, color: "hsl(var(--muted-foreground))", fontWeight: 600 }}>CLOSED</span>
+                    <span style={{ fontSize: 9, color: "var(--muted-foreground)", fontWeight: 600 }}>CLOSED</span>
                   )}
                   <button
                     onClick={() => handleAddShift(d)}
@@ -294,13 +294,13 @@ function MonthViewInner({
                       width: 18,
                       height: 18,
                       borderRadius: "50%",
-                      border: "1.5px dashed hsl(var(--muted-foreground))",
+                      border: "1.5px dashed var(--muted-foreground)",
                       background: "transparent",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      color: "hsl(var(--muted-foreground))",
+                      color: "var(--muted-foreground)",
                       padding: 0,
                       opacity: 0.7,
                     }}
@@ -323,13 +323,13 @@ function MonthViewInner({
                         width: 18,
                         height: 18,
                         borderRadius: "50%",
-                        border: "1.5px dashed hsl(var(--primary))",
+                        border: "1.5px dashed var(--primary)",
                         background: "transparent",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: "hsl(var(--primary))",
+                        color: "var(--primary)",
                         padding: 0,
                         opacity: 0.7,
                       }}
@@ -358,7 +358,7 @@ function MonthViewInner({
                     style={{
                       background: isDraft ? "transparent" : c.bg,
                       border: isDraft ? `1.5px dashed ${c.bg}` : "none",
-                      color: isDraft ? c.bg : "hsl(var(--background))",
+                      color: isDraft ? c.bg : "var(--background)",
                       borderRadius: 4,
                       padding: "2px 5px",
                       fontSize: 10,
@@ -387,7 +387,7 @@ function MonthViewInner({
                       style={{
                         background: "transparent",
                         border: "none",
-                        color: isDraft ? c.bg : "hsl(var(--background))",
+                        color: isDraft ? c.bg : "var(--background)",
                         cursor: "pointer",
                         padding: "0 2px",
                         display: "flex",
@@ -415,7 +415,7 @@ function MonthViewInner({
                   }}
                   style={{
                     fontSize: 10,
-                    color: "hsl(var(--primary))",
+                    color: "var(--primary)",
                     paddingLeft: 2,
                     cursor: "pointer",
                     textDecoration: "underline",
@@ -440,9 +440,9 @@ function MonthViewInner({
               left: hoverMore.rect.right,
               top: hoverMore.rect.top,
               marginLeft: 8,
-              background: "hsl(var(--popover))",
-              color: "hsl(var(--popover-foreground))",
-              border: "1px solid hsl(var(--border))",
+              background: "var(--popover)",
+              color: "var(--popover-foreground)",
+              border: "1px solid var(--border))",
               borderRadius: 8,
               padding: "8px 12px",
               boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
@@ -457,7 +457,7 @@ function MonthViewInner({
               return (
                 <div key={s.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 2 }}>
                   <span style={{ color: c.text }}>{s.employee.split(" ")[0]}</span>
-                  <span style={{ color: "hsl(var(--muted-foreground))" }}>{fmt12(s.startH)}–{fmt12(s.endH)}</span>
+                  <span style={{ color: "var(--muted-foreground)" }}>{fmt12(s.startH)}–{fmt12(s.endH)}</span>
                 </div>
               )
             })}
@@ -491,7 +491,7 @@ function MonthViewInner({
                 left: gPos.x + 12,
                 top: gPos.y - 10,
                 background: c.bg,
-                color: "hsl(var(--background))",
+                color: "var(--background)",
                 borderRadius: 6,
                 padding: "4px 8px",
                 fontSize: 11,

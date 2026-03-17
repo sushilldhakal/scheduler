@@ -55,7 +55,7 @@ export function BottomSheet({
           width: "100%",
           maxWidth: 420,
           maxHeight: "85vh",
-          background: "hsl(var(--background))",
+          background: "var(--background)",
           borderTopLeftRadius: 16,
           borderTopRightRadius: 16,
           boxShadow: "0 -8px 32px rgba(0,0,0,0.2)",
@@ -69,7 +69,7 @@ export function BottomSheet({
             style={{
               flexShrink: 0,
               padding: "12px 16px",
-              borderBottom: "1px solid hsl(var(--border))",
+              borderBottom: "1px solid var(--border))",
             }}
           >
             {title}

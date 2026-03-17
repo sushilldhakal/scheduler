@@ -463,6 +463,12 @@ interface SchedulerLabels {
 
 ## What's New
 
+### 0.3.2
+
+- **Performance — large datasets**: Windowed data (day/week views pre-filter to visible dates), memoized `displayShifts`, and a shift index for O(1) lookups. ~17× fewer shifts enter the grid; per-cell cost drops from 104K iterations to a single `Map.get()`.
+- **Performance — smooth drag**: Drag ghost updated via direct DOM (no React on pointer move). CSS containment and GPU hints for isolated rendering. Drag stays smooth with 200 staff and 100K+ shifts.
+- **Hour grid borders**: Day and week view separators use `--sch-b-12` for consistent styling.
+
 ### 0.3.0
 
 - **Zoom-based time intervals**: Day view shows 30‑minute labels when zoomed in; week view uses 1h / 2h / 4h label gaps depending on zoom so labels stay readable (including when zoomed out with narrow columns).

@@ -1,6 +1,6 @@
-import React, { useMemo, useState, useEffect } from "react"
+import React, { useMemo, useState } from "react"
 import type { Block, Resource } from "../../types"
-import { get3Weeks, getWeeksForBuffer, clamp } from "../../constants"
+import { getWeeksForBuffer, clamp, toDateISO } from "../../constants"
 import { useSchedulerContext } from "../../context"
 import { useIsMobile } from "../../hooks/useMediaQuery"
 import { GridView } from "../GridView"
@@ -75,10 +75,15 @@ export function DayView({
     })
   }, [currentCenter, setDate, bufferDays, totalDays])
 
+  const visibleShifts = useMemo(() => {
+    const dateSet = new Set(dates.map((d) => toDateISO(d)))
+    return shifts.filter((s) => dateSet.has(s.date))
+  }, [shifts, dates])
+
   return (
     <GridView
       dates={dates}
-      shifts={shifts}
+      shifts={visibleShifts}
       setShifts={setShifts}
       selEmps={selEmps}
       onShiftClick={onShiftClick}
@@ -170,10 +175,15 @@ export function WeekView({
     (): Date[] => getWeeksForBuffer(date, bufferWeeks),
     [date, bufferWeeks]
   )
+  const visibleShifts = useMemo(() => {
+    const dateSet = new Set(allDates.map((d) => toDateISO(d)))
+    return shifts.filter((s) => dateSet.has(s.date))
+  }, [shifts, allDates])
+
   return (
     <GridView
       dates={allDates}
-      shifts={shifts}
+      shifts={visibleShifts}
       setShifts={setShifts}
       selEmps={selEmps}
       onShiftClick={onShiftClick}

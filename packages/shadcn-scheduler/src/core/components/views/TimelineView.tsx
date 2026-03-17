@@ -227,7 +227,7 @@ function TimelineViewInner({
                           width: widthPx,
                           height,
                           background: isDraft ? c.light : c.bg,
-                          color: isDraft ? c.text : "hsl(var(--background))",
+                          color: isDraft ? c.text : "var(--background)",
                           borderColor: isDraft ? c.border : "transparent",
                           borderStyle: isDraft ? "dashed" : "solid",
                         }}

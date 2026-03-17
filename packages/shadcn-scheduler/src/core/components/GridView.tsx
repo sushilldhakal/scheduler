@@ -52,14 +52,6 @@ interface DragState {
   dur: number
 }
 
-interface GhostState {
-  ns: number
-  ne: number
-  categoryId: string
-  dayDelta: number
-  id: string
-}
-
 interface GridViewProps {
   dates: Date[]
   shifts: Block[]
@@ -292,24 +284,32 @@ function GridViewInner({
   const centerDayIdx = isDayViewMultiDay ? Math.floor(dates.length / 2) : 0
   useEffect(() => {
     if (!initRef.current && scrollRef.current) {
-      if (isWeekView) {
-        scrollRef.current.scrollLeft = weekViewScrollCol * COL_W_WEEK
-      } else if (hasDayScrollNav) {
-        scrollRef.current.scrollLeft = DAY_SCROLL_BUFFER
-      } else if (isDayViewMultiDay) {
-        const vw = scrollRef.current.clientWidth
-        scrollRef.current.scrollLeft = Math.max(0, centerDayIdx * DAY_WIDTH + DAY_WIDTH / 2 - vw / 2)
-      } else {
-        scrollRef.current.scrollLeft = 0
+      const performScroll = (): void => {
+        if (!scrollRef.current || initRef.current) return
+        if (isWeekView) {
+          scrollRef.current.scrollLeft = weekViewScrollCol * COL_W_WEEK
+        } else if (hasDayScrollNav) {
+          scrollRef.current.scrollLeft = DAY_SCROLL_BUFFER
+        } else if (isDayViewMultiDay) {
+          const vw = scrollRef.current.clientWidth
+          scrollRef.current.scrollLeft = Math.max(0, centerDayIdx * DAY_WIDTH + DAY_WIDTH / 2 - vw / 2)
+        } else {
+          scrollRef.current.scrollLeft = 0
+        }
+        if (headerRef.current) {
+          headerRef.current.scrollLeft = scrollRef.current.scrollLeft
+        }
+        if (sidebarRef.current) {
+          sidebarRef.current.scrollTop = scrollRef.current.scrollTop
+        }
+        initRef.current = true
+        lastReportedDayIdxRef.current = centerDayIdx
       }
-      if (headerRef.current) {
-        headerRef.current.scrollLeft = scrollRef.current.scrollLeft
-      }
-      if (sidebarRef.current) {
-        sidebarRef.current.scrollTop = scrollRef.current.scrollTop
-      }
-      initRef.current = true
-      lastReportedDayIdxRef.current = centerDayIdx
+      // Defer so layout is complete; rAF + rAF helps ensure layout has been painted
+      const id = requestAnimationFrame(() => {
+        requestAnimationFrame(performScroll)
+      })
+      return () => cancelAnimationFrame(id)
     }
   }, [isWeekView, hasDayScrollNav, isDayViewMultiDay, weekViewScrollCol, COL_W_WEEK, centerDayIdx, DAY_WIDTH])
 
@@ -565,7 +565,22 @@ function GridViewInner({
     return out
   }, [isLoading, CATEGORIES, dates])
 
-  const displayShifts = isLoading ? skeletonBlocks : shifts.filter((s) => selEmps.has(s.employeeId))
+  const displayShifts = useMemo(
+    () => (isLoading ? skeletonBlocks : shifts.filter((s) => selEmps.has(s.employeeId))),
+    [isLoading, skeletonBlocks, shifts, selEmps]
+  )
+
+  const shiftIndex = useMemo((): Map<string, Block[]> => {
+    const idx = new Map<string, Block[]>()
+    for (const s of displayShifts) {
+      const key = `${s.categoryId}:${s.date}`
+      const list = idx.get(key)
+      if (list) list.push(s)
+      else idx.set(key, [s])
+    }
+    return idx
+  }, [displayShifts])
+
   const categoryHeights = useMemo((): Record<string, number> => {
     const map: Record<string, number> = {}
     CATEGORIES.forEach((cat) => {
@@ -575,16 +590,14 @@ function GridViewInner({
       }
       let maxH = ROLE_HDR + SHIFT_H
       dates.forEach((date) => {
-        const dayShifts = displayShifts.filter(
-          (s) => sameDay(s.date, date) && (isLoading || selEmps.has(s.employeeId))
-        )
+        const dayShifts = shiftIndex.get(`${cat.id}:${toDateISO(date)}`) ?? []
         const h = getCategoryRowHeight(cat.id, dayShifts)
         if (h > maxH) maxH = h
       })
       map[cat.id] = maxH
     })
     return map
-  }, [displayShifts, dates, selEmps, CATEGORIES, collapsed, isLoading])
+  }, [shiftIndex, dates, CATEGORIES, collapsed, isLoading])
 
   const categoryTops = useMemo((): Record<string, number> => {
     const map: Record<string, number> = {}
@@ -628,18 +641,24 @@ function GridViewInner({
     const ids: string[] = []
     CATEGORIES.forEach((cat) => {
       dates.forEach((date) => {
-        const dayShifts = shifts.filter(
-          (s) =>
-            sameDay(s.date, date) &&
-            s.categoryId === cat.id &&
-            selEmps.has(s.employeeId)
-        )
+        const dayShifts = shiftIndex.get(`${cat.id}:${toDateISO(date)}`) ?? []
         const sorted = [...dayShifts].sort((a, b) => a.startH - b.startH)
         sorted.forEach((s) => ids.push(s.id))
       })
     })
     return ids
-  }, [shifts, dates, CATEGORIES, selEmps])
+  }, [shiftIndex, dates, CATEGORIES])
+
+  const categoryHasShifts = useMemo((): Record<string, boolean> => {
+    const map: Record<string, boolean> = {}
+    for (const [key, list] of shiftIndex.entries()) {
+      if (list.length > 0) {
+        const catId = key.split(":")[0]
+        map[catId] = true
+      }
+    }
+    return map
+  }, [shiftIndex])
 
   const totalH = useMemo(
     (): number => CATEGORIES.reduce((s, c) => s + categoryHeights[c.id], 0),
@@ -647,7 +666,23 @@ function GridViewInner({
   )
 
   const ds = useRef<DragState | null>(null)
-  const [ghost, setGhost] = useState<GhostState | null>(null)
+  const ghostRef = useRef<HTMLDivElement | null>(null)
+  const layoutRef = useRef({
+    categoryTops: {} as Record<string, number>,
+    categoryHeights: {} as Record<string, number>,
+    dates: [] as Date[],
+    shifts: [] as Block[],
+    CATEGORIES: [] as Resource[],
+    collapsed: new Set<string>(),
+  })
+  layoutRef.current = {
+    categoryTops,
+    categoryHeights,
+    dates,
+    shifts,
+    CATEGORIES,
+    collapsed,
+  }
   const [dragId, setDragId] = useState<string | null>(null)
   const gridPointerIdsRef = useRef<Set<number>>(new Set())
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null)
@@ -920,12 +955,12 @@ function GridViewInner({
         }
       }
 
+      let ns: number, ne: number, categoryId: string, dayDelta: number
       if (d.type === "move") {
         const dx = x - d.sx
         const di0 = isWeekView || isDayViewMultiDay ? getDateIdx(d.sx) : 0
         const di1 = getDateIdx(x)
-        const dayDelta = di1 - di0
-        // When moving between days, preserve original hours; only apply offset within same day
+        dayDelta = di1 - di0
         const hourOffset =
           dayDelta !== 0
             ? 0
@@ -934,26 +969,87 @@ function GridViewInner({
               : isDayViewMultiDay
                 ? snapH(dx / HOUR_W)
                 : snapH(dx / HOUR_W)
-        const ns = snapH(clamp(d.startH + hourOffset, 0, 24 - d.dur))
-        setGhost({ ns, ne: ns + d.dur, categoryId: newCat.id, dayDelta, id: d.id })
+        ns = snapH(clamp(d.startH + hourOffset, 0, 24 - d.dur))
+        ne = ns + d.dur
+        categoryId = newCat.id
       } else if (d.type === "resize-right") {
         const pxPerH = isWeekView ? PX_WEEK : isDayViewMultiDay ? HOUR_W : HOUR_W
-        const ne = snapH(clamp(d.endH + (x - d.sx) / pxPerH, d.startH + SNAP, 24))
-        setGhost({ ns: d.startH, ne, categoryId: d.categoryId, dayDelta: 0, id: d.id })
+        ne = snapH(clamp(d.endH + (x - d.sx) / pxPerH, d.startH + SNAP, 24))
+        ns = d.startH
+        categoryId = d.categoryId
+        dayDelta = 0
       } else {
         const pxPerH = isWeekView ? PX_WEEK : isDayViewMultiDay ? HOUR_W : HOUR_W
-        const ns = snapH(clamp(d.startH + (x - d.sx) / pxPerH, 0, d.endH - SNAP))
-        setGhost({ ns, ne: d.endH, categoryId: d.categoryId, dayDelta: 0, id: d.id })
+        ns = snapH(clamp(d.startH + (x - d.sx) / pxPerH, 0, d.endH - SNAP))
+        ne = d.endH
+        categoryId = d.categoryId
+        dayDelta = 0
+      }
+
+      const lay = layoutRef.current
+      const orig = lay.shifts.find((s) => s.id === d.id)
+      const cat = lay.CATEGORIES.find((c) => c.id === categoryId)
+      const ghostEl = ghostRef.current
+      if (!orig || !cat || lay.collapsed.has(cat.id) || !ghostEl) {
+        if (ghostEl) ghostEl.style.display = "none"
+        return
+      }
+
+      const top = lay.categoryTops[cat.id]
+      const rowH = lay.categoryHeights[cat.id]
+      let left: number, width: number
+      if (isWeekView) {
+        const origDi = lay.dates.findIndex((dt) => sameDay(dt, orig.date))
+        const newDi = clamp(origDi + dayDelta, 0, lay.dates.length - 1)
+        left = newDi * COL_W_WEEK + (ns - settings.visibleFrom) * PX_WEEK
+        width = Math.max((ne - ns) * PX_WEEK - 2, 8)
+      } else if (isDayViewMultiDay) {
+        const origDi = lay.dates.findIndex((dt) => sameDay(dt, orig.date))
+        const newDi = clamp(origDi + dayDelta, 0, lay.dates.length - 1)
+        const cs = Math.max(ns, settings.visibleFrom)
+        const ce = Math.min(ne, settings.visibleTo)
+        if (ce <= cs) {
+          ghostEl.style.display = "none"
+          return
+        }
+        left = newDi * DAY_WIDTH + (cs - settings.visibleFrom) * HOUR_W + 2
+        width = Math.max((ce - cs) * HOUR_W - 4, 10)
+      } else {
+        const cs = Math.max(ns, settings.visibleFrom)
+        const ce = Math.min(ne, settings.visibleTo)
+        if (ce <= cs) {
+          ghostEl.style.display = "none"
+          return
+        }
+        left = (cs - settings.visibleFrom) * HOUR_W + 2
+        width = Math.max((ce - cs) * HOUR_W - 4, 10)
+      }
+      const pixelTop = top + ROLE_HDR + 3
+      const c = getColor(cat.colorIdx)
+
+      ghostEl.style.display = "flex"
+      ghostEl.style.left = "0"
+      ghostEl.style.top = "0"
+      ghostEl.style.width = `${width}px`
+      ghostEl.style.height = `${SHIFT_H - 6}px`
+      ghostEl.style.transform = `translate(${left}px, ${pixelTop}px)`
+      ghostEl.style.background = `linear-gradient(135deg,${c.bg},${c.bg}cc)`
+      ghostEl.style.borderColor = c.bg
+      const label = ghostEl.querySelector("[data-ghost-label]") as HTMLElement | null
+      if (label) {
+        label.textContent = `${fmt12(ns)}–${fmt12(ne)}`
+        label.style.color = c.bg
+        label.style.background = "var(--background)"
       }
     },
-    [getGridXY, getCategoryAtY, getDateIdx, isWeekView, isDayViewMultiDay, COL_W_WEEK, DAY_WIDTH, PX_WEEK, HOUR_W, clearLongPress, setZoom, onPinchZoom]
+    [getGridXY, getCategoryAtY, getDateIdx, isWeekView, isDayViewMultiDay, COL_W_WEEK, DAY_WIDTH, PX_WEEK, HOUR_W, clearLongPress, setZoom, onPinchZoom, settings.visibleFrom, settings.visibleTo, getColor]
   )
 
   const onPC = useCallback(
     (e: React.PointerEvent<HTMLDivElement>): void => {
       ds.current = null
       setDragId(null)
-      setGhost(null)
+      if (ghostRef.current) ghostRef.current.style.display = "none"
     },
     []
   )
@@ -987,13 +1083,13 @@ function GridViewInner({
           setTimeout(() => setDropConflictId(null), 800)
           ds.current = null
           setDragId(null)
-          setGhost(null)
+          if (ghostRef.current) ghostRef.current.style.display = "none"
           return
         }
       }
       ds.current = null
       setDragId(null)
-      setGhost(null)
+      if (ghostRef.current) ghostRef.current.style.display = "none"
       setShifts((prev) => {
         const next = prev.map((s) => {
           if (s.id !== d.id) return s
@@ -1248,8 +1344,8 @@ function GridViewInner({
             alignItems: "center",
             justifyContent: "space-between",
             padding: "8px 12px",
-            borderBottom: "1px solid hsl(var(--border))",
-            background: "hsl(var(--muted))",
+            borderBottom: "1px solid var(--border))",
+            background: "var(--muted))",
           }}
         >
           <button
@@ -1262,13 +1358,13 @@ function GridViewInner({
               border: "none",
               background: "transparent",
               cursor: mobileResourceIndex! <= 0 ? "not-allowed" : "pointer",
-              color: "hsl(var(--muted-foreground))",
+              color: "var(--muted-foreground)",
               opacity: mobileResourceIndex! <= 0 ? 0.5 : 1,
             }}
           >
             ←
           </button>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "hsl(var(--foreground))" }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>
             {currentCategory.name}
           </span>
           <button
@@ -1281,7 +1377,7 @@ function GridViewInner({
               border: "none",
               background: "transparent",
               cursor: mobileResourceIndex! >= categories.length - 1 ? "not-allowed" : "pointer",
-              color: "hsl(var(--muted-foreground))",
+              color: "var(--muted-foreground)",
               opacity: mobileResourceIndex! >= categories.length - 1 ? 0.5 : 1,
             }}
           >
@@ -1293,15 +1389,15 @@ function GridViewInner({
         style={{
           display: "flex",
           flexShrink: 0,
-          borderBottom: "2px solid hsl(var(--border))",
-          background: "hsl(var(--muted))",
+          borderBottom: "2px solid var(--border))",
+          background: "var(--muted))",
         }}
       >
         <div
           style={{
             width: SIDEBAR_W,
             flexShrink: 0,
-            borderRight: "1px solid hsl(var(--border))",
+            borderRight: "1px solid var(--border))",
             display: "flex",
             alignItems: "flex-end",
             padding: "0 12px 6px",
@@ -1311,7 +1407,7 @@ function GridViewInner({
             style={{
               fontSize: 10,
               fontWeight: 700,
-              color: "hsl(var(--muted-foreground))",
+              color: "var(--muted-foreground)",
               textTransform: "uppercase",
               letterSpacing: 0.5,
             }}
@@ -1353,8 +1449,8 @@ function GridViewInner({
                           flexShrink: 0,
                           textAlign: "center",
                           padding: "8px 4px 6px",
-                          borderRight: "1px solid hsl(var(--border))",
-                          background: today ? "hsl(var(--accent))" : closed ? "hsl(var(--muted))" : "transparent",
+                          borderRight: "1px solid var(--border))",
+                          background: today ? "var(--accent)" : closed ? "var(--muted))" : "transparent",
                           cursor: onDateDoubleClick ? "pointer" : "default",
                         }}
                       >
@@ -1362,7 +1458,7 @@ function GridViewInner({
                           style={{
                             fontSize: 9,
                             fontWeight: 700,
-                            color: today ? "hsl(var(--primary))" : closed ? "hsl(var(--muted-foreground))" : "hsl(var(--muted-foreground))",
+                            color: today ? "var(--primary)" : closed ? "var(--muted-foreground)" : "var(--muted-foreground)",
                             textTransform: "uppercase",
                             letterSpacing: 0.5,
                           }}
@@ -1373,8 +1469,8 @@ function GridViewInner({
                           style={{
                             fontSize: 16,
                             fontWeight: 700,
-                            color: today ? "hsl(var(--background))" : closed ? "hsl(var(--muted-foreground))" : "hsl(var(--foreground))",
-                            background: today ? "hsl(var(--primary))" : "transparent",
+                            color: today ? "var(--background)" : closed ? "var(--muted-foreground)" : "var(--foreground)/08",
+                            background: today ? "var(--primary)" : "transparent",
                             width: 28,
                             height: 28,
                             borderRadius: "50%",
@@ -1416,7 +1512,7 @@ function GridViewInner({
                                     style={{
                                       fontSize: 8,
                                       fontWeight: 600,
-                                      color: "hsl(var(--muted-foreground))",
+                                      color: "var(--muted-foreground)",
                                       flex: 1,
                                       textAlign: "center",
                                       minWidth: 0,
@@ -1430,7 +1526,7 @@ function GridViewInner({
                           </div>
                         )}
                         {closed && (
-                          <div style={{ fontSize: 8, color: "hsl(var(--muted-foreground))", fontWeight: 600, marginTop: 1 }}>
+                          <div style={{ fontSize: 8, color: "var(--muted-foreground)", fontWeight: 600, marginTop: 1 }}>
                             CLOSED
                           </div>
                         )}
@@ -1445,7 +1541,7 @@ function GridViewInner({
                     display: "flex",
                     flexDirection: "column",
                     width: TOTAL_W,
-                    background: "hsl(var(--muted))",
+                    background: "var(--muted))",
                     flexShrink: 0,
                   }}
                 >
@@ -1463,7 +1559,7 @@ function GridViewInner({
                           width: DAY_WIDTH,
                           flexShrink: 0,
                           textAlign: "center",
-                          borderRight: "1px solid hsl(var(--border))",
+                          borderRight: "1px solid var(--border))",
                           padding: "0 4px",
                         }}
                       >
@@ -1471,7 +1567,7 @@ function GridViewInner({
                           style={{
                             fontSize: 9,
                             fontWeight: 700,
-                            color: isToday(d) ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                            color: isToday(d) ? "var(--primary)" : "var(--muted-foreground)",
                           }}
                         >
                           {MONTHS_SHORT[d.getMonth()]} {DOW_MON_FIRST[(d.getDay() + 6) % 7]} {d.getDate()}
@@ -1493,8 +1589,8 @@ function GridViewInner({
                           display: "flex",
                           width: DAY_WIDTH,
                           flexShrink: 0,
-                          borderRight: "1px solid hsl(var(--border))",
-                          background: isToday(d) ? "hsl(var(--accent))" : "transparent",
+                          borderRight: "1px solid var(--border))",
+                          background: isToday(d) ? "var(--accent)" : "transparent",
                         }}
                       >
                         {DAY_VISIBLE_SLOTS.map((h) => {
@@ -1511,9 +1607,9 @@ function GridViewInner({
                                 padding: "0 0 4px 6px",
                                 fontSize: dayTimeStep < 1 ? 9 : 10,
                                 fontWeight: 600,
-                                borderRight: "1px solid hsl(var(--border))",
+                                borderRight: "1px solid var(--border))",
                                 background: dashed ? DASHED_BG : hourBg(h, settings, d.getDay()),
-                                color: (dayTimeStep < 1 ? Math.abs(h - nowH) < 0.3 : h === Math.floor(nowH)) && isToday(d) ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                                color: (dayTimeStep < 1 ? Math.abs(h - nowH) < 0.3 : h === Math.floor(nowH)) && isToday(d) ? "var(--primary)" : "var(--muted-foreground)",
                               }}
                             >
                               {getTimeLabel(toDateISO(d), h)}
@@ -1531,7 +1627,7 @@ function GridViewInner({
                     display: "flex",
                     width: DAY_WIDTH,
                     height: HOUR_HDR_H,
-                    background: "hsl(var(--muted))",
+                    background: "var(--muted))",
                   }}
                 >
                   {DAY_VISIBLE_SLOTS.map((h) => {
@@ -1549,9 +1645,9 @@ function GridViewInner({
                           padding: "0 0 6px 8px",
                           fontSize: dayTimeStep < 1 ? 9 : 11,
                           fontWeight: 600,
-                          borderRight: "1px solid hsl(var(--border))",
+                          borderRight: "1px solid var(--border))",
                           background: dashed ? DASHED_BG : hourBg(h, settings, dates[0].getDay()),
-                          color: (dayTimeStep < 1 ? Math.abs(h - nowH) < 0.3 : h === Math.floor(nowH)) ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))",
+                          color: (dayTimeStep < 1 ? Math.abs(h - nowH) < 0.3 : h === Math.floor(nowH)) ? "var(--primary)" : "var(--muted-foreground)",
                         }}
                       >
                         {getTimeLabel(toDateISO(dates[0]), h)}
@@ -1574,9 +1670,9 @@ function GridViewInner({
           style={{
             width: SIDEBAR_W,
             flexShrink: 0,
-            borderRight: "1px solid hsl(var(--border))",
+            borderRight: "1px solid var(--border))",
             overflowY: "hidden",
-            background: "hsl(var(--muted))",
+            background: "var(--muted))",
           }}
         >
           {(() => {
@@ -1620,8 +1716,8 @@ function GridViewInner({
                 title={scheduled > 0 ? `${scheduled} block${scheduled !== 1 ? "s" : ""}, ${totalHours.toFixed(1)}h in this period` : undefined}
                 style={{
                   height: h,
-                  borderBottom: "1px solid hsl(var(--border))",
-                  background: "hsl(var(--muted))",
+                  borderBottom: "1px solid var(--border))",
+                  background: "var(--muted))",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "flex-start",
@@ -1661,7 +1757,7 @@ function GridViewInner({
                     style={{
                       fontSize: 12,
                       fontWeight: 700,
-                      color: "hsl(var(--foreground))",
+                      color: "var(--foreground)",
                       flex: 1,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -1698,7 +1794,7 @@ function GridViewInner({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      color: "hsl(var(--muted-foreground))",
+                      color: "var(--muted-foreground)",
                       transform: collapsed.has(cat.id) ? "rotate(-90deg)" : "none",
                       transition: "transform 0.2s",
                     }}
@@ -1779,6 +1875,8 @@ function GridViewInner({
                   width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
                   height: totalH,
                   minHeight: "100%",
+                  contain: "layout style",
+                  willChange: dragId ? "contents" : "auto",
                 }}
                 tabIndex={0}
                 onKeyDown={onGridKeyDown}
@@ -1787,6 +1885,32 @@ function GridViewInner({
                 onPointerUp={onGridPointerUp}
                 onPointerCancel={onPC}
               >
+            <div
+              ref={ghostRef}
+              data-scheduler-ghost
+              style={{
+                display: "none",
+                position: "absolute",
+                pointerEvents: "none",
+                zIndex: 18,
+                borderRadius: 5,
+                border: "2px dashed hsl(var(--primary))",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <span
+                data-ghost-label
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: "hsl(var(--background))",
+                  background: "hsl(var(--primary))",
+                  borderRadius: 3,
+                  padding: "1px 4px",
+                }}
+              />
+            </div>
             {CATEGORIES.map((cat) => {
               const top = categoryTops[cat.id]
               const rowH = categoryHeights[cat.id]
@@ -1808,7 +1932,7 @@ function GridViewInner({
                           width: SLOT_W,
                           height: rowH,
                           background: dashed ? DASHED_BG : hourBg(h, settings, date.getDay()),
-                          borderRight: "1px solid hsl(var(--border))",
+                          borderRight: "1px solid var(--sch-b-60)",
                         }}
                         onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
                           e.preventDefault()
@@ -1831,9 +1955,9 @@ function GridViewInner({
                         top,
                         width: COL_W_WEEK,
                         height: rowH,
-                        background: today ? "hsl(var(--accent))" : closed ? "hsl(var(--muted))" : "hsl(var(--background))",
-                        borderRight: "1px solid hsl(var(--border))",
-                        borderBottom: "1px solid hsl(var(--border))",
+                        background: today ? "var(--accent)" : closed ? "var(--muted))" : "var(--background)",
+                        borderRight: "1px solid var(--border))",
+                        borderBottom: "1px solid var(--border))",
                       }}
                       onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
                         e.preventDefault()
@@ -1858,8 +1982,7 @@ function GridViewInner({
                                 width: Math.max(PX_WEEK, 2),
                                 height: "100%",
                                 background: dashed ? DASHED_BG : "transparent",
-                                borderRight: "1px solid",
-                                borderColor: k % 2 === 0 ? "hsl(var(--border))" : "hsl(var(--border))",
+                                borderRight: "1px solid var(--sch-b-60)",
                                 pointerEvents: "none",
                               }}
                             />
@@ -1883,7 +2006,7 @@ function GridViewInner({
                       width: SLOT_W,
                       height: rowH,
                       background: dashed ? DASHED_BG : hourBg(h, settings, date.getDay()),
-                      borderRight: "1px solid hsl(var(--border))",
+                      borderRight: "1px solid var(--sch-b-60)",
                     }}
                     onDragOver={(e: React.DragEvent<HTMLDivElement>) => {
                       e.preventDefault()
@@ -1904,7 +2027,7 @@ function GridViewInner({
                   top: categoryTops[cat.id] + categoryHeights[cat.id] - 1,
                   width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
                   height: 2,
-                  background: "hsl(var(--border))",
+                  background: "var(--sch-fg-12))",
                   zIndex: 3,
                   pointerEvents: "none",
                 }}
@@ -1923,7 +2046,7 @@ function GridViewInner({
                           top: 0,
                           width: 1,
                           height: totalH,
-                          background: "hsl(var(--border))",
+                          background: "var(--sch-fg-12))",
                           zIndex: 1,
                           pointerEvents: "none",
                         }}
@@ -1939,7 +2062,7 @@ function GridViewInner({
                         top: 0,
                         width: 1,
                         height: totalH,
-                        background: "hsl(var(--border))",
+                        background: "var(--sch-fg-12))",
                         zIndex: 1,
                         pointerEvents: "none",
                       }}
@@ -1952,7 +2075,7 @@ function GridViewInner({
               nowH < settings.visibleTo ? (
                 <div
                   key={`now-${di}`}
-                  className="pointer-events-none absolute top-0 z-[15] h-full w-0.5 bg-destructive/80 shadow-[0_0_6px_hsl(var(--destructive)/0.4)]"
+                  className="pointer-events-none absolute top-0 z-[15] h-full w-0.5 bg-destructive/80 shadow-[0_0_6px_var(--destructive)/0.4]"
                   style={{
                     left: isWeekView
                       ? di * COL_W_WEEK + (nowH - settings.visibleFrom) * PX_WEEK
@@ -1984,13 +2107,13 @@ function GridViewInner({
                         width: 20,
                         height: 20,
                         borderRadius: "50%",
-                        border: "1.5px dashed hsl(var(--muted-foreground))",
-                        background: "hsl(var(--background))",
+                        border: "1.5px dashed var(--muted-foreground)",
+                        background: "var(--background)",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: "hsl(var(--muted-foreground))",
+                        color: "var(--muted-foreground)",
                         padding: 0,
                         boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                       }}
@@ -2014,13 +2137,13 @@ function GridViewInner({
                           width: 20,
                           height: 20,
                           borderRadius: "50%",
-                          border: "1.5px dashed hsl(var(--primary))",
-                          background: "hsl(var(--background))",
+                          border: "1.5px dashed var(--primary)",
+                          background: "var(--background)",
                           cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          color: "hsl(var(--primary))",
+                          color: "var(--primary)",
                           padding: 0,
                           boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                         }}
@@ -2042,13 +2165,13 @@ function GridViewInner({
                         width: 18,
                         height: 18,
                         borderRadius: "50%",
-                        border: "1.5px dashed hsl(var(--muted-foreground))",
-                        background: "hsl(var(--background))",
+                        border: "1.5px dashed var(--muted-foreground)",
+                        background: "var(--background)",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: "hsl(var(--muted-foreground))",
+                        color: "var(--muted-foreground)",
                         padding: 0,
                         boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                       }}
@@ -2074,13 +2197,13 @@ function GridViewInner({
                           width: 18,
                           height: 18,
                           borderRadius: "50%",
-                          border: "1.5px dashed hsl(var(--primary))",
-                          background: "hsl(var(--background))",
+                          border: "1.5px dashed var(--primary)",
+                          background: "var(--background)",
                           cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          color: "hsl(var(--primary))",
+                          color: "var(--primary)",
                           padding: 0,
                           boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
                         }}
@@ -2145,85 +2268,11 @@ function GridViewInner({
                 )
               })()}
 
-            {ghost &&
-              (() => {
-                const orig = shifts.find((s) => s.id === ghost.id)
-                if (!orig) return null
-                const cat = CATEGORIES.find((c) => c.id === ghost.categoryId)
-                if (!cat || collapsed.has(cat.id)) return null
-                const c = getColor(cat.colorIdx)
-                const top = categoryTops[cat.id]
-                const rowH = categoryHeights[cat.id]
-                let left: number, width: number
-                if (isWeekView) {
-                  const origDi = dates.findIndex((d) => sameDay(d, orig.date))
-                  const newDi = clamp(origDi + (ghost.dayDelta ?? 0), 0, dates.length - 1)
-                  left = newDi * COL_W_WEEK + (ghost.ns - settings.visibleFrom) * PX_WEEK
-                  width = Math.max((ghost.ne - ghost.ns) * PX_WEEK - 2, 8)
-                } else if (isDayViewMultiDay) {
-                  const origDi = dates.findIndex((d) => sameDay(d, orig.date))
-                  const newDi = clamp(origDi + (ghost.dayDelta ?? 0), 0, dates.length - 1)
-                  const cs = Math.max(ghost.ns, settings.visibleFrom)
-                  const ce = Math.min(ghost.ne, settings.visibleTo)
-                  if (ce <= cs) return null
-                  left = newDi * DAY_WIDTH + (cs - settings.visibleFrom) * HOUR_W + 2
-                  width = Math.max((ce - cs) * HOUR_W - 4, 10)
-                } else {
-                  const cs = Math.max(ghost.ns, settings.visibleFrom)
-                  const ce = Math.min(ghost.ne, settings.visibleTo)
-                  if (ce <= cs) return null
-                  left = (cs - settings.visibleFrom) * HOUR_W + 2
-                  width = Math.max((ce - cs) * HOUR_W - 4, 10)
-                }
-                return (
-                  <>
-                    <div
-                      className="bg-primary/10 ring-1 ring-primary/30 pointer-events-none rounded absolute z-[17]"
-                      style={{ left, top: top + ROLE_HDR, width, height: rowH }}
-                    />
-                    <div
-                      className="opacity-80 ring-2 ring-primary/50"
-                      style={{
-                        position: "absolute",
-                        left,
-                        top: top + ROLE_HDR + 3,
-                        width,
-                        height: SHIFT_H - 6,
-                        background: c.bg,
-                        borderRadius: 5,
-                        border: `2px dashed ${c.bg}`,
-                        pointerEvents: "none",
-                        zIndex: 18,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 9,
-                          fontWeight: 700,
-                          color: c.bg,
-                          background: "hsl(var(--background))",
-                          borderRadius: 3,
-                          padding: "1px 4px",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {fmt12(ghost.ns)}–{fmt12(ghost.ne)}
-                      </span>
-                    </div>
-                  </>
-                )
-              })()}
-
             {CATEGORIES.map((cat) => {
               if (collapsed.has(cat.id)) return null
               const catTop = categoryTops[cat.id]
               return dates.map((date, di) => {
-                const dayShifts = displayShifts.filter(
-                  (s) => sameDay(s.date, date) && s.categoryId === cat.id && (isLoading || selEmps.has(s.employeeId))
-                )
+                const dayShifts = shiftIndex.get(`${cat.id}:${toDateISO(date)}`) ?? []
                 const sorted = [...dayShifts].sort((a, b) => a.startH - b.startH)
                 const trackNums = packShifts(sorted)
                 const c = getColor(cat.colorIdx)
@@ -2322,6 +2371,8 @@ function GridViewInner({
                     border: isDraft ? `1.5px dashed ${c.bg}` : `1px solid ${c.bg}88`,
                     boxShadow: isDrag || isDraft ? "none" : `0 2px 6px ${c.bg}44`,
                     transition: isDeleting ? "opacity 150ms ease-out" : "transform 150ms ease-out",
+                    contain: "layout style paint",
+                    willChange: isDrag ? "transform" : "auto",
                   }
                   if (isDrag) {
                     blockStyle.transform = "scale(1.02)"
@@ -2403,7 +2454,7 @@ function GridViewInner({
                         isNew && "animate-[scaleIn_120ms_ease-out]",
                         (isDropConflict || hasConflict) && "ring-2 ring-destructive border-destructive",
                         isDraft && "opacity-90",
-                        isLive && "shadow-[0_0_0_2px_hsl(var(--primary)/0.4)]"
+                        isLive && "shadow-[0_0_0_2px_var(--primary)/0.4]"
                       )}
                       style={blockStyle}
                     >
@@ -2475,7 +2526,7 @@ function GridViewInner({
                           height: "100%",
                           cursor: "ew-resize",
                           flexShrink: 0,
-                          background: isDraft ? `${c.bg}22` : "hsl(var(--foreground))",
+                          background: isDraft ? `${c.bg}22` : "var(--foreground)",
                           borderRadius: "4px 0 0 4px",
                           display: "flex",
                           alignItems: "center",
@@ -2490,7 +2541,7 @@ function GridViewInner({
                                 width: 2,
                                 height: 2,
                                 borderRadius: "50%",
-                                background: isDraft ? c.bg : "hsl(var(--background))",
+                                background: isDraft ? c.bg : "var(--background)",
                               }}
                             />
                           ))}
@@ -2510,7 +2561,7 @@ function GridViewInner({
                           <div
                             className="truncate"
                             style={{
-                              color: isDraft ? c.bg : "hsl(var(--background))",
+                              color: isDraft ? c.bg : "var(--background)",
                               fontSize: 10,
                               fontWeight: 700,
                               display: "flex",
@@ -2524,7 +2575,7 @@ function GridViewInner({
                                 style={{
                                   fontSize: 8,
                                   background: c.bg,
-                                  color: "hsl(var(--background))",
+                                  color: "var(--background)",
                                   borderRadius: 2,
                                   padding: "0 2px",
                                   flexShrink: 0,
@@ -2539,7 +2590,7 @@ function GridViewInner({
                         {width > 52 && (
                           <div
                             style={{
-                              color: isDraft ? c.text : "hsl(var(--background))",
+                              color: isDraft ? c.text : "var(--background)",
                               fontSize: 9,
                               whiteSpace: "nowrap",
                             }}
@@ -2559,7 +2610,7 @@ function GridViewInner({
                           style={{
                             background: "transparent",
                             border: "none",
-                            color: isDraft ? c.bg : "hsl(var(--background))",
+                            color: isDraft ? c.bg : "var(--background)",
                             cursor: "pointer",
                             padding: "0 4px",
                             display: "flex",
@@ -2592,7 +2643,7 @@ function GridViewInner({
                           style={{
                             background: "transparent",
                             border: "none",
-                            color: isDraft ? c.bg : "hsl(var(--background))",
+                            color: isDraft ? c.bg : "var(--background)",
                             cursor: "pointer",
                             padding: "0 4px",
                             display: "flex",
@@ -2622,7 +2673,7 @@ function GridViewInner({
                           height: "100%",
                           cursor: "ew-resize",
                           flexShrink: 0,
-                          background: isDraft ? `${c.bg}22` : "hsl(var(--foreground))",
+                          background: isDraft ? `${c.bg}22` : "var(--foreground)",
                           borderRadius: "0 4px 4px 0",
                           display: "flex",
                           alignItems: "center",
@@ -2637,7 +2688,7 @@ function GridViewInner({
                                 width: 2,
                                 height: 2,
                                 borderRadius: "50%",
-                                background: isDraft ? c.bg : "hsl(var(--background))",
+                                background: isDraft ? c.bg : "var(--background)",
                               }}
                             />
                           ))}
@@ -2655,9 +2706,7 @@ function GridViewInner({
             {!isLoading &&
               !readOnly &&
               CATEGORIES.filter(
-                (cat) =>
-                  !collapsed.has(cat.id) &&
-                  displayShifts.filter((s) => s.categoryId === cat.id).length === 0
+                (cat) => !collapsed.has(cat.id) && !categoryHasShifts[cat.id]
               ).map((cat) => {
                 const top = categoryTops[cat.id] + ROLE_HDR
                 const rowH = categoryHeights[cat.id] - ROLE_HDR
@@ -2731,19 +2780,19 @@ function GridViewInner({
         >
           <div
             style={{
-              background: "hsl(var(--background))",
+              background: "var(--background)",
               borderRadius: 12,
               padding: 20,
               maxWidth: 340,
               boxShadow: "0 24px 64px rgba(0,0,0,0.22)",
-              border: "1px solid hsl(var(--border))",
+              border: "1px solid var(--border))",
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "hsl(var(--foreground))" }}>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: "var(--foreground)" }}>
               Delete shift?
             </div>
-            <div style={{ fontSize: 13, color: "hsl(var(--muted-foreground))", marginBottom: 16 }}>
+            <div style={{ fontSize: 13, color: "var(--muted-foreground)", marginBottom: 16 }}>
               This shift will be removed. This cannot be undone.
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -2752,8 +2801,8 @@ function GridViewInner({
                 onClick={() => setShiftToDeleteConfirm(null)}
                 style={{
                   padding: "8px 16px",
-                  background: "hsl(var(--muted))",
-                  color: "hsl(var(--foreground))",
+                  background: "var(--muted))",
+                  color: "var(--foreground)",
                   border: "none",
                   borderRadius: 8,
                   fontSize: 13,
@@ -2780,8 +2829,8 @@ function GridViewInner({
                 }}
                 style={{
                   padding: "8px 16px",
-                  background: "hsl(var(--destructive))",
-                  color: "hsl(var(--destructive-foreground))",
+                  background: "var(--destructive)",
+                  color: "var(--destructive-foreground)",
                   border: "none",
                   borderRadius: 8,
                   fontSize: 13,
