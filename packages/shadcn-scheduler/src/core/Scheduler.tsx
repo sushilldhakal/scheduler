@@ -478,6 +478,17 @@ export function Scheduler({
     handleSetDate(new Date(y, m, 1))
     setView("month")
   }
+
+  // Smart view change: when narrowing from list-week/month/year → list-day,
+  // snap currentDate back to today so the day list isn't empty on a random nav date
+  const handleViewChange = useCallback((nextView: string) => {
+    const wasWideList = view.startsWith("list") && view !== "listday"
+    const isNowDayList = nextView === "listday"
+    if (wasWideList && isNowDayList) {
+      setCurrentDate(new Date())
+    }
+    setView(nextView)
+  }, [view])
   const handleShiftModalPublish = (id: string): void => {
     publishShifts(id)
     setSelShift((s) => (s ? { ...s, status: "published" } : null))
@@ -568,7 +579,7 @@ export function Scheduler({
               className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center gap-2 border-t border-border bg-background p-2"
               style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
             >
-              <ViewTabs view={view} setView={setView} views={mergedConfig.views} />
+              <ViewTabs view={view} setView={handleViewChange} views={mergedConfig.views} />
               <Button onClick={handleAddShiftButton} size="sm">
                 <Plus size={16} />
                 Add
@@ -611,7 +622,7 @@ export function Scheduler({
                   </div>
                 )}
               <div className="flex w-full items-center gap-2">
-                <ViewTabs view={view} setView={setView} views={mergedConfig.views} />
+                <ViewTabs view={view} setView={handleViewChange} views={mergedConfig.views} />
                 <UserSelect
                   selEmps={selEmps}
                   onToggle={toggleEmp}
