@@ -155,7 +155,8 @@ function MonthViewInner({
       setGPos(null)
       if (cd) {
         const [y, m, day] = cd.split("-").map(Number)
-        setShifts((prev) => prev.map((s) => (s.id === id ? { ...s, date: new Date(y, m - 1, day) } : s)))
+        const newDate = `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+        setShifts((prev) => prev.map((s) => (s.id === id ? { ...s, date: newDate } : s)))
       }
     },
     [getCD, setShifts]
@@ -339,7 +340,7 @@ function MonthViewInner({
                         const newShift: Block = {
                           ...copiedShift,
                           id: nextUid(),
-                          date: d,
+                          date: toDateISO(d),
                         }
                         setShifts((prev) => [...prev, newShift])
                         setCopiedShift?.(null)

@@ -1,6 +1,7 @@
 import React from "react"
 import { Button } from "./ui/button"
 import { cn } from "../lib/utils"
+import type { ViewKey } from "../types"
 import {
   LayoutGrid,
   List,

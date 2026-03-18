@@ -194,19 +194,28 @@ export function getWeeksForBuffer(date: Date, bufferWeeks: number): Date[] {
 export function hourBg(h: number, settings: Settings, dow: number): string {
   const wh = settings.workingHours[dow]
   const inV = h >= settings.visibleFrom && h < settings.visibleTo
-  if (!inV) return "var(--border))"
+  if (!inV) return "var(--muted))"
   if (wh === null) return "var(--muted))"
   if (h < wh.from || h >= wh.to) return "var(--muted))"
   return "var(--background)"
 }
 
-/** Returns true if hour is outside working hours (for dashed background in week/day view) */
+/**
+ * Returns true if hour slot `h` is outside the day's working hours.
+ * For days where workingHours[dow] is null (closed), the entire day is shaded — but
+ * individual hour slots within the visible range that fall before wh.from or after wh.to
+ * should also be dashed even when the day is open.
+ * E.g. visibleFrom=7, visibleTo=17, Saturday wh={from:10,to:15}:
+ *   hours 7,8,9 → dashed; 10..14 → clear; 15,16 → dashed
+ */
 export function isOutsideWorkingHours(h: number, settings: Settings, dow: number): boolean {
   const wh = settings.workingHours[dow]
+  // Closed day — entire row is muted (handled by hourBg), not dashed
   if (wh === null) return false
+  // Hour is within visible range but outside this day's working window → dashed
   return h < wh.from || h >= wh.to
 }
 
-/** CSS for dashed background (outside working hours) */
+/** CSS for dashed background (outside working hours within a visible day) */
 export const DASHED_BG =
-  "repeating-linear-gradient(-45deg, var(--muted)), var(--muted)) 2px, var(--background) 2px, var(--background) 4px)"
+  "repeating-linear-gradient(-45deg, var(--muted) 0px, var(--muted) 2px, var(--background) 2px, var(--background) 6px)"

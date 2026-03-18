@@ -18,6 +18,7 @@ import { YearView } from "./components/views/YearView"
 import { ListView } from "./components/views/ListView"
 import { TimelineView } from "./components/views/TimelineView"
 import type { SchedulerConfig, SchedulerSettingsContext } from "./types"
+import { useAuditTrail, type AuditEntry } from "./hooks/useAuditTrail"
 
 interface AddContext {
   date: Date
@@ -75,6 +76,8 @@ export interface SchedulerProps {
   onBlockMove?: (block: Block) => void
   onBlockResize?: (block: Block) => void
   onBlockPublish?: (block: Block) => void
+  /** P14-13: Audit trail — called on every block mutation with before/after state. */
+  onAuditEvent?: (entry: AuditEntry) => void
 }
 
 export interface SchedulerHeaderActions {
@@ -105,6 +108,7 @@ export function Scheduler({
   onBlockMove,
   onBlockResize,
   onBlockPublish,
+  onAuditEvent,
 }: SchedulerProps): React.ReactElement {
   const parentCtx = useContext(SchedulerContext)
   const slots = slotsProp ?? {}
@@ -117,19 +121,6 @@ export function Scheduler({
       </div>
     )
   }
-  const setShifts = useCallback(
-    (updater: React.SetStateAction<Block[]>) => {
-      const next = typeof updater === "function" ? updater(shifts) : updater
-      historyRef.current = [shifts, ...historyRef.current].slice(0, HISTORY_MAX)
-      onShiftsChange(next)
-    },
-    [shifts, onShiftsChange]
-  )
-
-  const handleUndo = useCallback(() => {
-    const prev = historyRef.current.pop()
-    if (prev) onShiftsChange(prev)
-  }, [onShiftsChange])
 
   const [view, setView] = useState<string>(initialView)
   /** P12-03: visible view after transition (lagged by 150ms on change). */
@@ -153,7 +144,18 @@ export function Scheduler({
   const [selShift, setSelShift] = useState<Block | null>(null)
   const [selCategory, setSelCategory] = useState<Resource | null>(null)
   const [addCtx, setAddCtx] = useState<AddContext | null>(null)
-  const [settingsOverride, setSettingsOverride] = useState<Partial<import("./types").Settings>>({})
+  // ── Persistent settings via localStorage ──────────────────
+  // Key is scoped per-consumer via config so multi-tenant apps don't bleed settings
+  const storageKey = `sch-settings-${config?.labels?.category ?? "default"}`
+
+  const [settingsOverride, setSettingsOverride] = useState<Partial<import("./types").Settings>>(() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null
+      return raw ? (JSON.parse(raw) as Partial<import("./types").Settings>) : {}
+    } catch {
+      return {}
+    }
+  })
   const [selEmps, setSelEmps] = useState<Set<string>>(
     () => new Set(employees.map((e) => e.id))
   )
@@ -166,6 +168,38 @@ export function Scheduler({
   const isMobile = useIsMobile()
   const historyRef = useRef<Block[][]>([])
   const HISTORY_MAX = 20
+
+  // ── Audit trail ────────────────────────────────────────────
+  const { append: auditAppend } = useAuditTrail(onAuditEvent)
+
+  // ── Debounced onShiftsChange ───────────────────────────────
+  const debounceShiftsRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingShiftsRef = useRef<Block[] | null>(null)
+  const debouncedOnShiftsChange = useCallback(
+    (next: Block[]) => {
+      pendingShiftsRef.current = next
+      if (debounceShiftsRef.current) clearTimeout(debounceShiftsRef.current)
+      debounceShiftsRef.current = setTimeout(() => {
+        if (pendingShiftsRef.current) onShiftsChange(pendingShiftsRef.current)
+        pendingShiftsRef.current = null
+      }, 150)
+    },
+    [onShiftsChange]
+  )
+
+  const setShifts = useCallback(
+    (updater: React.SetStateAction<Block[]>) => {
+      const next = typeof updater === "function" ? updater(shifts) : updater
+      historyRef.current = [shifts, ...historyRef.current].slice(0, HISTORY_MAX)
+      debouncedOnShiftsChange(next)
+    },
+    [shifts, debouncedOnShiftsChange]
+  )
+
+  const handleUndo = useCallback(() => {
+    const prev = historyRef.current.pop()
+    if (prev) debouncedOnShiftsChange(prev)
+  }, [debouncedOnShiftsChange])
 
   const handleZoomIn = () => setZoom((z) => Math.min(z + 0.25, 2))
   const handleZoomOut = () => setZoom((z) => Math.max(z - 0.25, 0.5))
@@ -181,6 +215,7 @@ export function Scheduler({
   ): void => setAddCtx({ date, categoryId, empId })
   const handleAdd = (block: Block): void => {
     onBlockCreate?.(block)
+    auditAppend({ action: "create", blockId: block.id, after: block })
     setShifts((prev) => [...prev, block])
   }
 
@@ -260,12 +295,15 @@ export function Scheduler({
   const handleDeleteShift = useCallback(
     (id: string) => {
       const removed = shifts.find((s) => s.id === id)
-      if (removed) onBlockDelete?.(removed)
+      if (removed) {
+        onBlockDelete?.(removed)
+        auditAppend({ action: "delete", blockId: id, before: removed })
+      }
       setShifts((prev) => prev.filter((s) => s.id !== id))
       setSelShift(null)
       setSelCategory(null)
     },
-    [setShifts, shifts, onBlockDelete]
+    [setShifts, shifts, onBlockDelete, auditAppend]
   )
 
   const handleShiftUpdate = useCallback(
@@ -278,9 +316,18 @@ export function Scheduler({
           prev.employeeId !== updated.employeeId
         const timeChanged = prev.startH !== updated.startH || prev.endH !== updated.endH
         const resized = timeChanged && (prev.endH - prev.startH) !== (updated.endH - updated.startH)
-        if (moved || (timeChanged && !resized)) onBlockMove?.(updated)
-        if (resized) onBlockResize?.(updated)
-        if (prev.status !== "published" && updated.status === "published") onBlockPublish?.(updated)
+        if (moved || (timeChanged && !resized)) {
+          onBlockMove?.(updated)
+          auditAppend({ action: "move", blockId: updated.id, before: prev, after: updated })
+        }
+        if (resized) {
+          onBlockResize?.(updated)
+          auditAppend({ action: "resize", blockId: updated.id, before: prev, after: updated })
+        }
+        if (prev.status !== "published" && updated.status === "published") {
+          onBlockPublish?.(updated)
+          auditAppend({ action: "publish", blockId: updated.id, before: prev, after: updated })
+        }
       }
       setShifts((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
       setSelShift(updated)
@@ -447,9 +494,15 @@ export function Scheduler({
 
   const handleSettingsChange = useCallback(
     (partial: Partial<import("./types").Settings>) => {
-      setSettingsOverride((prev) => ({ ...prev, ...partial }))
+      setSettingsOverride((prev) => {
+        const next = { ...prev, ...partial }
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(next))
+        } catch { /* quota exceeded or SSR */ }
+        return next
+      })
     },
-    []
+    [storageKey]
   )
 
   const content = (

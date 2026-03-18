@@ -4,28 +4,28 @@ import { makeGridConfig } from "../layout/geometry"
 import type { Block, Resource, Settings } from "../types"
 
 export function useDragEngine(
-  scrollRef:    React.RefObject<HTMLDivElement | null>,
-  ghostRef:     React.RefObject<HTMLDivElement | null>,
-  categories:   Resource[],
-  categoryTops: Record<string, number>,
+  scrollRef:       React.RefObject<HTMLDivElement | null>,
+  ghostRef:        React.RefObject<HTMLDivElement | null>,
+  cursorGhostRef:  React.RefObject<HTMLDivElement | null>,
+  categories:      Resource[],
+  categoryTops:    Record<string, number>,
   categoryHeights: Record<string, number>,
-  dates:        Date[],
-  settings:     Settings,
-  zoom:         number,
-  isWeekView:   boolean,
-  isDayMultiDay: boolean,
-  snapHours:    number,
+  dates:           Date[],
+  settings:        Settings,
+  zoom:            number,
+  isWeekView:      boolean,
+  isDayMultiDay:   boolean,
+  snapHours:       number,
   hasDayScrollNav: boolean,
-  onCommit:     (patch: DragCommit, shifts: Block[]) => void,
-  shifts:       Block[],
+  onCommit:        (patch: DragCommit, shifts: Block[]) => void,
+  onHoverCategory: (id: string | null) => void,
+  shifts:          Block[],
 ) {
-  // The only React state remaining for drag: which block is the source (for opacity)
   const [dragId, setDragId] = useState<string | null>(null)
   const engineRef = useRef<DragEngine | null>(null)
   const shiftsRef = useRef(shifts)
   shiftsRef.current = shifts
 
-  // Build/update the engine options on every render — cheap, just updates the ref
   const getOpts = useCallback((): DragEngineOptions => ({
     cfg: makeGridConfig(zoom, settings.visibleFrom, settings.visibleTo, isWeekView, isDayMultiDay, snapHours),
     dates,
@@ -33,25 +33,25 @@ export function useDragEngine(
     categoryHeights,
     categories,
     snapHours,
-    scrollEl: scrollRef.current,
+    scrollEl:        scrollRef.current,
     hasDayScrollNav,
-    ghostEl:  ghostRef.current,
-    sourceEl: null,
-    onDragStart: (id) => setDragId(id),    // 1 render
-    onDragEnd:   ()   => setDragId(null),  // 1 render
-    onCommit:    (patch) => onCommit(patch, shiftsRef.current),  // 1 render
-    onConflict:  (_id) => { /* flash handled in GridView */ },
+    ghostEl:         ghostRef.current,
+    cursorGhostEl:   cursorGhostRef.current,
+    sourceEl:        null,
+    onDragStart:     (id) => setDragId(id),
+    onDragEnd:       ()   => setDragId(null),
+    onCommit:        (patch) => onCommit(patch, shiftsRef.current),
+    onConflict:      (_id) => { /* flash handled in GridView */ },
+    onHoverCategory,
   }), [zoom, settings, isWeekView, isDayMultiDay, snapHours, dates,
-       categoryTops, categoryHeights, categories, hasDayScrollNav, onCommit])
+       categoryTops, categoryHeights, categories, hasDayScrollNav, onCommit, onHoverCategory])
 
-  // Create engine once, update opts on every render
   if (!engineRef.current) {
     engineRef.current = new DragEngine(getOpts())
   } else {
     engineRef.current.update(getOpts())
   }
 
-  // Global pointer listeners only active while dragging
   useEffect(() => {
     if (!dragId) return
     const engine = engineRef.current!
@@ -70,8 +70,9 @@ export function useDragEngine(
 
   return {
     dragId,
-    startMove:        (e: React.PointerEvent, block: Block) =>
-                        engineRef.current!.startMove(e.nativeEvent, block),
+    engine: engineRef,
+    startMove:        (e: React.PointerEvent, block: Block, blockEl: HTMLElement | null) =>
+                        engineRef.current!.startMove(e.nativeEvent, block, blockEl),
     startResizeRight: (e: React.PointerEvent, block: Block) =>
                         engineRef.current!.startResizeRight(e.nativeEvent, block),
     startResizeLeft:  (e: React.PointerEvent, block: Block) =>

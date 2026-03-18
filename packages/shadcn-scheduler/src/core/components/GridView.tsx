@@ -35,6 +35,8 @@ import {
 import { packShifts, getCategoryRowHeight, findConflicts, getConflictCount, wouldConflictAt } from "../utils/packing"
 import { useScrollToNow } from "../hooks/useScrollToNow"
 import { useMediaQuery, useIsTablet } from "../hooks/useMediaQuery"
+import { useFlatRows } from "../hooks/useFlatRows"
+import type { FlatRow } from "../types"
 import { StaffPanel } from "./StaffPanel"
 import { RoleWarningModal } from "./modals/RoleWarningModal"
 import { AddShiftModal } from "./modals/AddShiftModal"
@@ -51,6 +53,8 @@ interface DragState {
   categoryId: string
   empId: string
   dur: number
+  blockEl: HTMLElement | null
+  blockColor: string
 }
 
 interface GridViewProps {
@@ -198,10 +202,22 @@ function GridViewInner({
   const sidebarRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
+  const cursorGhostRef = useRef<HTMLDivElement | null>(null)
   const initRef = useRef<boolean>(false)
   const lastReportedDayIdxRef = useRef<number>(-1)
   const scrollTriggeredUpdateRef = useRef(false)
   const lastReportedRangeRef = useRef<{ start: number; end: number } | null>(null)
+
+  /** Row highlighted during block drag — set by drag engine via onHoverCategory */
+  const [hoveredCategoryId, setHoveredCategoryId] = useState<string | null>(null)
+  /** Resizable sidebar width */
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_W)
+  const sidebarDragRef = useRef<{ startX: number; startW: number } | null>(null)
+  /** Sort: "name" | "hours" | "scheduled" | null */
+  const [sortBy, setSortBy] = useState<"name" | "hours" | "scheduled" | null>(null)
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
+  /** Multi-select: set of selected block IDs */
+  const [selectedBlockIds, setSelectedBlockIds] = useState<Set<string>>(new Set())
 
   const [staffPanel, setStaffPanel] = useState<StaffPanelState | null>(null)
   const staffDragRef = useRef<{ empId: string; fromCategoryId: string; empName: string; pointerId: number } | null>(null)
@@ -249,6 +265,52 @@ function GridViewInner({
       return next
     })
   }, [])
+
+  // ── Sidebar resize ──────────────────────────────────────────
+  const onSidebarResizeStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    sidebarDragRef.current = { startX: e.clientX, startW: sidebarWidth }
+  }, [sidebarWidth])
+
+  const onSidebarResizeMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!sidebarDragRef.current) return
+    const delta = e.clientX - sidebarDragRef.current.startX
+    setSidebarWidth(Math.max(120, Math.min(400, sidebarDragRef.current.startW + delta)))
+  }, [])
+
+  const onSidebarResizeEnd = useCallback(() => {
+    sidebarDragRef.current = null
+  }, [])
+
+  // ── Sidebar sort ────────────────────────────────────────────
+  const toggleSort = useCallback((col: "name" | "hours" | "scheduled") => {
+    setSortBy((prev) => {
+      if (prev === col) {
+        setSortDir((d) => d === "asc" ? "desc" : "asc")
+        return col
+      }
+      setSortDir("asc")
+      return col
+    })
+  }, [])
+
+  // ── Multi-select ────────────────────────────────────────────
+  const toggleBlockSelect = useCallback((id: string, multi: boolean) => {
+    setSelectedBlockIds((prev) => {
+      if (!multi) return new Set(prev.has(id) && prev.size === 1 ? [] : [id])
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const deleteSelectedBlocks = useCallback(() => {
+    if (!onDeleteShift) return
+    selectedBlockIds.forEach((id) => onDeleteShift(id))
+    setSelectedBlockIds(new Set())
+  }, [selectedBlockIds, onDeleteShift])
 
   const COL_W_WEEK = useMemo((): number => {
     if (!isWeekView) return HOUR_W
@@ -595,33 +657,80 @@ function GridViewInner({
     return idx
   }, [displayShifts])
 
+  /** Sidebar-sorted categories — re-orders CATEGORIES based on sortBy/sortDir */
+  const SORTED_CATEGORIES = useMemo(() => {
+    if (!sortBy) return CATEGORIES
+    return [...CATEGORIES].sort((a, b) => {
+      if (sortBy === "name") {
+        const cmp = a.name.localeCompare(b.name)
+        return sortDir === "asc" ? cmp : -cmp
+      }
+      let av = 0, bv = 0
+      if (sortBy === "hours" || sortBy === "scheduled") {
+        const aShifts = shifts.filter((s) => s.categoryId === a.id)
+        const bShifts = shifts.filter((s) => s.categoryId === b.id)
+        if (sortBy === "hours") {
+          av = aShifts.reduce((s, x) => s + (x.endH - x.startH), 0)
+          bv = bShifts.reduce((s, x) => s + (x.endH - x.startH), 0)
+        } else {
+          av = aShifts.length
+          bv = bShifts.length
+        }
+      }
+      return sortDir === "asc" ? av - bv : bv - av
+    })
+  }, [CATEGORIES, sortBy, sortDir, shifts])
+
+  /**
+   * Phase 4 — flat row list for the virtualizer.
+   * Each FlatRow is either a category header or an employee row under that category.
+   * category header → collapsed.has(cat.id) hides employee rows beneath it
+   */
+  const flatRows = useFlatRows(SORTED_CATEGORIES, ALL_EMPLOYEES, collapsed)
+
   const categoryHeights = useMemo((): Record<string, number> => {
     const map: Record<string, number> = {}
-    CATEGORIES.forEach((cat) => {
-      if (collapsed.has(cat.id)) {
-        map[cat.id] = ROLE_HDR
+    flatRows.forEach((row) => {
+      const key = row.kind === "employee" && row.employee
+        ? `emp:${row.employee.id}`
+        : `cat:${row.category.id}`
+      if (row.kind === "category") {
+        // Category header row — always ROLE_HDR height
+        map[key] = ROLE_HDR
         return
       }
-      let maxH = ROLE_HDR + SHIFT_H
+      // Employee row — height based on max packed shifts across all dates
+      const emp = row.employee!
+      let maxH = SHIFT_H
       dates.forEach((date) => {
-        const dayShifts = shiftIndex.get(`${cat.id}:${toDateISO(date)}`) ?? []
-        const h = getCategoryRowHeight(cat.id, dayShifts)
-        if (h > maxH) maxH = h
+        const dayShifts = (shiftIndex.get(`${row.category.id}:${toDateISO(date)}`) ?? [])
+          .filter((s) => s.employeeId === emp.id)
+        const h = getCategoryRowHeight(row.category.id, dayShifts)
+        if (h - ROLE_HDR > maxH) maxH = h - ROLE_HDR
       })
-      map[cat.id] = maxH
+      map[key] = maxH + ADD_BTN_H
     })
     return map
-  }, [shiftIndex, dates, CATEGORIES, collapsed, isLoading])
+  }, [shiftIndex, dates, flatRows, isLoading])
+
+  // NOTE: vrTopsRef is updated from virtualizer vr.start values every render
+  const vrTopsRef = useRef<Record<string, number>>({})
 
   const categoryTops = useMemo((): Record<string, number> => {
+    if (Object.keys(vrTopsRef.current).length === flatRows.length) {
+      return { ...vrTopsRef.current }
+    }
     const map: Record<string, number> = {}
     let acc = 0
-    CATEGORIES.forEach((c) => {
-      map[c.id] = acc
-      acc += categoryHeights[c.id]
+    flatRows.forEach((row) => {
+      const key = row.kind === "employee" && row.employee
+        ? `emp:${row.employee.id}`
+        : `cat:${row.category.id}`
+      map[key] = acc
+      acc += categoryHeights[key] ?? ROLE_HDR
     })
     return map
-  }, [categoryHeights, CATEGORIES])
+  }, [categoryHeights, flatRows])
 
   // For conflict detection: in day view with buffer, only the focused day counts (not all buffer days).
   const conflictRangeDates = useMemo((): Date[] => {
@@ -675,9 +784,16 @@ function GridViewInner({
   }, [shiftIndex])
 
   const rowVirtualizer = useVirtualizer({
-    count: CATEGORIES.length,
+    count: flatRows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (i) => categoryHeights[CATEGORIES[i]?.id] ?? ROLE_HDR,
+    estimateSize: (i) => {
+      const row = flatRows[i]
+      if (!row) return ROLE_HDR
+      const key = row.kind === "employee" && row.employee
+        ? `emp:${row.employee.id}`
+        : `cat:${row.category.id}`
+      return categoryHeights[key] ?? ROLE_HDR
+    },
     overscan: 6,
   })
 
@@ -707,6 +823,11 @@ function GridViewInner({
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressStartRef = useRef<{ x: number; y: number } | null>(null)
   const longPressPointerIdRef = useRef<number | null>(null)
+  /** Long press on a specific block — for touch drag activation */
+  const blockLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const blockLongPressIdRef = useRef<string | null>(null)
+  /** Block that is "activating" on long press (shows scale-up feedback) */
+  const [activatingBlockId, setActivatingBlockId] = useState<string | null>(null)
   const pinchPointersRef = useRef<Map<number, { x: number; y: number }>>(new Map())
   const initialPinchDistRef = useRef<number | null>(null)
   const initialZoomRef = useRef<number>(1)
@@ -726,16 +847,19 @@ function GridViewInner({
 
   const getCategoryAtY = useCallback(
     (y: number): Resource => {
-      if (y < 0) return CATEGORIES[0]
-      let acc = 0
-      for (const cat of CATEGORIES) {
-        const h = categoryHeights[cat.id]
-        if (y >= acc && y < acc + h) return cat
-        acc += h
+      if (y < 0) return CATEGORIES[0]!
+      // Find the flat row whose top ≤ y < top + height
+      for (const row of flatRows) {
+        const key = row.kind === "employee" && row.employee
+          ? `emp:${row.employee.id}`
+          : `cat:${row.category.id}`
+        const top = categoryTops[key] ?? 0
+        const h   = categoryHeights[key] ?? 0
+        if (y >= top && y < top + h) return row.category
       }
-      return CATEGORIES[CATEGORIES.length - 1]
+      return CATEGORIES[CATEGORIES.length - 1]!
     },
-    [categoryHeights, CATEGORIES]
+    [categoryTops, categoryHeights, flatRows, CATEGORIES]
   )
 
   const getHourAtX = useCallback(
@@ -773,6 +897,15 @@ function GridViewInner({
     }
     longPressStartRef.current = null
     longPressPointerIdRef.current = null
+  }, [])
+
+  const clearBlockLongPress = useCallback(() => {
+    if (blockLongPressTimerRef.current) {
+      clearTimeout(blockLongPressTimerRef.current)
+      blockLongPressTimerRef.current = null
+    }
+    blockLongPressIdRef.current = null
+    setActivatingBlockId(null)
   }, [])
 
   const cleanupPointer = useCallback((pointerId: number) => {
@@ -917,23 +1050,84 @@ function GridViewInner({
       if (shift.draggable === false) return
       if ((e.target as HTMLElement).dataset.resize) return
       if (gridPointerIdsRef.current.size >= 2) return
-      e.stopPropagation()
-      e.currentTarget.setPointerCapture(e.pointerId)
-      const { x, y } = getGridXY(e.clientX, e.clientY)
-      ds.current = {
-        type: "move",
-        id: shift.id,
-        sx: x,
-        sy: y,
-        startH: shift.startH,
-        endH: shift.endH,
-        categoryId: shift.categoryId,
-        empId: shift.employeeId,
-        dur: shift.endH - shift.startH,
+      // Multi-select: shift+click selects without dragging
+      if (e.shiftKey) {
+        toggleBlockSelect(shift.id, true)
+        return
       }
-      setDragId(shift.id)
+
+      const isTouch = e.pointerType === "touch"
+      const blockEl = e.currentTarget as HTMLElement
+      const cat = CATEGORIES.find((c) => c.id === shift.categoryId)
+      const color = cat ? getColor(cat.colorIdx).bg : "hsl(var(--primary))"
+
+      const startDrag = (captureEvent: React.PointerEvent<HTMLDivElement> | PointerEvent): void => {
+        const el = blockEl
+        el.setPointerCapture(
+          "pointerId" in captureEvent ? captureEvent.pointerId : e.pointerId
+        )
+        const { x, y } = getGridXY(e.clientX, e.clientY)
+        ds.current = {
+          type: "move",
+          id: shift.id,
+          sx: x, sy: y,
+          startH: shift.startH,
+          endH: shift.endH,
+          categoryId: shift.categoryId,
+          empId: shift.employeeId,
+          dur: shift.endH - shift.startH,
+          blockEl,
+          blockColor: color,
+        }
+        setDragId(shift.id)
+        setActivatingBlockId(null)
+        // Haptic feedback on supported devices
+        if (navigator.vibrate) navigator.vibrate(30)
+      }
+
+      if (!isTouch) {
+        // Desktop: start drag immediately on pointer down
+        e.stopPropagation()
+        e.currentTarget.setPointerCapture(e.pointerId)
+        startDrag(e)
+        return
+      }
+
+      // Touch: start a long press timer — let scroll work until threshold
+      e.stopPropagation()
+      blockLongPressIdRef.current = shift.id
+      const startX = e.clientX
+      const startY = e.clientY
+
+      // Show activating feedback at 200ms
+      const activateTimer = setTimeout(() => setActivatingBlockId(shift.id), 200)
+
+      blockLongPressTimerRef.current = setTimeout(() => {
+        blockLongPressTimerRef.current = null
+        clearTimeout(activateTimer)
+        if (blockLongPressIdRef.current !== shift.id) return
+        startDrag(e)
+      }, LONG_PRESS_DELAY_MS)
+
+      // Cancel long press if finger moves too much (user is scrolling)
+      const onMove = (ev: PointerEvent): void => {
+        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > LONG_PRESS_MOVE_THRESHOLD_PX) {
+          clearTimeout(activateTimer)
+          clearBlockLongPress()
+          document.removeEventListener("pointermove", onMove, { capture: true })
+          document.removeEventListener("pointerup", onUp, { capture: true })
+        }
+      }
+      const onUp = (): void => {
+        clearTimeout(activateTimer)
+        clearBlockLongPress()
+        document.removeEventListener("pointermove", onMove, { capture: true })
+        document.removeEventListener("pointerup", onUp, { capture: true })
+      }
+      document.addEventListener("pointermove", onMove, { capture: true })
+      document.addEventListener("pointerup", onUp, { capture: true })
     },
-    [getGridXY, readOnly]
+    [getGridXY, readOnly, toggleBlockSelect, CATEGORIES, getColor, clearBlockLongPress]
   )
 
   const onRRD = useCallback(
@@ -952,6 +1146,8 @@ function GridViewInner({
         categoryId: shift.categoryId,
         empId: shift.employeeId,
         dur: 0,
+        blockEl: null,
+        blockColor: "",
       }
       setDragId(shift.id)
     },
@@ -974,11 +1170,14 @@ function GridViewInner({
         categoryId: shift.categoryId,
         empId: shift.employeeId,
         dur: 0,
+        blockEl: null,
+        blockColor: "",
       }
       setDragId(shift.id)
     },
     [getGridXY, readOnly]
   )
+
 
   const onBlockKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>, shift: Block, category: Resource): void => {
@@ -1136,13 +1335,24 @@ function GridViewInner({
       const orig = lay.shifts.find((s) => s.id === d.id)
       const cat = lay.CATEGORIES.find((c) => c.id === categoryId)
       const ghostEl = ghostRef.current
+      // Update hovered row highlight
+      setHoveredCategoryId(cat?.id ?? null)
       if (!orig || !cat || lay.collapsed.has(cat.id) || !ghostEl) {
         if (ghostEl) ghostEl.style.display = "none"
         return
       }
 
-      const top = lay.categoryTops[cat.id]
-      const rowH = lay.categoryHeights[cat.id]
+      // Use employee-row top if we know the employee, else category header top
+      const origShift = lay.shifts.find((s) => s.id === d.id)
+      const empKey = origShift ? `emp:${origShift.employeeId}` : null
+      const top = (empKey ? lay.categoryTops[empKey] : null)
+        ?? lay.categoryTops[`cat:${cat.id}`]
+        ?? lay.categoryTops[cat.id]
+        ?? 0
+      const rowH = (empKey ? lay.categoryHeights[empKey] : null)
+        ?? lay.categoryHeights[`cat:${cat.id}`]
+        ?? lay.categoryHeights[cat.id]
+        ?? 40
       let left: number, width: number
       if (isWeekView) {
         const origDi = lay.dates.findIndex((dt) => sameDay(dt, orig.date))
@@ -1173,31 +1383,69 @@ function GridViewInner({
       const pixelTop = top + ROLE_HDR + 3
       const c = getColor(cat.colorIdx)
 
+      // ── Snapped drop-zone ghost: real card appearance, no dashed border ──
       ghostEl.style.display = "flex"
       ghostEl.style.left = "0"
       ghostEl.style.top = "0"
       ghostEl.style.width = `${width}px`
       ghostEl.style.height = `${SHIFT_H - 6}px`
       ghostEl.style.transform = `translate(${left}px, ${pixelTop}px)`
-      ghostEl.style.background = `linear-gradient(135deg,${c.bg},${c.bg}cc)`
-      ghostEl.style.borderColor = c.bg
+      ghostEl.style.background = `${c.bg}22`
+      ghostEl.style.border = `2px solid ${c.bg}88`
+      ghostEl.style.borderRadius = "6px"
+      ghostEl.style.boxShadow = `inset 0 0 0 1px ${c.bg}44`
       const label = ghostEl.querySelector("[data-ghost-label]") as HTMLElement | null
       if (label) {
         label.textContent = `${fmt12(ns)}–${fmt12(ne)}`
         label.style.color = c.bg
-        label.style.background = "var(--background)"
+        label.style.background = "transparent"
+        label.style.fontWeight = "700"
+      }
+
+      // ── Cursor ghost: follows raw pointer offset by where the user grabbed ──
+      const cursorGhostEl = cursorGhostRef.current
+      if (cursorGhostEl && d.type === "move") {
+        const sr = scrollRef.current?.getBoundingClientRect()
+        if (sr) {
+          // Compute block's current rendered left so we can offset correctly
+          const grabX = d.blockEl
+            ? e.clientX - d.blockEl.getBoundingClientRect().left
+            : width / 2
+          const grabY = d.blockEl
+            ? e.clientY - d.blockEl.getBoundingClientRect().top
+            : (SHIFT_H - 6) / 2
+          const cursorLeft = (scrollRef.current?.scrollLeft ?? 0) + (e.clientX - sr.left) - grabX
+          const cursorTop  = (scrollRef.current?.scrollTop ?? 0) + (e.clientY - sr.top) - grabY
+          cursorGhostEl.style.display    = "flex"
+          cursorGhostEl.style.left       = "0"
+          cursorGhostEl.style.top        = "0"
+          cursorGhostEl.style.transform  = `translate(${cursorLeft}px, ${cursorTop}px)`
+          cursorGhostEl.style.width      = `${width}px`
+          cursorGhostEl.style.height     = `${SHIFT_H - 6}px`
+          cursorGhostEl.style.background = `linear-gradient(135deg,${c.bg},${c.bg}cc)`
+          cursorGhostEl.style.boxShadow  = `0 16px 32px -8px ${c.bg}60, 0 8px 16px -4px rgba(0,0,0,0.2)`
+          cursorGhostEl.style.opacity    = "0.92"
+          cursorGhostEl.style.borderRadius = "6px"
+          cursorGhostEl.style.border     = `1px solid ${c.bg}88`
+          cursorGhostEl.style.pointerEvents = "none"
+          cursorGhostEl.style.zIndex     = "100"
+        }
       }
     },
-    [getGridXY, getCategoryAtY, getDateIdx, isWeekView, isDayViewMultiDay, COL_W_WEEK, DAY_WIDTH, PX_WEEK, HOUR_W, clearLongPress, setZoom, onPinchZoom, settings.visibleFrom, settings.visibleTo, getColor]
+    [getGridXY, getCategoryAtY, getDateIdx, isWeekView, isDayViewMultiDay, COL_W_WEEK, DAY_WIDTH, PX_WEEK, HOUR_W, clearLongPress, setZoom, onPinchZoom, settings.visibleFrom, settings.visibleTo, getColor, setHoveredCategoryId]
   )
 
   const onPC = useCallback(
     (e: React.PointerEvent<HTMLDivElement>): void => {
       ds.current = null
       setDragId(null)
+      setHoveredCategoryId(null)
+      clearBlockLongPress()
       if (ghostRef.current) ghostRef.current.style.display = "none"
+      if (cursorGhostRef.current) cursorGhostRef.current.style.display = "none"
     },
-    []
+    [clearBlockLongPress]
+
   )
 
   const onPU = useCallback(
@@ -1230,13 +1478,17 @@ function GridViewInner({
           setTimeout(() => setDropConflictId(null), 800)
           ds.current = null
           setDragId(null)
+          setHoveredCategoryId(null)
           if (ghostRef.current) ghostRef.current.style.display = "none"
+          if (cursorGhostRef.current) cursorGhostRef.current.style.display = "none"
           return
         }
       }
       ds.current = null
       setDragId(null)
+      setHoveredCategoryId(null)
       if (ghostRef.current) ghostRef.current.style.display = "none"
+      if (cursorGhostRef.current) cursorGhostRef.current.style.display = "none"
       setShifts((prev) => {
         const next = prev.map((s) => {
           if (s.id !== d.id) return s
@@ -1500,25 +1752,55 @@ function GridViewInner({
       >
         <div
           style={{
-            width: SIDEBAR_W,
+            width: sidebarWidth,
             flexShrink: 0,
             borderRight: "1px solid var(--border))",
             display: "flex",
-            alignItems: "flex-end",
-            padding: "0 12px 6px",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+            padding: "0 0 0 0",
+            overflow: "hidden",
           }}
         >
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: "var(--muted-foreground)",
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
-            }}
-          >
-            {labels.categories}
-          </span>
+          {/* Column headers row */}
+          <div style={{ display: "flex", alignItems: "center", padding: "0 10px 4px", gap: 2 }}>
+            {(["name", "hours", "scheduled"] as const).map((col) => {
+              const labels_col = col === "name" ? labels.category ?? "Name" : col === "hours" ? "Hours" : "Shifts"
+              const isActive = sortBy === col
+              return (
+                <button
+                  key={col}
+                  type="button"
+                  onClick={() => toggleSort(col)}
+                  style={{
+                    fontSize: 9,
+                    fontWeight: isActive ? 700 : 600,
+                    color: isActive ? "var(--foreground)" : "var(--muted-foreground)",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "2px 4px",
+                    borderRadius: 3,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
+                    flexShrink: col === "name" ? 1 : 0,
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {labels_col}
+                  {isActive && (
+                    <span style={{ fontSize: 8 }}>{sortDir === "asc" ? "↑" : "↓"}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
         <div ref={headerRef} style={{ flex: 1, overflowX: "hidden" }}>
           <div
@@ -1773,11 +2055,12 @@ function GridViewInner({
         <div
           ref={sidebarRef}
           style={{
-            width: SIDEBAR_W,
+            width: sidebarWidth,
             flexShrink: 0,
             borderRight: "1px solid var(--border))",
             overflowY: "hidden",
             background: "var(--muted))",
+            position: "relative",
           }}
         >
           {(() => {
@@ -1812,16 +2095,92 @@ function GridViewInner({
             return (
               <div style={{ position: "relative", height: totalHVirtual }}>
                 {rowVirtualizer.getVirtualItems().map((vr) => {
-                  const cat = CATEGORIES[vr.index]
-                  if (!cat) return null
+                  const row = flatRows[vr.index]
+                  if (!row) return null
+                  const cat = row.category
+                  const emp = row.employee
                   const c = getColor(cat.colorIdx)
-                  const catShifts = baseShifts.filter((s) => s.categoryId === cat.id)
-                  const scheduled = catShifts.length
-                  const totalHours = catShifts.reduce((sum, s) => sum + (s.endH - s.startH), 0)
+                  const rowKey = row.key
+
+                  // ── Category header row ──────────────────────────────────
+                  if (row.kind === "category") {
+                    const catShifts = baseShifts.filter((s) => s.categoryId === cat.id)
+                    const scheduled = catShifts.length
+                    const totalHours = catShifts.reduce((sum, s) => sum + (s.endH - s.startH), 0)
+                    return (
+                      <div
+                        key={rowKey}
+                        style={{
+                          position: "absolute",
+                          top: vr.start,
+                          left: 0,
+                          right: 0,
+                          height: vr.size,
+                          borderBottom: `1px solid ${c.bg}30`,
+                          background: hoveredCategoryId === cat.id
+                            ? `${c.bg}18`
+                            : `${c.bg}08`,
+                          display: "flex",
+                          flexDirection: "column",
+                          justifyContent: "flex-start",
+                          overflow: "hidden",
+                          transition: "background 80ms ease",
+                        }}
+                      >
+                        <div style={{ height: ROLE_HDR, display: "flex", alignItems: "center", padding: "0 10px", gap: 6 }}>
+                          {slots.resourceHeader ? (
+                            slots.resourceHeader({
+                              resource: cat,
+                              scheduledCount: scheduled,
+                              isCollapsed: collapsed.has(cat.id),
+                              onToggleCollapse: () => toggleCollapse(cat.id),
+                            })
+                          ) : (
+                            <>
+                              <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {cat.name}
+                              </span>
+                              <span style={{ fontSize: 10, color: "var(--muted-foreground)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                                {totalHours > 0 ? `${totalHours.toFixed(1)}h` : ""}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => toggleCollapse(cat.id)}
+                                aria-label={collapsed.has(cat.id) ? "Expand" : "Collapse"}
+                                style={{ border: "none", background: "transparent", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)", transform: collapsed.has(cat.id) ? "rotate(-90deg)" : "none", transition: "transform 0.2s", flexShrink: 0 }}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                              </button>
+                              <button
+                                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                                  const rect = e.currentTarget.getBoundingClientRect()
+                                  setStaffPanel((p) => p?.categoryId === cat.id ? null : { categoryId: cat.id, anchorRect: rect })
+                                }}
+                                style={{ fontSize: 10, fontWeight: 600, color: c.text, background: c.light, border: `1px solid ${c.border}`, borderRadius: 5, padding: "2px 6px", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
+                              >
+                                {labels.staff}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        {totalHours > 0 && (
+                          <div style={{ padding: "0 10px 4px", flexShrink: 0 }}>
+                            <div style={{ height: 3, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
+                              <div style={{ height: "100%", borderRadius: 2, background: c.bg, width: `${Math.min(100, (totalHours / 40) * 100)}%`, transition: "width 200ms ease" }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
+
+                  // ── Employee row ──────────────────────────────────────────
+                  const empShifts = baseShifts.filter((s) => s.categoryId === cat.id && s.employeeId === emp!.id)
+                  const empHours = empShifts.reduce((sum, s) => sum + (s.endH - s.startH), 0)
                   return (
                     <div
-                      key={cat.id}
-                      title={scheduled > 0 ? `${scheduled} block${scheduled !== 1 ? "s" : ""}, ${totalHours.toFixed(1)}h in this period` : undefined}
+                      key={rowKey}
                       style={{
                         position: "absolute",
                         top: vr.start,
@@ -1829,124 +2188,25 @@ function GridViewInner({
                         right: 0,
                         height: vr.size,
                         borderBottom: "1px solid var(--border))",
-                        background: "var(--muted))",
+                        background: hoveredCategoryId === cat.id ? `${c.bg}0a` : "var(--muted))",
                         display: "flex",
-                        flexDirection: "column",
-                        justifyContent: "flex-start",
-                        flexShrink: 0,
+                        alignItems: "flex-start",
+                        paddingLeft: 18,
+                        paddingTop: 4,
+                        gap: 6,
                         overflow: "hidden",
+                        transition: "background 80ms ease",
                       }}
                     >
-                      <div
-                        style={{
-                          height: ROLE_HDR,
-                          display: "flex",
-                          alignItems: "center",
-                          padding: "0 10px",
-                          gap: 6,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {slots.resourceHeader ? (
-                          slots.resourceHeader({
-                            resource: cat,
-                            scheduledCount: scheduled,
-                            isCollapsed: collapsed.has(cat.id),
-                            onToggleCollapse: () => toggleCollapse(cat.id),
-                          })
-                        ) : (
-                          <>
-                            <div
-                              style={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: "50%",
-                                background: c.bg,
-                                flexShrink: 0,
-                              }}
-                            />
-                            <span
-                              style={{
-                                fontSize: 12,
-                                fontWeight: 700,
-                                color: "var(--foreground)",
-                                flex: 1,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {cat.name}
-                            </span>
-                            {scheduled > 0 && (
-                              <span
-                                title="Scheduled in this view"
-                                style={{
-                                  fontSize: 10,
-                                  color: c.bg,
-                                  fontWeight: 700,
-                                  background: c.light,
-                                  borderRadius: 8,
-                                  padding: "1px 5px",
-                                }}
-                              >
-                                {scheduled}
-                              </span>
-                            )}
-                            <button
-                              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                                e.stopPropagation()
-                                toggleCollapse(cat.id)
-                              }}
-                              style={{
-                                background: "transparent",
-                                border: "none",
-                                cursor: "pointer",
-                                padding: 4,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: "var(--muted-foreground)",
-                                transform: collapsed.has(cat.id) ? "rotate(-90deg)" : "none",
-                                transition: "transform 0.2s",
-                              }}
-                            >
-                              <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <polyline points="6 9 12 15 18 9" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                                const rect = e.currentTarget.getBoundingClientRect()
-                                setStaffPanel((p) =>
-                                  p?.categoryId === cat.id ? null : { categoryId: cat.id, anchorRect: rect }
-                                )
-                              }}
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 600,
-                                color: c.text,
-                                background: c.light,
-                                border: `1px solid ${c.border}`,
-                                borderRadius: 5,
-                                padding: "2px 6px",
-                                cursor: "pointer",
-                                whiteSpace: "nowrap",
-                                flexShrink: 0,
-                              }}
-                            >
-                              {labels.staff}
-                            </button>
-                          </>
+                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: c.light, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 8, fontWeight: 700, color: c.text }}>
+                        {emp!.avatar ?? emp!.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {emp!.name}
+                        </div>
+                        {empHours > 0 && (
+                          <div style={{ fontSize: 9, color: "var(--muted-foreground)" }}>{empHours.toFixed(1)}h</div>
                         )}
                       </div>
                     </div>
@@ -1955,6 +2215,26 @@ function GridViewInner({
               </div>
             )
           })()}
+          {/* Resize handle — drag to resize sidebar width */}
+          <div
+            onPointerDown={onSidebarResizeStart}
+            onPointerMove={onSidebarResizeMove}
+            onPointerUp={onSidebarResizeEnd}
+            onPointerCancel={onSidebarResizeEnd}
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              width: 6,
+              height: "100%",
+              cursor: "col-resize",
+              zIndex: 20,
+              background: "transparent",
+              transition: "background 150ms",
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--border)" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
+          />
         </div>
 
         <div
@@ -1999,6 +2279,7 @@ function GridViewInner({
                 onPointerUp={onGridPointerUp}
                 onPointerCancel={onPC}
               >
+            {/* Drop-zone ghost: snapped, shows landing position — no dashed border */}
             <div
               ref={ghostRef}
               data-scheduler-ghost
@@ -2007,8 +2288,7 @@ function GridViewInner({
                 position: "absolute",
                 pointerEvents: "none",
                 zIndex: 18,
-                borderRadius: 5,
-                border: "2px dashed hsl(var(--primary))",
+                borderRadius: 6,
                 alignItems: "center",
                 justifyContent: "center",
               }}
@@ -2016,20 +2296,87 @@ function GridViewInner({
               <span
                 data-ghost-label
                 style={{
-                  fontSize: 9,
+                  fontSize: 10,
                   fontWeight: 700,
-                  color: "hsl(var(--background))",
-                  background: "hsl(var(--primary))",
+                  padding: "1px 6px",
                   borderRadius: 3,
-                  padding: "1px 4px",
                 }}
               />
             </div>
+            {/* Cursor ghost: follows raw pointer — feels like lifting a physical card */}
+            <div
+              ref={cursorGhostRef}
+              data-scheduler-cursor-ghost
+              style={{
+                display: "none",
+                position: "absolute",
+                pointerEvents: "none",
+                zIndex: 100,
+                borderRadius: 6,
+                alignItems: "center",
+                justifyContent: "flex-start",
+                paddingLeft: 8,
+                fontSize: 10,
+                fontWeight: 600,
+                color: "rgba(255,255,255,0.9)",
+                gap: 4,
+                willChange: "transform",
+              }}
+            />
+            {/* Row hover highlight during drag */}
+            {dragId && hoveredCategoryId && (() => {
+              const top = categoryTops[hoveredCategoryId] ?? 0
+              const h = categoryHeights[hoveredCategoryId] ?? 0
+              const hovCat = SORTED_CATEGORIES.find(c => c.id === hoveredCategoryId)
+              if (!hovCat) return null
+              const col = getColor(hovCat.colorIdx)
+              return (
+                <div
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top,
+                    width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
+                    height: h,
+                    background: `${col.bg}12`,
+                    borderTop: `2px solid ${col.bg}44`,
+                    borderBottom: `2px solid ${col.bg}44`,
+                    pointerEvents: "none",
+                    zIndex: 6,
+                  }}
+                />
+              )
+            })()}
             {rowVirtualizer.getVirtualItems().map((vr) => {
-              const cat = CATEGORIES[vr.index]
-              if (!cat) return null
+              const row = flatRows[vr.index]
+              if (!row) return null
+              const cat = row.category
+              // Keep vrTopsRef in sync with actual virtualizer positions
+              const rowTopsKey = row.kind === "employee" && row.employee
+                ? `emp:${row.employee.id}` : `cat:${cat.id}`
+              vrTopsRef.current[rowTopsKey] = vr.start
               const top = vr.start
               const rowH = vr.size
+              // Category header rows — show solid background, no hour cells
+              if (row.kind === "category") {
+                const c = getColor(cat.colorIdx)
+                return (
+                  <div
+                    key={row.key}
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top,
+                      width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
+                      height: rowH,
+                      background: `${c.bg}08`,
+                      borderBottom: `1px solid ${c.bg}30`,
+                      pointerEvents: "none",
+                      zIndex: 4,
+                    }}
+                  />
+                )
+              }
               return dates.map((date, di) => {
                 const closed = settings.workingHours[date.getDay()] === null
                 const today = isToday(date)
@@ -2038,7 +2385,7 @@ function GridViewInner({
                     const dashed = isOutsideWorkingHours(h, settings, date.getDay())
                     return (
                       <div
-                        key={`bg-${cat.id}-${di}-${h}`}
+                        key={`bg-${row.key}-${di}-${h}`}
                         data-empty-cell
                         role="gridcell"
                         style={{
@@ -2061,7 +2408,7 @@ function GridViewInner({
                 if (isWeekView) {
                   return (
                     <div
-                      key={`bg-${cat.id}-${di}`}
+                      key={`bg-${row.key}-${di}`}
                       data-empty-cell
                       role="gridcell"
                       style={{
@@ -2108,7 +2455,7 @@ function GridViewInner({
                   const dashed = isOutsideWorkingHours(h, settings, date.getDay())
                   return (
                   <div
-                    key={`bg-${cat.id}-${h}`}
+                    key={`bg-${row.key}-${h}`}
                     data-empty-cell
                     role="gridcell"
                     style={{
@@ -2130,11 +2477,13 @@ function GridViewInner({
             })}
 
             {rowVirtualizer.getVirtualItems().map((vr) => {
-              const cat = CATEGORIES[vr.index]
-              if (!cat) return null
+              const row = flatRows[vr.index]
+              if (!row) return null
+              // Only draw separator after employee rows (not after category headers)
+              if (row.kind === "category") return null
               return (
                 <div
-                  key={`sep-${cat.id}`}
+                  key={`sep-${row.key}`}
                   style={{
                     position: "absolute",
                     left: 0,
@@ -2206,15 +2555,18 @@ function GridViewInner({
             )}
 
             {rowVirtualizer.getVirtualItems().map((vr) => {
-              const cat = CATEGORIES[vr.index]
-              if (!cat || collapsed.has(cat.id)) return null
+              const row = flatRows[vr.index]
+              if (!row || row.kind === "category") return null
+              const cat = row.category
+              const emp = row.employee!
+              if (collapsed.has(cat.id)) return null
               const top = vr.start
               const rowH = vr.size
               const addBtnTop = top + rowH - ADD_BTN_H + (ADD_BTN_H - 20) / 2
               if (isWeekView || isDayViewMultiDay) {
                 const colW = isDayViewMultiDay ? DAY_WIDTH : COL_W_WEEK
                 return dates.map((date, di) => (
-                  <div key={`add-${cat.id}-${di}`} style={{ position: "absolute", left: di * colW + colW / 2 - 10, top: addBtnTop, display: "flex", gap: 4, zIndex: 25 }}>
+                  <div key={`add-${row.key}-${di}`} style={{ position: "absolute", left: di * colW + colW / 2 - 10, top: addBtnTop, display: "flex", gap: 4, zIndex: 25 }}>
                     <button
                       onClick={() =>
                         setAddPrompt({ date, categoryId: cat.id, hour: settings.visibleFrom })
@@ -2245,24 +2597,13 @@ function GridViewInner({
                             id: nextUid(),
                             date: toDateISO(date),
                             categoryId: cat.id,
+                            employeeId: emp.id,
+                            employee: emp.name,
                           }
                           setShifts((prev) => [...prev, newShift])
                           setCopiedShift?.(null)
                         }}
-                        style={{
-                          width: 20,
-                          height: 20,
-                          borderRadius: "50%",
-                          border: "1.5px dashed var(--primary)",
-                          background: "var(--background)",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "var(--primary)",
-                          padding: 0,
-                          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                        }}
+                        style={{ width: 20, height: 20, borderRadius: "50%", border: "1.5px dashed var(--primary)", background: "var(--background)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)", padding: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
                         title="Paste Shift"
                       >
                         <ClipboardPaste size={9} />
@@ -2272,65 +2613,40 @@ function GridViewInner({
                 ))
               }
               return DAY_VISIBLE_SLOTS.map((h) => (
-                  <div key={`add-${cat.id}-${h}`} style={{ position: "absolute", left: (h - settings.visibleFrom) * HOUR_W + SLOT_W / 2 - 9, top: addBtnTop, display: "flex", gap: 4, zIndex: 25 }}>
+                <div key={`add-${row.key}-${h}`} style={{ position: "absolute", left: (h - settings.visibleFrom) * HOUR_W + SLOT_W / 2 - 9, top: addBtnTop, display: "flex", gap: 4, zIndex: 25 }}>
+                  <button
+                    onClick={() =>
+                      setAddPrompt({ date: dates[1] ?? dates[0]!, categoryId: cat.id, hour: h })
+                    }
+                    style={{ width: 18, height: 18, borderRadius: "50%", border: "1.5px dashed var(--muted-foreground)", background: "var(--background)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)", padding: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
+                    title="Add Shift"
+                  >
+                    <Plus size={8} />
+                  </button>
+                  {copiedShift && (
                     <button
-                      onClick={() =>
-                        setAddPrompt({ date: dates[1] ?? dates[0], categoryId: cat.id, hour: h })
-                      }
-                      style={{
-                        width: 18,
-                        height: 18,
-                        borderRadius: "50%",
-                        border: "1.5px dashed var(--muted-foreground)",
-                        background: "var(--background)",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "var(--muted-foreground)",
-                        padding: 0,
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                      onClick={() => {
+                        const newShift: Block = {
+                          ...copiedShift,
+                          id: nextUid(),
+                          date: toDateISO(dates[1] ?? dates[0]!),
+                          categoryId: cat.id,
+                          employeeId: emp.id,
+                          employee: emp.name,
+                          startH: h,
+                          endH: h + (copiedShift.endH - copiedShift.startH),
+                        }
+                        setShifts((prev) => [...prev, newShift])
+                        setCopiedShift?.(null)
                       }}
-                      title="Add Shift"
+                      style={{ width: 18, height: 18, borderRadius: "50%", border: "1.5px dashed var(--primary)", background: "var(--background)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)", padding: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
+                      title="Paste Shift"
                     >
-                      <Plus size={8} />
+                      <ClipboardPaste size={8} />
                     </button>
-                    {copiedShift && (
-                      <button
-                        onClick={() => {
-                          const newShift: Block = {
-                            ...copiedShift,
-                            id: nextUid(),
-                            date: toDateISO(dates[1] ?? dates[0]),
-                            categoryId: cat.id,
-                            startH: h,
-                            endH: h + (copiedShift.endH - copiedShift.startH),
-                          }
-                          setShifts((prev) => [...prev, newShift])
-                          setCopiedShift?.(null)
-                        }}
-                        style={{
-                          width: 18,
-                          height: 18,
-                          borderRadius: "50%",
-                          border: "1.5px dashed var(--primary)",
-                          background: "var(--background)",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "var(--primary)",
-                          padding: 0,
-                          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                        }}
-                        title="Paste Shift"
-                      >
-                        <ClipboardPaste size={8} />
-                      </button>
-                    )}
-                  </div>
-                )
-              )
+                  )}
+                </div>
+              ))
             })}
 
             {dropHover &&
@@ -2339,8 +2655,12 @@ function GridViewInner({
                 const cat = CATEGORIES.find((c) => c.id === dropHover.categoryId)
                 if (!cat || collapsed.has(cat.id)) return null
                 const c = getColor(cat.colorIdx)
-                const top = categoryTops[cat.id]
-                const rowH = categoryHeights[cat.id]
+                // Use category header top + total height of all employee rows in this category
+                const catHeaderTop = categoryTops[`cat:${cat.id}`] ?? 0
+                const catEmps = ALL_EMPLOYEES.filter((e) => e.categoryId === cat.id)
+                const empHeights = catEmps.reduce((sum, e) => sum + (categoryHeights[`emp:${e.id}`] ?? SHIFT_H), 0)
+                const top = catHeaderTop
+                const rowH = ROLE_HDR + empHeights
                 const dropClass = "bg-primary/10 ring-1 ring-primary/30 rounded pointer-events-none z-10"
                 if (isWeekView)
                   return (
@@ -2385,18 +2705,24 @@ function GridViewInner({
               })()}
 
             {rowVirtualizer.getVirtualItems().map((vr) => {
-              const cat = CATEGORIES[vr.index]
-              if (!cat || collapsed.has(cat.id)) return null
+              const row = flatRows[vr.index]
+              if (!row) return null
+              // Category header rows have no blocks — skip
+              if (row.kind === "category") return null
+              const cat = row.category
+              const emp = row.employee!
+              if (collapsed.has(cat.id)) return null
               const catTop = vr.start
+              const c = getColor(cat.colorIdx)
               return dates.map((date, di) => {
-                const dayShifts = shiftIndex.get(`${cat.id}:${toDateISO(date)}`) ?? []
+                // Only render shifts belonging to this specific employee
+                const allDayShifts = shiftIndex.get(`${cat.id}:${toDateISO(date)}`) ?? []
+                const dayShifts = allDayShifts.filter((s) => s.employeeId === emp.id)
                 const sorted = [...dayShifts].sort((a, b) => a.startH - b.startH)
                 const trackNums = packShifts(sorted)
-                const c = getColor(cat.colorIdx)
-
                 return sorted.map((shift, si) => {
                   if (isLoading) {
-                    const track = trackNums[si]
+                    const track = trackNums[si] ?? 0
                     let left: number, width: number
                     if (isWeekView) {
                       const cs = Math.max(shift.startH, settings.visibleFrom)
@@ -2414,25 +2740,19 @@ function GridViewInner({
                       left = (cs - settings.visibleFrom) * HOUR_W + 2
                       width = Math.max((ce - cs) * HOUR_W - 4, 18)
                     }
-                    const top = catTop + ROLE_HDR + track * SHIFT_H + 3
+                    const top = catTop + track * SHIFT_H + 3
                     return (
                       <div
                         key={shift.id}
                         className="animate-pulse rounded-md bg-muted"
-                        style={{
-                          position: "absolute",
-                          left,
-                          top,
-                          width,
-                          height: SHIFT_H - 6,
-                        }}
+                        style={{ position: "absolute", left, top, width, height: SHIFT_H - 6 }}
                       />
                     )
                   }
-                  const track = trackNums[si]
+                  const track = trackNums[si] ?? 0
                   const isDraft = shift.status === "draft"
                   const isDrag = dragId === shift.id
-                  const top = catTop + ROLE_HDR + track * SHIFT_H + 3
+                  const top = catTop + track * SHIFT_H + 3
                   let left: number, width: number
                   if (isWeekView) {
                     const cs = Math.max(shift.startH, settings.visibleFrom)
@@ -2455,92 +2775,57 @@ function GridViewInner({
                   }
                   const variant = settings.badgeVariant ?? "both"
                   const canDrag = (variant === "drag" || variant === "both") && shift.draggable !== false
-                  const showResize =
-                    !readOnly &&
-                    (variant === "resize" || variant === "both") &&
-                    width >= 48 &&
-                    shift.resizable !== false
-                  const isLive =
-                    sameDay(shift.date, new Date()) &&
-                    nowH >= shift.startH &&
-                    nowH < shift.endH
-                  const isPast =
-                    shift.date < toDateISO(new Date()) ||
-                    (sameDay(shift.date, new Date()) && shift.endH < nowH)
-
+                  const showResize = !readOnly && (variant === "resize" || variant === "both") && width >= 48 && shift.resizable !== false
+                  const isLive = sameDay(shift.date, new Date()) && nowH >= shift.startH && nowH < shift.endH
+                  const isPast = shift.date < toDateISO(new Date()) || (sameDay(shift.date, new Date()) && shift.endH < nowH)
                   const isDeleting = deletingIds.has(shift.id)
                   const isNew = newlyAddedIds.has(shift.id)
                   const isDropConflict = dropConflictId === shift.id
+                  const isSelected = selectedBlockIds.has(shift.id)
+                  const isActivating = activatingBlockId === shift.id
+                  const hasConflict = conflictIds.has(shift.id)
                   const blockStyle: React.CSSProperties = {
-                    position: "absolute",
-                    left,
-                    top,
-                    width,
-                    height: SHIFT_H - 6,
-                    borderRadius: 5,
-                    cursor: canDrag ? (isDrag ? "grabbing" : "grab") : "default",
+                    position: "absolute", left, top, width,
+                    height: SHIFT_H - 6, borderRadius: 6,
+                    cursor: canDrag ? (isDrag ? "grabbing" : isTouchDevice ? "default" : "grab") : "default",
                     userSelect: "none",
-                    touchAction: "none",
-                    opacity: isDrag ? 0.3 : isDeleting ? 0 : isPast ? 0.6 : 1,
-                    zIndex: isDrag ? 20 : 8,
-                    overflow: "visible",
-                    display: "flex",
-                    alignItems: "center",
-                    background: isDraft
-                      ? "transparent"
-                      : `linear-gradient(135deg,${c.bg},${c.bg}cc)`,
-                    border: isDraft ? `1.5px dashed ${c.bg}` : `1px solid ${c.bg}88`,
-                    boxShadow: isDrag || isDraft ? "none" : `0 2px 6px ${c.bg}44`,
-                    transition: isDeleting ? "opacity 150ms ease-out" : "transform 150ms ease-out",
+                    touchAction: isDrag ? "none" : isTouchDevice ? "pan-y" : "none",
+                    opacity: isDrag ? 0.85 : isDeleting ? 0 : isPast ? 0.6 : 1,
+                    zIndex: isDrag ? 50 : isSelected ? 12 : isActivating ? 15 : 8,
+                    overflow: "visible", display: "flex", alignItems: "center",
+                    background: isDraft ? "transparent" : `linear-gradient(135deg,${c.bg},${c.bg}cc)`,
+                    border: isDraft ? `1.5px dashed ${c.bg}` : isSelected ? `2px solid ${c.bg}` : `1px solid ${c.bg}88`,
+                    boxShadow: isDrag
+                      ? `0 20px 40px -8px ${c.bg}60, 0 8px 16px -4px rgba(0,0,0,0.2)`
+                      : isActivating ? `0 8px 24px -4px ${c.bg}80, 0 0 0 3px ${c.bg}33`
+                      : isDraft ? "none"
+                      : isSelected ? `0 0 0 3px ${c.bg}44, 0 2px 6px ${c.bg}44`
+                      : `0 2px 6px ${c.bg}44`,
+                    transition: isDrag
+                      ? "transform 100ms ease-out, box-shadow 100ms ease-out"
+                      : isActivating ? "transform 200ms ease-out, box-shadow 200ms ease-out"
+                      : isDeleting ? "opacity 150ms ease-out"
+                      : "transform 150ms ease-out",
                     contain: "layout style paint",
                     willChange: isDrag ? "transform" : "auto",
                   }
-                  if (isDrag) {
-                    blockStyle.transform = "scale(1.02)"
-                    blockStyle.boxShadow = "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)"
-                  }
-
-                  const hasConflict = conflictIds.has(shift.id)
-
-                  const blockSlotProps = {
-                    block: shift,
-                    resource: cat,
-                    isDraft,
-                    isDragging: isDrag,
-                    hasConflict,
-                    widthPx: width,
-                    onDoubleClick: () => onShiftClick(shift, cat),
-                  }
-
+                  if (isDrag) blockStyle.transform = "scale(1.04)"
+                  else if (isActivating) blockStyle.transform = "scale(1.06)"
                   const showTooltip = tooltipBlockId === shift.id
                   const conflictCount = getConflictCount(shifts, shift.id)
+                  const blockSlotProps = {
+                    block: shift, resource: cat, isDraft, isDragging: isDrag,
+                    hasConflict, widthPx: width, onDoubleClick: () => onShiftClick(shift, cat),
+                  }
                   return (
                     <div
                       key={shift.id}
-                      data-scheduler-block
-                      data-block-id={shift.id}
-                      ref={(el) => {
-                        blockRefsRef.current[shift.id] = el
-                      }}
-                      tabIndex={0}
+                      ref={(el) => { blockRefsRef.current[shift.id] = el }}
                       role="button"
+                      tabIndex={0}
                       aria-label={`${shift.employee}, ${getTimeLabel(shift.date, shift.startH)} to ${getTimeLabel(shift.date, shift.endH)}, ${cat.name}`}
-                      onFocus={() => {
-                        setFocusedBlockId(shift.id)
-                        onFocusedBlockChange?.(shift.id)
-                      }}
-                      onBlur={() => {
-                        if (focusedBlockId === shift.id) {
-                          setFocusedBlockId(null)
-                          onFocusedBlockChange?.(null)
-                        }
-                      }}
-                      onKeyDown={(e) => onBlockKeyDown(e, shift, cat)}
+                      data-scheduler-block
                       onPointerEnter={() => {
-                        if (tooltipLeaveTimerRef.current) {
-                          clearTimeout(tooltipLeaveTimerRef.current)
-                          tooltipLeaveTimerRef.current = null
-                        }
                         if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current)
                         tooltipTimerRef.current = setTimeout(() => setTooltipBlockId(shift.id), TOOLTIP_HOVER_MS)
                       }}
@@ -2550,26 +2835,9 @@ function GridViewInner({
                         if (tooltipLeaveTimerRef.current) clearTimeout(tooltipLeaveTimerRef.current)
                         tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS)
                       }}
-                      onPointerDown={
-                        canDrag
-                          ? (e: React.PointerEvent<HTMLDivElement>) => onBD(e, shift)
-                          : undefined
-                      }
-                      onDoubleClick={(e) => {
-                        e.stopPropagation()
-                        if (!dragId) {
-                          // Debug: track why double click triggers
-                          // eslint-disable-next-line no-console
-                          console.log("[Scheduler] Block double-click", {
-                            id: shift.id,
-                            employee: shift.employee,
-                            date: shift.date,
-                            startH: shift.startH,
-                            endH: shift.endH,
-                          })
-                          onShiftClick(shift, cat)
-                        }
-                      }}
+                      onPointerDown={canDrag ? (e: React.PointerEvent<HTMLDivElement>) => onBD(e, shift) : undefined}
+                      onDoubleClick={(e) => { e.stopPropagation(); if (!dragId) onShiftClick(shift, cat) }}
+                      onKeyDown={(e) => onBlockKeyDown(e, shift, cat)}
                       className={cn(
                         "group/block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                         isNew && "animate-[scaleIn_120ms_ease-out]",
@@ -2579,243 +2847,36 @@ function GridViewInner({
                       )}
                       style={blockStyle}
                     >
-                      {showTooltip && (
-                        <div
-                          className="absolute bottom-full left-1/2 z-50 mb-1 -translate-x-1/2 rounded-md border border-border bg-popover px-2 py-1.5 text-xs text-popover-foreground shadow-md pointer-events-auto"
-                          role="tooltip"
-                          onPointerEnter={() => {
-                            if (tooltipLeaveTimerRef.current) {
-                              clearTimeout(tooltipLeaveTimerRef.current)
-                              tooltipLeaveTimerRef.current = null
-                            }
-                            setTooltipBlockId(shift.id)
-                          }}
-                          onPointerLeave={() => {
-                            if (tooltipLeaveTimerRef.current) clearTimeout(tooltipLeaveTimerRef.current)
-                            tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS)
-                          }}
-                        >
-                          <div className="font-semibold">{shift.employee}</div>
-                          <div className="text-muted-foreground">
-                            {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)} · {cat.name}
-                          </div>
-                          <div className="capitalize">{shift.status}</div>
-                          {hasConflict && (
-                            <div className="text-destructive">
-                              Overlaps with {conflictCount} other block{conflictCount !== 1 ? "s" : ""}
-                            </div>
-                          )}
-                          {shift.meta && Object.keys(shift.meta).length > 0 && (
-                            <div className="mt-0.5 text-muted-foreground">
-                              {JSON.stringify(shift.meta)}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {slots.block ? (
-                        slots.block(blockSlotProps)
-                      ) : (
+                      {slots.block ? slots.block(blockSlotProps) : (
                         <>
-                      {hasConflict && (
-                        <span
-                          className="absolute right-1 top-0.5 z-10 cursor-help text-destructive"
-                          title={conflictCount > 0 ? `Overlaps with ${conflictCount} other block${conflictCount !== 1 ? "s" : ""}` : "Overlapping shifts (conflict)"}
-                          onPointerEnter={(e) => {
-                            e.stopPropagation()
-                            if (tooltipTimerRef.current) {
-                              clearTimeout(tooltipTimerRef.current)
-                              tooltipTimerRef.current = null
-                            }
-                            setTooltipBlockId(shift.id)
-                          }}
-                        >
-                          <AlertTriangle size={12} />
-                        </span>
-                      )}
-                      {showResize && (
-                      <div
-                        data-scheduler-resize-handle
-                        data-resize="left"
-                        className={cn(
-                          "transition-opacity duration-150",
-                          !isTouchDevice && "opacity-0 group-hover/block:opacity-100"
-                        )}
-                        onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
-                        style={{
-                          width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9,
-                          minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined,
-                          height: "100%",
-                          cursor: "ew-resize",
-                          flexShrink: 0,
-                          background: isDraft ? `${c.bg}22` : "var(--foreground)",
-                          borderRadius: "4px 0 0 4px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
-                          {[0, 1, 2].map((i) => (
-                            <div
-                              key={i}
-                              style={{
-                                width: 2,
-                                height: 2,
-                                borderRadius: "50%",
-                                background: isDraft ? c.bg : "var(--background)",
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      )}
-                      <div
-                        style={{
-                          flex: 1,
-                          padding: "0 3px",
-                          overflow: "hidden",
-                          pointerEvents: "none",
-                          minWidth: 0,
-                        }}
-                      >
-                        {width >= 60 && (
-                          <div
-                            className="truncate"
-                            style={{
-                              color: isDraft ? c.bg : "var(--background)",
-                              fontSize: 10,
-                              fontWeight: 700,
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 2,
-                              minWidth: 0,
-                            }}
-                          >
-                            {isDraft && (
-                              <span
-                                style={{
-                                  fontSize: 8,
-                                  background: c.bg,
-                                  color: "var(--background)",
-                                  borderRadius: 2,
-                                  padding: "0 2px",
-                                  flexShrink: 0,
-                                }}
-                              >
-                                D
-                              </span>
-                            )}
-                            {shift.employee.split(" ")[0]}
+                          {showTooltip && (
+                            <div className="absolute bottom-full left-1/2 z-50 mb-1 -translate-x-1/2 rounded-md border border-border bg-popover px-2 py-1.5 text-xs text-popover-foreground shadow-md pointer-events-auto">
+                              <div className="font-semibold">{shift.employee}</div>
+                              <div className="text-muted-foreground">{getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}</div>
+                            </div>
+                          )}
+                          <div className="flex min-w-0 flex-1 items-center gap-1 px-2">
+                            {hasConflict && <AlertTriangle size={10} className="shrink-0 text-destructive" />}
+                            <span className="truncate text-[10px] font-semibold leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.95)" }}>
+                              {shift.employee}
+                            </span>
                           </div>
-                        )}
-                        {width > 52 && (
-                          <div
-                            style={{
-                              color: isDraft ? c.text : "var(--background)",
-                              fontSize: 9,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}
-                          </div>
-                        )}
-                      </div>
-
-                      {width > 70 && (
-                        <button
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setCopiedShift?.(shift)
-                          }}
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            color: isDraft ? c.bg : "var(--background)",
-                            cursor: "pointer",
-                            padding: "0 4px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            zIndex: 10,
-                          }}
-                          title="Copy Shift"
-                          aria-label="Copy shift"
-                        >
-                          <Copy size={12} />
-                        </button>
-                      )}
-                      {onDeleteShift && (
-                        <button
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            // Debug: track delete clicks
-                            // eslint-disable-next-line no-console
-                            console.log("[Scheduler] Delete shift click", {
-                              id: shift.id,
-                              employee: shift.employee,
-                              date: shift.date,
-                              startH: shift.startH,
-                              endH: shift.endH,
-                            })
-                            setShiftToDeleteConfirm(shift)
-                          }}
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            color: isDraft ? c.bg : "var(--background)",
-                            cursor: "pointer",
-                            padding: "0 4px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            zIndex: 10,
-                          }}
-                          title="Delete shift"
-                          aria-label="Delete shift"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      )}
-
-                      {showResize && (
-                      <div
-                        data-scheduler-resize-handle
-                        data-resize="right"
-                        className={cn(
-                          "transition-opacity duration-150",
-                          !isTouchDevice && "opacity-0 group-hover/block:opacity-100"
-                        )}
-                        onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
-                        style={{
-                          width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9,
-                          minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined,
-                          height: "100%",
-                          cursor: "ew-resize",
-                          flexShrink: 0,
-                          background: isDraft ? `${c.bg}22` : "var(--foreground)",
-                          borderRadius: "0 4px 4px 0",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
-                          {[0, 1, 2].map((i) => (
+                          {showResize && (
                             <div
-                              key={i}
-                              style={{
-                                width: 2,
-                                height: 2,
-                                borderRadius: "50%",
-                                background: isDraft ? c.bg : "var(--background)",
-                              }}
+                              data-resize="left"
+                              onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
+                              className={cn("absolute left-0 top-0 h-full cursor-w-resize", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
+                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: `${c.bg}33`, borderRadius: "6px 0 0 6px" }}
                             />
-                          ))}
-                        </div>
-                      </div>
-                      )}
+                          )}
+                          {showResize && (
+                            <div
+                              data-resize="right"
+                              onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
+                              className={cn("absolute right-0 top-0 h-full cursor-e-resize", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
+                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: `${c.bg}33`, borderRadius: "0 6px 6px 0" }}
+                            />
+                          )}
                         </>
                       )}
                     </div>
@@ -2826,36 +2887,39 @@ function GridViewInner({
 
             {!isLoading &&
               !readOnly &&
-              CATEGORIES.filter(
-                (cat) => !collapsed.has(cat.id) && !categoryHasShifts[cat.id]
-              ).map((cat) => {
-                const top = categoryTops[cat.id] + ROLE_HDR
-                const rowH = categoryHeights[cat.id] - ROLE_HDR
-                const centerDate = dates[Math.floor(dates.length / 2)] ?? dates[0]
-                return (
-                  <div
-                    key={`empty-row-${cat.id}`}
-                    className="flex items-center justify-center gap-2 rounded border border-dashed border-muted-foreground/40 bg-muted/20"
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top,
-                      width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
-                      height: rowH,
-                      zIndex: 5,
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => onAddShift(centerDate, cat.id)}
-                      className="flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground"
+              flatRows
+                .filter((row) => row.kind === "employee" && row.employee &&
+                  !collapsed.has(row.category.id) &&
+                  !categoryHasShifts[row.category.id])
+                .map((row) => {
+                  const cat = row.category
+                  const top = (categoryTops[`emp:${row.employee!.id}`] ?? 0)
+                  const rowH = categoryHeights[`emp:${row.employee!.id}`] ?? SHIFT_H
+                  const centerDate = dates[Math.floor(dates.length / 2)] ?? dates[0]!
+                  return (
+                    <div
+                      key={`empty-row-${row.key}`}
+                      className="flex items-center justify-center gap-2 rounded border border-dashed border-muted-foreground/40 bg-muted/20"
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        top,
+                        width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
+                        height: rowH,
+                        zIndex: 5,
+                      }}
                     >
-                      <Plus size={14} />
-                      Add {labels.shift}
-                    </button>
-                  </div>
-                )
-              })}
+                      <button
+                        type="button"
+                        onClick={() => onAddShift(centerDate, cat.id)}
+                        className="flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground"
+                      >
+                        <Plus size={14} />
+                        Add {labels.shift}
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
             </div>
             {hasDayScrollNav && (
@@ -2864,6 +2928,63 @@ function GridViewInner({
           </div>
         </div>
       </div>
+
+      {/* Multi-select bulk action bar */}
+      {selectedBlockIds.size > 0 && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 200,
+            background: "var(--background)",
+            border: "1px solid var(--border)",
+            borderRadius: 10,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "8px 16px",
+            fontSize: 13,
+          }}
+        >
+          <span style={{ fontWeight: 600, color: "var(--foreground)" }}>
+            {selectedBlockIds.size} selected
+          </span>
+          <button
+            type="button"
+            onClick={deleteSelectedBlocks}
+            style={{
+              background: "var(--destructive)",
+              color: "var(--destructive-foreground)",
+              border: "none",
+              borderRadius: 6,
+              padding: "4px 12px",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Delete
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedBlockIds(new Set())}
+            style={{
+              background: "transparent",
+              color: "var(--muted-foreground)",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              padding: "4px 10px",
+              fontSize: 12,
+              cursor: "pointer",
+            }}
+          >
+            Clear
+          </button>
+        </div>
+      )}
 
       {staffPanel &&
         (() => {

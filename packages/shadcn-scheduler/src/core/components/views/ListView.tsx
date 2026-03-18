@@ -159,6 +159,7 @@ function ListViewInner({
       {grouped.map(({ date, shifts: ds_ }) => {
         const drafts = ds_.filter((s) => s.status === "draft")
         const dateStr = date.slice(0, 10)
+        const dateObj = new Date(dateStr + "T12:00:00")
         const isOT = dropT === dateStr
 
         const handlePublishAll = (): void => {
@@ -199,7 +200,7 @@ function ListViewInner({
                     width: 36,
                     height: 36,
                     borderRadius: "50%",
-                    background: isToday(date) ? "var(--primary)" : "var(--border))",
+                    background: isToday(dateObj) ? "var(--primary)" : "var(--border))",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -210,16 +211,16 @@ function ListViewInner({
                     style={{
                       fontSize: 13,
                       fontWeight: 800,
-                      color: isToday(date) ? "var(--background)" : "var(--foreground)",
+                      color: isToday(dateObj) ? "var(--background)" : "var(--foreground)",
                     }}
                   >
-                    {date.getDate()}
+                    {dateObj.getDate()}
                   </span>
                 </div>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)" }}>
-                    {DAY_NAMES[date.getDay()]}, {MONTHS_SHORT[date.getMonth()]} {date.getDate()},{" "}
-                    {date.getFullYear()}
+                    {DAY_NAMES[dateObj.getDay()]}, {MONTHS_SHORT[dateObj.getMonth()]} {dateObj.getDate()},{" "}
+                    {dateObj.getFullYear()}
                   </div>
                   <div style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
                     {ds_.length} shift{ds_.length !== 1 ? "s" : ""}

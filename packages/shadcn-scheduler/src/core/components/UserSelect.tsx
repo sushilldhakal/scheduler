@@ -11,7 +11,7 @@ interface UserSelectProps {
 }
 
 interface OptionMeta {
-  avatar: string
+  avatar: string | undefined
   categoryName: string
   bg: string
   text: string

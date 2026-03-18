@@ -30,6 +30,29 @@ export interface Block<TMeta = Record<string, unknown>> {
   meta?: TMeta
 }
 
+// ─── Tree / flat-row model ────────────────────────────────────────────────────
+
+/**
+ * A single virtualizer row. Either:
+ *   kind="category" — a group header (collapsible). Shows category name + stats.
+ *   kind="employee" — one row per employee inside the category. Shows their shifts.
+ *
+ * This is the Phase-4 employee-per-row tree model. The grid renders one virtualizer
+ * row per FlatRow instead of one per category.
+ */
+export interface FlatRow {
+  /** Unique row key — stable across re-renders */
+  key: string
+  kind: "category" | "employee"
+  /** The category this row belongs to (or is) */
+  category: Resource
+  /** Present when kind === "employee" */
+  employee?: Resource
+  /** Depth for indentation (0 = category header, 1 = employee row) */
+  depth: number
+}
+
+
 /** Resource kind: row/category (e.g. Delivery, Kitchen) or assignable unit (e.g. person). */
 export type ResourceKind = "category" | "employee"
 

@@ -73,3 +73,7 @@ export { SchedulerGantt } from "./domains/gantt"
 export type { SchedulerGanttProps } from "./domains/gantt"
 export { SchedulerVenue } from "./domains/venue"
 export type { SchedulerVenueProps } from "./domains/venue"
+
+// Phase 4 — employee-per-row tree model
+export { useFlatRows, buildFlatRowTops } from "./core/hooks/useFlatRows"
+export type { FlatRow } from "./core/types"
