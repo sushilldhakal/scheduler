@@ -3070,10 +3070,7 @@ function GridViewInner({
                             <div
                               data-resize="left"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
-<<<<<<< HEAD
-              className={cn("absolute left-0 top-0 h-full cursor-w-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
-                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: `${c.bg}30`, borderRadius: "6px 0 0 6px" }}
-=======
+
                               className={cn(
                                 "absolute left-0 top-0 flex h-full cursor-w-resize items-center justify-center",
                                 !isTouchDevice && "opacity-0 group-hover/block:opacity-100"
@@ -3084,7 +3081,6 @@ function GridViewInner({
                                 background: `${c.bg}33`,
                                 borderRadius: "6px 0 0 6px",
                               }}
->>>>>>> e65009a (fix(scheduler): sort arrows, sidebar stats, resize dots, list→day nav)
                             >
                               <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
                                 <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
@@ -3097,10 +3093,7 @@ function GridViewInner({
                             <div
                               data-resize="right"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
-<<<<<<< HEAD
-              className={cn("absolute right-0 top-0 h-full cursor-e-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
-                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: `${c.bg}30`, borderRadius: "0 6px 6px 0" }}
-=======
+
                               className={cn(
                                 "absolute right-0 top-0 flex h-full cursor-e-resize items-center justify-center",
                                 !isTouchDevice && "opacity-0 group-hover/block:opacity-100"
@@ -3111,7 +3104,6 @@ function GridViewInner({
                                 background: `${c.bg}33`,
                                 borderRadius: "0 6px 6px 0",
                               }}
->>>>>>> e65009a (fix(scheduler): sort arrows, sidebar stats, resize dots, list→day nav)
                             >
                               <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
                                 <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
