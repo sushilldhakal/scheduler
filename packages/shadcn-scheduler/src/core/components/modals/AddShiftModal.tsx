@@ -4,7 +4,6 @@ import { useSchedulerContext } from "../../context"
 import { HOURS, fmtHourOpt, toDateISO } from "../../constants"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { Calendar } from "../ui/calendar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs"
 import { CalendarIcon, Clock } from "lucide-react"
 
 interface AddShiftModalProps {
