@@ -285,15 +285,15 @@ function GridViewInner({
 
   // ── Sidebar sort ────────────────────────────────────────────
   const toggleSort = useCallback((col: "name" | "hours" | "scheduled") => {
-    setSortBy((prev) => {
-      if (prev === col) {
-        setSortDir((d) => d === "asc" ? "desc" : "asc")
-        return col
-      }
+    if (sortBy === col) {
+      // Same column — flip direction
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+    } else {
+      // New column — set it and reset to asc
+      setSortBy(col)
       setSortDir("asc")
-      return col
-    })
-  }, [])
+    }
+  }, [sortBy])
 
   // ── Multi-select ────────────────────────────────────────────
   const toggleBlockSelect = useCallback((id: string, multi: boolean) => {
@@ -1765,12 +1765,13 @@ function GridViewInner({
           {/* Column headers row */}
           <div style={{ display: "flex", alignItems: "center", padding: "0 10px 4px", gap: 2 }}>
             {(["name", "hours", "scheduled"] as const).map((col) => {
-              const labels_col = col === "name" ? labels.category ?? "Name" : col === "hours" ? "Hours" : "Shifts"
+              const colLabel = col === "name" ? labels.category ?? "Name" : col === "hours" ? "Hours" : "Shifts"
               const isActive = sortBy === col
               return (
                 <button
                   key={col}
                   type="button"
+                  title={`Sort by ${colLabel} (${isActive ? (sortDir === "asc" ? "low→high, click for high→low" : "high→low, click for low→high") : "click to sort"})`}
                   onClick={() => toggleSort(col)}
                   style={{
                     fontSize: 9,
@@ -1778,7 +1779,7 @@ function GridViewInner({
                     color: isActive ? "var(--foreground)" : "var(--muted-foreground)",
                     textTransform: "uppercase",
                     letterSpacing: 0.5,
-                    background: "transparent",
+                    background: isActive ? "var(--accent)" : "transparent",
                     border: "none",
                     cursor: "pointer",
                     padding: "2px 4px",
@@ -1791,12 +1792,13 @@ function GridViewInner({
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
+                    transition: "background 100ms, color 100ms",
                   }}
                 >
-                  {labels_col}
-                  {isActive && (
-                    <span style={{ fontSize: 8 }}>{sortDir === "asc" ? "↑" : "↓"}</span>
-                  )}
+                  {colLabel}
+                  <span style={{ fontSize: 8, opacity: isActive ? 1 : 0.4 }}>
+                    {isActive ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
+                  </span>
                 </button>
               )
             })}
@@ -2141,9 +2143,13 @@ function GridViewInner({
                               <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                 {cat.name}
                               </span>
-                              <span style={{ fontSize: 10, color: "var(--muted-foreground)", whiteSpace: "nowrap", flexShrink: 0 }}>
-                                {totalHours > 0 ? `${totalHours.toFixed(1)}h` : ""}
-                              </span>
+                              {(totalHours > 0 || scheduled > 0) && (
+                                <span style={{ fontSize: 9, color: "var(--muted-foreground)", whiteSpace: "nowrap", flexShrink: 0 }}>
+                                  {totalHours > 0 ? `${totalHours.toFixed(1)}h` : ""}
+                                  {totalHours > 0 && scheduled > 0 ? " · " : ""}
+                                  {scheduled > 0 ? `${scheduled} shift${scheduled !== 1 ? "s" : ""}` : ""}
+                                </span>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => toggleCollapse(cat.id)}
@@ -2865,17 +2871,29 @@ function GridViewInner({
                             <div
                               data-resize="left"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
-                              className={cn("absolute left-0 top-0 h-full cursor-w-resize", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
+                              className={cn("absolute left-0 top-0 h-full cursor-w-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
                               style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: `${c.bg}33`, borderRadius: "6px 0 0 6px" }}
-                            />
+                            >
+                              <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
+                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
+                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
+                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
+                              </div>
+                            </div>
                           )}
                           {showResize && (
                             <div
                               data-resize="right"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
-                              className={cn("absolute right-0 top-0 h-full cursor-e-resize", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
+                              className={cn("absolute right-0 top-0 h-full cursor-e-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
                               style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: `${c.bg}33`, borderRadius: "0 6px 6px 0" }}
-                            />
+                            >
+                              <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
+                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
+                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
+                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
+                              </div>
+                            </div>
                           )}
                         </>
                       )}
