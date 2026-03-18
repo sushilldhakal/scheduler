@@ -2425,6 +2425,7 @@ function GridViewInner({
                         key={`bg-${row.key}-${di}-${h}`}
                         data-empty-cell
                         role="gridcell"
+                        className="changeGrid-first"
                         style={{
                           position: "absolute",
                           left: di * DAY_WIDTH + (h - settings.visibleFrom) * HOUR_W,
@@ -2448,6 +2449,7 @@ function GridViewInner({
                       key={`bg-${row.key}-${di}`}
                       data-empty-cell
                       role="gridcell"
+                      className="changeGrid-second"
                       style={{
                         position: "absolute",
                         left: di * COL_W_WEEK,
@@ -2495,6 +2497,7 @@ function GridViewInner({
                     key={`bg-${row.key}-${h}`}
                     data-empty-cell
                     role="gridcell"
+                    className="changeGrid-third"
                     style={{
                       position: "absolute",
                       left: (h - settings.visibleFrom) * HOUR_W,
