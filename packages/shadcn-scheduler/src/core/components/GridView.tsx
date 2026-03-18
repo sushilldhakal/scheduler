@@ -2850,7 +2850,7 @@ function GridViewInner({
                         {/* Copy + Delete actions — visible on hover */}
                         {!isTouchDevice && width >= 72 && (
                           <div
-                            className="absolute right-0 top-0 flex h-full items-center gap-0.5 pr-1 opacity-0 group-hover/block:opacity-100 transition-opacity"
+                            className="absolute right-2 top-0 flex h-full items-center gap-0.5 pr-1 opacity-0 group-hover/block:opacity-100 transition-opacity"
                             style={{ zIndex: 20, pointerEvents: "auto" }}
                           >
                             <button
@@ -2859,7 +2859,7 @@ function GridViewInner({
                               title="Copy shift"
                               style={{ width: 16, height: 16, borderRadius: 3, border: "none", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.9)", padding: 0, flexShrink: 0 }}
                             >
-                              <Copy size={9} />
+                              <Copy size={9} className={`${isDraft ? "text-primary" : "text-primary-foreground"}`} />
                             </button>
                             {onDeleteShift && (
                               <button
@@ -2868,7 +2868,7 @@ function GridViewInner({
                                 title="Delete shift"
                                 style={{ width: 16, height: 16, borderRadius: 3, border: "none", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.9)", padding: 0, flexShrink: 0 }}
                               >
-                                <Trash2 size={9} />
+                                <Trash2 size={9} className={`${isDraft ? "text-primary" : "text-primary-foreground"}`} />
                               </button>
                             )}
                           </div>
@@ -3043,7 +3043,7 @@ function GridViewInner({
                           {/* Copy + Delete actions — visible on hover */}
                           {!isTouchDevice && width >= 72 && (
                           <div
-                            className="absolute right-0 top-0 flex h-full items-center gap-0.5 pr-1 opacity-0 group-hover/block:opacity-100 transition-opacity"
+                            className="absolute right-2 top-0 flex h-full items-center gap-0.5 pr-1 opacity-0 group-hover/block:opacity-100 transition-opacity"
                             style={{ zIndex: 20, pointerEvents: "auto" }}
                           >
                             <button
@@ -3052,7 +3052,7 @@ function GridViewInner({
                               title="Copy shift"
                               style={{ width: 16, height: 16, borderRadius: 3, border: "none", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.9)", padding: 0, flexShrink: 0 }}
                             >
-                              <Copy size={9} />
+                              <Copy size={9} className={`${isDraft ? "text-primary" : "text-primary-foreground"}`}/>
                             </button>
                               {onDeleteShift && (
                               <button
@@ -3061,7 +3061,7 @@ function GridViewInner({
                                 title="Delete shift"
                                 style={{ width: 16, height: 16, borderRadius: 3, border: "none", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.9)", padding: 0, flexShrink: 0 }}
                               >
-                                <Trash2 size={9} />
+                                <Trash2 size={9} className={`${isDraft ? "text-primary" : "text-primary-foreground"}`} />
                               </button>
                               )}
                           </div>
