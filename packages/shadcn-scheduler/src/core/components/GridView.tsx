@@ -2841,6 +2841,31 @@ function GridViewInner({
                             <div className="text-muted-foreground">{getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}</div>
                           </div>
                         )}
+
+                        {/* Break gap indicator */}
+                        {shift.breakStartH !== undefined && shift.breakEndH !== undefined && (() => {
+                          const dur = shift.endH - shift.startH
+                          if (dur <= 0) return null
+                          const breakLeft = ((shift.breakStartH - shift.startH) / dur) * 100
+                          const breakWidth = ((shift.breakEndH - shift.breakStartH) / dur) * 100
+                          return (
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: 0,
+                                left: `${breakLeft}%`,
+                                width: `${Math.max(breakWidth, 2)}%`,
+                                height: "100%",
+                                background: "rgba(0,0,0,0.18)",
+                                borderLeft: "1px solid rgba(255,255,255,0.4)",
+                                borderRight: "1px solid rgba(255,255,255,0.4)",
+                                pointerEvents: "none",
+                                zIndex: 2,
+                              }}
+                              title={`Break ${shift.breakStartH}:00–${shift.breakEndH}:00`}
+                            />
+                          )
+                        })()}
                         <div className="flex min-w-0 flex-1 items-center gap-1 px-2">
                           {hasConflict && <AlertTriangle size={10} className="shrink-0 text-destructive" />}
                           <span className="truncate text-[10px] font-semibold leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.95)" }}>
@@ -3040,6 +3065,28 @@ function GridViewInner({
                               {shift.employee}
                             </span>
                           </div>
+                          {/* Break gap indicator */}
+                          {shift.breakStartH !== undefined && shift.breakEndH !== undefined && (() => {
+                            const dur = shift.endH - shift.startH
+                            if (dur <= 0) return null
+                            const breakLeft = ((shift.breakStartH - shift.startH) / dur) * 100
+                            const breakWidth = ((shift.breakEndH - shift.breakStartH) / dur) * 100
+                            return (
+                              <div
+                                style={{
+                                  position: "absolute", top: 0,
+                                  left: `${breakLeft}%`,
+                                  width: `${Math.max(breakWidth, 2)}%`,
+                                  height: "100%",
+                                  background: "rgba(0,0,0,0.18)",
+                                  borderLeft: "1px solid rgba(255,255,255,0.4)",
+                                  borderRight: "1px solid rgba(255,255,255,0.4)",
+                                  pointerEvents: "none", zIndex: 2,
+                                }}
+                                title={`Break ${shift.breakStartH}:00–${shift.breakEndH}:00`}
+                              />
+                            )
+                          })()}
                           {/* Copy + Delete actions — visible on hover */}
                           {!isTouchDevice && width >= 72 && (
                           <div
