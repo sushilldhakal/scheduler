@@ -711,16 +711,8 @@ function GridViewInner({
         }
         return
       }
-      // Individual mode: employee row sized by that employee's shifts only
-      const emp = row.employee!
-      let maxH = SHIFT_H
-      dates.forEach((date) => {
-        const dayShifts = (shiftIndex.get(`${row.category.id}:${toDateISO(date)}`) ?? [])
-          .filter((s) => s.employeeId === emp.id)
-        const h = getCategoryRowHeight(row.category.id, dayShifts)
-        if (h - ROLE_HDR > maxH) maxH = h - ROLE_HDR
-      })
-      map[key] = maxH + ADD_BTN_H
+      // Individual mode: fixed 50px per employee row (compact, one row per person)
+      map[key] = 50
     })
     return map
   }, [shiftIndex, dates, flatRows, rowMode, collapsed, isLoading])
@@ -2852,13 +2844,39 @@ function GridViewInner({
                             {shift.employee}
                           </span>
                         </div>
+                        {/* Copy + Delete actions — visible on hover */}
+                        {!isTouchDevice && width >= 72 && (
+                          <div
+                            className="absolute right-0 top-0 flex h-full items-center gap-0.5 pr-1 opacity-0 group-hover/block:opacity-100 transition-opacity"
+                            style={{ zIndex: 20, pointerEvents: "auto" }}
+                          >
+                            <button
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => { e.stopPropagation(); setCopiedShift?.(shift) }}
+                              title="Copy shift"
+                              style={{ width: 16, height: 16, borderRadius: 3, border: "none", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.9)", padding: 0, flexShrink: 0 }}
+                            >
+                              <Copy size={9} />
+                            </button>
+                            {onDeleteShift && (
+                              <button
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onClick={(e) => { e.stopPropagation(); setShiftToDeleteConfirm(shift) }}
+                                title="Delete shift"
+                                style={{ width: 16, height: 16, borderRadius: 3, border: "none", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.9)", padding: 0, flexShrink: 0 }}
+                              >
+                                <Trash2 size={9} />
+                              </button>
+                            )}
+                          </div>
+                        )}
                         {showResize && (
-                          <div data-resize="left" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)} className={cn("absolute left-0 top-0 h-full cursor-w-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")} style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: "var(--background)", borderRadius: "6px 0 0 6px", borderRight: `1px solid ${c.bg}44` }}>
+                          <div data-resize="left" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)} className={cn("absolute left-0 top-0 h-full cursor-w-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")} style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: `${c.bg}30`, borderRadius: "6px 0 0 6px" }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /></div>
                           </div>
                         )}
                         {showResize && (
-                          <div data-resize="right" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)} className={cn("absolute right-0 top-0 h-full cursor-e-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")} style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: "var(--background)", borderRadius: "0 6px 6px 0", borderLeft: `1px solid ${c.bg}44` }}>
+                          <div data-resize="right" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)} className={cn("absolute right-0 top-0 h-full cursor-e-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")} style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: `${c.bg}30`, borderRadius: "0 6px 6px 0" }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /></div>
                           </div>
                         )}
@@ -3019,12 +3037,38 @@ function GridViewInner({
                               {shift.employee}
                             </span>
                           </div>
+                          {/* Copy + Delete actions — visible on hover */}
+                          {!isTouchDevice && width >= 72 && (
+                          <div
+                            className="absolute right-0 top-0 flex h-full items-center gap-0.5 pr-1 opacity-0 group-hover/block:opacity-100 transition-opacity"
+                            style={{ zIndex: 20, pointerEvents: "auto" }}
+                          >
+                            <button
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => { e.stopPropagation(); setCopiedShift?.(shift) }}
+                              title="Copy shift"
+                              style={{ width: 16, height: 16, borderRadius: 3, border: "none", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.9)", padding: 0, flexShrink: 0 }}
+                            >
+                              <Copy size={9} />
+                            </button>
+                              {onDeleteShift && (
+                              <button
+                                onPointerDown={(e) => e.stopPropagation()}
+                                onClick={(e) => { e.stopPropagation(); setShiftToDeleteConfirm(shift) }}
+                                title="Delete shift"
+                                style={{ width: 16, height: 16, borderRadius: 3, border: "none", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.9)", padding: 0, flexShrink: 0 }}
+                              >
+                                <Trash2 size={9} />
+                              </button>
+                              )}
+                          </div>
+                          )}
                           {showResize && (
                             <div
                               data-resize="left"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
               className={cn("absolute left-0 top-0 h-full cursor-w-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
-                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: "var(--background)", borderRadius: "6px 0 0 6px", borderRight: `1px solid ${c.bg}44` }}
+                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: `${c.bg}30`, borderRadius: "6px 0 0 6px" }}
                             >
                               <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
                                 <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
@@ -3038,7 +3082,7 @@ function GridViewInner({
                               data-resize="right"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
               className={cn("absolute right-0 top-0 h-full cursor-e-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
-                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: "var(--background)", borderRadius: "0 6px 6px 0", borderLeft: `1px solid ${c.bg}44` }}
+                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: `${c.bg}30`, borderRadius: "0 6px 6px 0" }}
                             >
                               <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
                                 <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
