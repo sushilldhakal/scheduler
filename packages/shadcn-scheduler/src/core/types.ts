@@ -81,11 +81,17 @@ export interface WorkingHours {
 /** "drag" = drag only, "resize" = resize only, "both" = drag + resize */
 export type BadgeVariant = "drag" | "resize" | "both"
 
+/** "category" = one row per category, shifts stacked (default, scales to 200+ staff).
+ *  "individual" = one row per employee under each category header. */
+export type RowMode = "category" | "individual"
+
 export interface Settings {
   visibleFrom: number
   visibleTo: number
   workingHours: Record<number, WorkingHours | null>
   badgeVariant?: BadgeVariant
+  /** Controls how rows are rendered in day/week grid. Default: "category" */
+  rowMode?: RowMode
 }
 
 export interface CategoryColor {
