@@ -88,6 +88,7 @@ export const DEFAULT_SETTINGS: Settings = {
     6: { from: 8, to: 12 },
   },
   badgeVariant: "both",
+  rowMode: "category",
 }
 
 export const snapH = (v: number): number => Math.round(v / SNAP) * SNAP

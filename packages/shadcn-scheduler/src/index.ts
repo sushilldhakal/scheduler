@@ -76,4 +76,5 @@ export type { SchedulerVenueProps } from "./domains/venue"
 
 // Phase 4 — employee-per-row tree model
 export { useFlatRows, buildFlatRowTops } from "./core/hooks/useFlatRows"
-export type { FlatRow } from "./core/types"
+export type { FlatRow, RowMode } from "./core/types"
+export { ChangeRowModeInput } from "./core/components/settings/ChangeRowModeInput"

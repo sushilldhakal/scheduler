@@ -683,10 +683,11 @@ function GridViewInner({
 
   /**
    * Phase 4 — flat row list for the virtualizer.
-   * Each FlatRow is either a category header or an employee row under that category.
-   * category header → collapsed.has(cat.id) hides employee rows beneath it
+   * In "individual" mode: category header + one row per employee.
+   * In "category" mode: category header rows only (shifts stack inside like the original model).
    */
-  const flatRows = useFlatRows(SORTED_CATEGORIES, ALL_EMPLOYEES, collapsed)
+  const rowMode = settings.rowMode ?? "category"
+  const flatRows = useFlatRows(SORTED_CATEGORIES, ALL_EMPLOYEES, collapsed, rowMode)
 
   const categoryHeights = useMemo((): Record<string, number> => {
     const map: Record<string, number> = {}
@@ -695,11 +696,22 @@ function GridViewInner({
         ? `emp:${row.employee.id}`
         : `cat:${row.category.id}`
       if (row.kind === "category") {
-        // Category header row — always ROLE_HDR height
-        map[key] = ROLE_HDR
+        if (rowMode === "category" && !collapsed.has(row.category.id)) {
+          // Category mode: row grows to fit all stacked shifts
+          let maxH = ROLE_HDR + SHIFT_H
+          dates.forEach((date) => {
+            const dayShifts = shiftIndex.get(`${row.category.id}:${toDateISO(date)}`) ?? []
+            const h = getCategoryRowHeight(row.category.id, dayShifts)
+            if (h > maxH) maxH = h
+          })
+          map[key] = maxH
+        } else {
+          // Individual mode or collapsed: header is ROLE_HDR only
+          map[key] = ROLE_HDR
+        }
         return
       }
-      // Employee row — height based on max packed shifts across all dates
+      // Individual mode: employee row sized by that employee's shifts only
       const emp = row.employee!
       let maxH = SHIFT_H
       dates.forEach((date) => {
@@ -711,7 +723,7 @@ function GridViewInner({
       map[key] = maxH + ADD_BTN_H
     })
     return map
-  }, [shiftIndex, dates, flatRows, isLoading])
+  }, [shiftIndex, dates, flatRows, rowMode, collapsed, isLoading])
 
   // NOTE: vrTopsRef is updated from virtualizer vr.start values every render
   const vrTopsRef = useRef<Record<string, number>>({})
@@ -2377,8 +2389,8 @@ function GridViewInner({
               vrTopsRef.current[rowTopsKey] = vr.start
               const top = vr.start
               const rowH = vr.size
-              // Category header rows — show solid background, no hour cells
-              if (row.kind === "category") {
+              // Individual mode: category header rows — solid tinted background, no hour cells
+              if (row.kind === "category" && rowMode === "individual") {
                 const c = getColor(cat.colorIdx)
                 return (
                   <div
@@ -2397,6 +2409,7 @@ function GridViewInner({
                   />
                 )
               }
+              // Category mode category rows + all employee rows → render hour-slot cells
               return dates.map((date, di) => {
                 const closed = settings.workingHours[date.getDay()] === null
                 const today = isToday(date)
@@ -2499,8 +2512,12 @@ function GridViewInner({
             {rowVirtualizer.getVirtualItems().map((vr) => {
               const row = flatRows[vr.index]
               if (!row) return null
-              // Only draw separator after employee rows (not after category headers)
-              if (row.kind === "category") return null
+              // Category mode: separator after each category row
+              // Individual mode: separator after each employee row (not category headers)
+              const drawSep = rowMode === "category"
+                ? row.kind === "category" && !collapsed.has(row.category.id)
+                : row.kind === "employee"
+              if (!drawSep) return null
               return (
                 <div
                   key={`sep-${row.key}`}
@@ -2576,10 +2593,15 @@ function GridViewInner({
 
             {rowVirtualizer.getVirtualItems().map((vr) => {
               const row = flatRows[vr.index]
-              if (!row || row.kind === "category") return null
+              if (!row) return null
+              // Individual mode: skip category headers (no blocks, no add buttons)
+              if (row.kind === "category" && rowMode === "individual") return null
+              // Category mode: skip collapsed category rows
+              if (row.kind === "category" && collapsed.has(row.category.id)) return null
+              // Individual mode: skip collapsed employee rows
+              if (row.kind === "employee" && collapsed.has(row.category.id)) return null
               const cat = row.category
-              const emp = row.employee!
-              if (collapsed.has(cat.id)) return null
+              const emp = row.kind === "employee" ? row.employee! : null
               const top = vr.start
               const rowH = vr.size
               const addBtnTop = top + rowH - ADD_BTN_H + (ADD_BTN_H - 20) / 2
@@ -2617,8 +2639,8 @@ function GridViewInner({
                             id: nextUid(),
                             date: toDateISO(date),
                             categoryId: cat.id,
-                            employeeId: emp.id,
-                            employee: emp.name,
+                            employeeId: emp?.id ?? copiedShift.employeeId,
+                            employee: emp?.name ?? copiedShift.employee,
                           }
                           setShifts((prev) => [...prev, newShift])
                           setCopiedShift?.(null)
@@ -2651,8 +2673,8 @@ function GridViewInner({
                           id: nextUid(),
                           date: toDateISO(dates[1] ?? dates[0]!),
                           categoryId: cat.id,
-                          employeeId: emp.id,
-                          employee: emp.name,
+                          employeeId: emp?.id ?? copiedShift.employeeId,
+                          employee: emp?.name ?? copiedShift.employee,
                           startH: h,
                           endH: h + (copiedShift.endH - copiedShift.startH),
                         }
@@ -2727,13 +2749,117 @@ function GridViewInner({
             {rowVirtualizer.getVirtualItems().map((vr) => {
               const row = flatRows[vr.index]
               if (!row) return null
-              // Category header rows have no blocks — skip
-              if (row.kind === "category") return null
               const cat = row.category
+              const c = getColor(cat.colorIdx)
+
+              // ── Category mode: render all shifts for this category in the row ──
+              if (row.kind === "category") {
+                if (rowMode !== "category" || collapsed.has(cat.id)) return null
+                const catTop = vr.start
+                return dates.map((date, di) => {
+                  const dayShifts = shiftIndex.get(`${cat.id}:${toDateISO(date)}`) ?? []
+                  const sorted = [...dayShifts].sort((a, b) => a.startH - b.startH)
+                  const trackNums = packShifts(sorted)
+                  return sorted.map((shift, si) => {
+                    const track = trackNums[si] ?? 0
+                    const isDraft = shift.status === "draft"
+                    const isDrag = dragId === shift.id
+                    let left: number, width: number
+                    if (isWeekView) {
+                      const cs = Math.max(shift.startH, settings.visibleFrom)
+                      const ce = Math.min(shift.endH, settings.visibleTo)
+                      if (ce <= cs) return null
+                      left = di * COL_W_WEEK + (cs - settings.visibleFrom) * PX_WEEK + 1
+                      width = Math.max((ce - cs) * PX_WEEK - 2, 12)
+                    } else if (isDayViewMultiDay) {
+                      const cs = Math.max(shift.startH, settings.visibleFrom)
+                      const ce = Math.min(shift.endH, settings.visibleTo)
+                      if (ce <= cs) return null
+                      left = di * DAY_WIDTH + (cs - settings.visibleFrom) * HOUR_W + 2
+                      width = Math.max((ce - cs) * HOUR_W - 4, 18)
+                    } else {
+                      const cs = Math.max(shift.startH, settings.visibleFrom)
+                      const ce = Math.min(shift.endH, settings.visibleTo)
+                      if (ce <= cs) return null
+                      left = (cs - settings.visibleFrom) * HOUR_W + 2
+                      width = Math.max((ce - cs) * HOUR_W - 4, 18)
+                    }
+                    const top = catTop + ROLE_HDR + track * SHIFT_H + 3
+                    const variant = settings.badgeVariant ?? "both"
+                    const canDrag = (variant === "drag" || variant === "both") && shift.draggable !== false
+                    const showResize = !readOnly && (variant === "resize" || variant === "both") && width >= 48 && shift.resizable !== false
+                    const isDeleting = deletingIds.has(shift.id)
+                    const isNew = newlyAddedIds.has(shift.id)
+                    const isDropConflict = dropConflictId === shift.id
+                    const isSelected = selectedBlockIds.has(shift.id)
+                    const isActivating = activatingBlockId === shift.id
+                    const hasConflict = conflictIds.has(shift.id)
+                    const isPast = shift.date < toDateISO(new Date()) || (sameDay(shift.date, new Date()) && shift.endH < nowH)
+                    const isLive = sameDay(shift.date, new Date()) && nowH >= shift.startH && nowH < shift.endH
+                    const blockStyle: React.CSSProperties = {
+                      position: "absolute", left, top, width,
+                      height: SHIFT_H - 6, borderRadius: 6,
+                      cursor: canDrag ? (isDrag ? "grabbing" : isTouchDevice ? "default" : "grab") : "default",
+                      userSelect: "none",
+                      touchAction: isDrag ? "none" : isTouchDevice ? "pan-y" : "none",
+                      opacity: isDrag ? 0.85 : isDeleting ? 0 : isPast ? 0.6 : 1,
+                      zIndex: isDrag ? 50 : isSelected ? 12 : isActivating ? 15 : 8,
+                      overflow: "visible", display: "flex", alignItems: "center",
+                      background: isDraft ? "transparent" : `linear-gradient(135deg,${c.bg},${c.bg}cc)`,
+                      border: isDraft ? `1.5px dashed ${c.bg}` : isSelected ? `2px solid ${c.bg}` : `1px solid ${c.bg}88`,
+                      boxShadow: isDrag ? `0 20px 40px -8px ${c.bg}60, 0 8px 16px -4px rgba(0,0,0,0.2)` : isDraft ? "none" : `0 2px 6px ${c.bg}44`,
+                      transition: isDrag ? "transform 100ms ease-out, box-shadow 100ms ease-out" : isDeleting ? "opacity 150ms ease-out" : "transform 150ms ease-out",
+                      contain: "layout style paint", willChange: isDrag ? "transform" : "auto",
+                    }
+                    if (isDrag) blockStyle.transform = "scale(1.04)"
+                    else if (isActivating) blockStyle.transform = "scale(1.06)"
+                    return (
+                      <div
+                        key={shift.id}
+                        ref={(el) => { blockRefsRef.current[shift.id] = el }}
+                        role="button" tabIndex={0}
+                        aria-label={`${shift.employee}, ${getTimeLabel(shift.date, shift.startH)} to ${getTimeLabel(shift.date, shift.endH)}, ${cat.name}`}
+                        data-scheduler-block
+                        onPointerEnter={() => { if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current); tooltipTimerRef.current = setTimeout(() => setTooltipBlockId(shift.id), TOOLTIP_HOVER_MS) }}
+                        onPointerLeave={() => { if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current); tooltipTimerRef.current = null; if (tooltipLeaveTimerRef.current) clearTimeout(tooltipLeaveTimerRef.current); tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS) }}
+                        onPointerDown={canDrag ? (e: React.PointerEvent<HTMLDivElement>) => onBD(e, shift) : undefined}
+                        onDoubleClick={(e) => { e.stopPropagation(); if (!dragId) onShiftClick(shift, cat) }}
+                        onKeyDown={(e) => onBlockKeyDown(e, shift, cat)}
+                        className={cn("group/block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring", isNew && "animate-[scaleIn_120ms_ease-out]", (isDropConflict || hasConflict) && "ring-2 ring-destructive border-destructive", isDraft && "opacity-90", isLive && "shadow-[0_0_0_2px_var(--primary)/0.4]")}
+                        style={blockStyle}
+                      >
+                        {tooltipBlockId === shift.id && (
+                          <div className="absolute bottom-full left-1/2 z-50 mb-1 -translate-x-1/2 rounded-md border border-border bg-popover px-2 py-1.5 text-xs text-popover-foreground shadow-md pointer-events-auto">
+                            <div className="font-semibold">{shift.employee}</div>
+                            <div className="text-muted-foreground">{getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}</div>
+                          </div>
+                        )}
+                        <div className="flex min-w-0 flex-1 items-center gap-1 px-2">
+                          {hasConflict && <AlertTriangle size={10} className="shrink-0 text-destructive" />}
+                          <span className="truncate text-[10px] font-semibold leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.95)" }}>
+                            {shift.employee}
+                          </span>
+                        </div>
+                        {showResize && (
+                          <div data-resize="left" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)} className={cn("absolute left-0 top-0 h-full cursor-w-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")} style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: `${c.bg}33`, borderRadius: "6px 0 0 6px" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /></div>
+                          </div>
+                        )}
+                        {showResize && (
+                          <div data-resize="right" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)} className={cn("absolute right-0 top-0 h-full cursor-e-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")} style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: `${c.bg}33`, borderRadius: "0 6px 6px 0" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /></div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                })
+              }
+
+              // ── Individual mode: render this employee's shifts only ──
               const emp = row.employee!
               if (collapsed.has(cat.id)) return null
               const catTop = vr.start
-              const c = getColor(cat.colorIdx)
               return dates.map((date, di) => {
                 // Only render shifts belonging to this specific employee
                 const allDayShifts = shiftIndex.get(`${cat.id}:${toDateISO(date)}`) ?? []

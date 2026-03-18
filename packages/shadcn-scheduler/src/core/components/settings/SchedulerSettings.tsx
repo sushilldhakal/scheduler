@@ -6,8 +6,9 @@ import { useSchedulerContext } from "../../context"
 import { ChangeBadgeVariantInput } from "./ChangeBadgeVariantInput"
 import { ChangeVisibleHoursInput } from "./ChangeVisibleHoursInput"
 import { ChangeWorkingHoursInput } from "./ChangeWorkingHoursInput"
+import { ChangeRowModeInput } from "./ChangeRowModeInput"
 import { exportToCSV, exportToImage, exportToPDF } from "../../utils/export"
-import type { BadgeVariant } from "../../types"
+import type { BadgeVariant, RowMode } from "../../types"
 import type { SchedulerSettingsContext } from "../../types"
 
 export interface SchedulerSettingsProps extends SchedulerSettingsContext {}
@@ -80,6 +81,11 @@ export function SchedulerSettings({
           <ChangeBadgeVariantInput
             value={(settings.badgeVariant ?? "both") as BadgeVariant}
             onChange={(v) => onSettingsChange({ badgeVariant: v })}
+          />
+
+          <ChangeRowModeInput
+            value={(settings.rowMode ?? "category") as RowMode}
+            onChange={(mode) => onSettingsChange({ rowMode: mode })}
           />
 
           <ChangeVisibleHoursInput
