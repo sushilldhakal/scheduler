@@ -72,7 +72,7 @@ function ListViewInner({
       const st = new Date(start)
       st.setHours(0, 0, 0, 0)
       const en = new Date(end)
-      en.setHours(0, 0, 0, 0)
+      en.setHours(23, 59, 59, 999)   // end-of-day so same-day shifts (T12:00) are included
       return sd >= st && sd <= en
     })
     inRange.sort((a, b) => a.date.localeCompare(b.date) || a.startH - b.startH)
