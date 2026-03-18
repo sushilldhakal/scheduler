@@ -1836,8 +1836,9 @@ function GridViewInner({
                           flexShrink: 0,
                           textAlign: "center",
                           padding: "8px 4px 6px",
-                          borderRight: "1px solid var(--border))",
-                          background: today ? "var(--accent)" : closed ? "var(--muted))" : "transparent",
+                          borderLeft: i === 0 ? "1px solid var(--border)" : "2px solid var(--border)",
+                          borderRight: "1px solid var(--border)",
+                          background: today ? "var(--accent)" : closed ? "var(--muted)" : "var(--background)",
                           cursor: onDateDoubleClick ? "pointer" : "default",
                         }}
                       >
@@ -1946,8 +1947,10 @@ function GridViewInner({
                           width: DAY_WIDTH,
                           flexShrink: 0,
                           textAlign: "center",
-                          borderRight: "1px solid var(--border))",
+                          borderLeft: i === 0 ? "1px solid var(--border)" : "2px solid var(--border)",
+                          borderRight: "1px solid var(--border)",
                           padding: "0 4px",
+                          background: "var(--background)",
                         }}
                       >
                         <span
@@ -1976,7 +1979,8 @@ function GridViewInner({
                           display: "flex",
                           width: DAY_WIDTH,
                           flexShrink: 0,
-                          borderRight: "1px solid var(--border))",
+                          borderLeft: i === 0 ? "1px solid var(--border)" : "2px solid var(--border)",
+                          borderRight: "1px solid var(--border)",
                           background: isToday(d) ? "var(--accent)" : "transparent",
                         }}
                       >
@@ -2225,15 +2229,25 @@ function GridViewInner({
               position: "absolute",
               top: 0,
               right: 0,
-              width: 6,
+              width: 8,
               height: "100%",
               cursor: "col-resize",
               zIndex: 20,
-              background: "transparent",
-              transition: "background 150ms",
+              background: "var(--border)",
+              borderLeft: "2px solid var(--foreground)",
+              opacity: 0.8,
+              transition: "opacity 150ms, background 150ms",
             }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "var(--border)" }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent" }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLElement
+              el.style.opacity = "1"
+              el.style.background = "var(--muted-foreground)"
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLElement
+              el.style.opacity = "0.8"
+              el.style.background = "var(--border)"
+            }}
           />
         </div>
 
@@ -2866,7 +2880,13 @@ function GridViewInner({
                               data-resize="left"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
                               className={cn("absolute left-0 top-0 h-full cursor-w-resize", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
-                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: `${c.bg}33`, borderRadius: "6px 0 0 6px" }}
+                              style={{
+                                width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9,
+                                minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined,
+                                background: "var(--foreground)",
+                                opacity: 0.25,
+                                borderRadius: "6px 0 0 6px",
+                              }}
                             />
                           )}
                           {showResize && (
@@ -2874,7 +2894,13 @@ function GridViewInner({
                               data-resize="right"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
                               className={cn("absolute right-0 top-0 h-full cursor-e-resize", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
-                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: `${c.bg}33`, borderRadius: "0 6px 6px 0" }}
+                              style={{
+                                width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9,
+                                minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined,
+                                background: "var(--foreground)",
+                                opacity: 0.25,
+                                borderRadius: "0 6px 6px 0",
+                              }}
                             />
                           )}
                         </>
