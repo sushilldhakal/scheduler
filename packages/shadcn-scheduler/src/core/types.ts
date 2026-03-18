@@ -14,15 +14,11 @@ export interface Block<TMeta = Record<string, unknown>> {
   date: string
   startH: number
   endH: number
-  /**
-   * When false, this block cannot be dragged to move it.
-   * Defaults to true when omitted.
-   */
+  /** Break start hour — present when shift has a break */
+  breakStartH?: number
+  /** Break end hour — present when shift has a break */
+  breakEndH?: number
   draggable?: boolean
-  /**
-   * When false, this block cannot be resized (left or right).
-   * Defaults to true when omitted.
-   */
   resizable?: boolean
   employee: string
   status: "draft" | "published"
