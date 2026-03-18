@@ -809,6 +809,18 @@ function GridViewInner({
     overscan: 6,
   })
 
+  // Force virtualizer to re-measure whenever row heights change.
+  // This is necessary because @tanstack/react-virtual caches estimateSize results
+  // and won't pick up changes to categoryHeights (e.g. new shift added, collapse toggled)
+  // without an explicit measure() call.
+  const categoryHeightsRef = useRef(categoryHeights)
+  useEffect(() => {
+    if (categoryHeightsRef.current !== categoryHeights) {
+      categoryHeightsRef.current = categoryHeights
+      rowVirtualizer.measure()
+    }
+  })
+
   const totalHVirtual = rowVirtualizer.getTotalSize()
 
   const ds = useRef<DragState | null>(null)
@@ -2841,12 +2853,12 @@ function GridViewInner({
                           </span>
                         </div>
                         {showResize && (
-                          <div data-resize="left" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)} className={cn("absolute left-0 top-0 h-full cursor-w-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")} style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: `${c.bg}33`, borderRadius: "6px 0 0 6px" }}>
+                          <div data-resize="left" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)} className={cn("absolute left-0 top-0 h-full cursor-w-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")} style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: "var(--background)", borderRadius: "6px 0 0 6px", borderRight: `1px solid ${c.bg}44` }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /></div>
                           </div>
                         )}
                         {showResize && (
-                          <div data-resize="right" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)} className={cn("absolute right-0 top-0 h-full cursor-e-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")} style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: `${c.bg}33`, borderRadius: "0 6px 6px 0" }}>
+                          <div data-resize="right" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)} className={cn("absolute right-0 top-0 h-full cursor-e-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")} style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: "var(--background)", borderRadius: "0 6px 6px 0", borderLeft: `1px solid ${c.bg}44` }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /></div>
                           </div>
                         )}
@@ -3012,7 +3024,7 @@ function GridViewInner({
                               data-resize="left"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
               className={cn("absolute left-0 top-0 h-full cursor-w-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
-                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: `${c.bg}33`, borderRadius: "6px 0 0 6px" }}
+                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: "var(--background)", borderRadius: "6px 0 0 6px", borderRight: `1px solid ${c.bg}44` }}
                             >
                               <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
                                 <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
@@ -3026,7 +3038,7 @@ function GridViewInner({
                               data-resize="right"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
               className={cn("absolute right-0 top-0 h-full cursor-e-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")}
-                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: `${c.bg}33`, borderRadius: "0 6px 6px 0" }}
+                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined, background: "var(--background)", borderRadius: "0 6px 6px 0", borderLeft: `1px solid ${c.bg}44` }}
                             >
                               <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
                                 <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
