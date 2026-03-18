@@ -55,6 +55,11 @@ interface DragState {
   dur: number
   blockEl: HTMLElement | null
   blockColor: string
+  /** Where inside the block the pointer landed — stored once at pointerdown to avoid per-frame reflows */
+  grabOffsetX: number
+  grabOffsetY: number
+  /** Scroll container rect captured at drag start — stable until drag ends */
+  gridRect: DOMRect | null
 }
 
 interface GridViewProps {
@@ -817,6 +822,9 @@ function GridViewInner({
 
   const ds = useRef<DragState | null>(null)
   const ghostRef = useRef<HTMLDivElement | null>(null)
+  /** Edge-scroll RAF: direction (-1 left, 0 none, 1 right) + speed multiplier */
+  const edgeScrollRef = useRef<{ dir: number; speed: number } | null>(null)
+  const edgeRafRef = useRef<number | null>(null)
   const layoutRef = useRef({
     categoryTops: {} as Record<string, number>,
     categoryHeights: {} as Record<string, number>,
@@ -1083,6 +1091,11 @@ function GridViewInner({
           "pointerId" in captureEvent ? captureEvent.pointerId : e.pointerId
         )
         const { x, y } = getGridXY(e.clientX, e.clientY)
+        // Capture grab offset + grid rect ONCE here — avoids getBoundingClientRect on every pointermove
+        const blockRect = blockEl ? blockEl.getBoundingClientRect() : null
+        const gRect = scrollRef.current?.getBoundingClientRect() ?? null
+        const grabOffsetX = blockRect ? e.clientX - blockRect.left : 0
+        const grabOffsetY = blockRect ? e.clientY - blockRect.top  : (SHIFT_H - 6) / 2
         ds.current = {
           type: "move",
           id: shift.id,
@@ -1094,10 +1107,12 @@ function GridViewInner({
           dur: shift.endH - shift.startH,
           blockEl,
           blockColor: color,
+          grabOffsetX,
+          grabOffsetY,
+          gridRect: gRect,
         }
         setDragId(shift.id)
         setActivatingBlockId(null)
-        // Haptic feedback on supported devices
         if (navigator.vibrate) navigator.vibrate(30)
       }
 
@@ -1164,6 +1179,9 @@ function GridViewInner({
         dur: 0,
         blockEl: null,
         blockColor: "",
+        grabOffsetX: 0,
+        grabOffsetY: 0,
+        gridRect: scrollRef.current?.getBoundingClientRect() ?? null,
       }
       setDragId(shift.id)
     },
@@ -1188,6 +1206,9 @@ function GridViewInner({
         dur: 0,
         blockEl: null,
         blockColor: "",
+        grabOffsetX: 0,
+        grabOffsetY: 0,
+        gridRect: scrollRef.current?.getBoundingClientRect() ?? null,
       }
       setDragId(shift.id)
     },
@@ -1268,8 +1289,36 @@ function GridViewInner({
     ]
   )
 
+  // ── Edge-scroll RAF loop ─────────────────────────────────────────────────
+  // Runs independently of pointermove so scroll continues even if pointer stops moving.
+  // Speed scales with proximity to edge: max 1.0 at the very edge, 0.0 at EDGE_SCROLL_ZONE.
   const EDGE_SCROLL_ZONE = 80
-  const EDGE_SCROLL_SPEED = 12
+  const EDGE_SCROLL_MAX = 20   // px per frame at full speed
+
+  const stopEdgeScroll = useCallback(() => {
+    if (edgeRafRef.current !== null) {
+      cancelAnimationFrame(edgeRafRef.current)
+      edgeRafRef.current = null
+    }
+    edgeScrollRef.current = null
+  }, [])
+
+  const startEdgeScroll = useCallback((dir: number, speed: number) => {
+    edgeScrollRef.current = { dir, speed }
+    if (edgeRafRef.current !== null) return  // already running
+    const tick = () => {
+      const state = edgeScrollRef.current
+      if (!state || !scrollRef.current || !ds.current) {
+        stopEdgeScroll()
+        return
+      }
+      const delta = state.dir * state.speed * EDGE_SCROLL_MAX
+      scrollRef.current.scrollLeft += delta
+      if (headerRef.current) headerRef.current.scrollLeft = scrollRef.current.scrollLeft
+      edgeRafRef.current = requestAnimationFrame(tick)
+    }
+    edgeRafRef.current = requestAnimationFrame(tick)
+  }, [stopEdgeScroll])
 
   const onPM = useCallback(
     (e: React.PointerEvent<HTMLDivElement>): void => {
@@ -1306,15 +1355,20 @@ function GridViewInner({
 
       // Auto-scroll when dragging near edges so user can reach off-screen days
       if (d.type === "move" && scrollRef.current && (isWeekView || isDayViewMultiDay)) {
-        const sr = scrollRef.current.getBoundingClientRect()
-        const px = e.clientX - sr.left
-        const vw = sr.width
-        if (px < EDGE_SCROLL_ZONE && px >= 0) {
-          scrollRef.current.scrollLeft -= EDGE_SCROLL_SPEED
-          if (headerRef.current) headerRef.current.scrollLeft = scrollRef.current.scrollLeft
-        } else if (px > vw - EDGE_SCROLL_ZONE && px <= vw) {
-          scrollRef.current.scrollLeft += EDGE_SCROLL_SPEED
-          if (headerRef.current) headerRef.current.scrollLeft = scrollRef.current.scrollLeft
+        const sr = d.gridRect
+        if (sr) {
+          const px = e.clientX - sr.left
+          const vw = sr.width
+          if (px < EDGE_SCROLL_ZONE && px >= 0) {
+            // Scale speed: 1.0 at edge, 0.1 at EDGE_SCROLL_ZONE boundary
+            const speed = Math.max(0.1, 1 - px / EDGE_SCROLL_ZONE)
+            startEdgeScroll(-1, speed)
+          } else if (px > vw - EDGE_SCROLL_ZONE && px <= vw) {
+            const speed = Math.max(0.1, 1 - (vw - px) / EDGE_SCROLL_ZONE)
+            startEdgeScroll(1, speed)
+          } else {
+            stopEdgeScroll()
+          }
         }
       }
 
@@ -1421,15 +1475,11 @@ function GridViewInner({
       // ── Cursor ghost: follows raw pointer offset by where the user grabbed ──
       const cursorGhostEl = cursorGhostRef.current
       if (cursorGhostEl && d.type === "move") {
-        const sr = scrollRef.current?.getBoundingClientRect()
+        // Use stored gridRect + grabOffset — no getBoundingClientRect per frame
+        const sr = d.gridRect
         if (sr) {
-          // Compute block's current rendered left so we can offset correctly
-          const grabX = d.blockEl
-            ? e.clientX - d.blockEl.getBoundingClientRect().left
-            : width / 2
-          const grabY = d.blockEl
-            ? e.clientY - d.blockEl.getBoundingClientRect().top
-            : (SHIFT_H - 6) / 2
+          const grabX = d.grabOffsetX
+          const grabY = d.grabOffsetY
           const cursorLeft = (scrollRef.current?.scrollLeft ?? 0) + (e.clientX - sr.left) - grabX
           const cursorTop  = (scrollRef.current?.scrollTop ?? 0) + (e.clientY - sr.top) - grabY
           cursorGhostEl.style.display    = "flex"
@@ -1457,10 +1507,11 @@ function GridViewInner({
       setDragId(null)
       setHoveredCategoryId(null)
       clearBlockLongPress()
+      stopEdgeScroll()
       if (ghostRef.current) ghostRef.current.style.display = "none"
       if (cursorGhostRef.current) cursorGhostRef.current.style.display = "none"
     },
-    [clearBlockLongPress]
+    [clearBlockLongPress, stopEdgeScroll]
 
   )
 
@@ -1471,6 +1522,16 @@ function GridViewInner({
       const { x, y } = getGridXY(e.clientX, e.clientY)
       const newCat = getCategoryAtY(y)
       if (d.type === "move") {
+        // Guard: if the drop target is a collapsed category, treat as a cancel — don't commit
+        if (collapsed.has(newCat.id)) {
+          ds.current = null
+          setDragId(null)
+          setHoveredCategoryId(null)
+          stopEdgeScroll()
+          if (ghostRef.current) ghostRef.current.style.display = "none"
+          if (cursorGhostRef.current) cursorGhostRef.current.style.display = "none"
+          return
+        }
         const di0 = isWeekView || isDayViewMultiDay ? getDateIdx(d.sx) : 0
         const di1 = getDateIdx(x)
         const dayDelta = di1 - di0
@@ -1495,6 +1556,7 @@ function GridViewInner({
           ds.current = null
           setDragId(null)
           setHoveredCategoryId(null)
+          stopEdgeScroll()
           if (ghostRef.current) ghostRef.current.style.display = "none"
           if (cursorGhostRef.current) cursorGhostRef.current.style.display = "none"
           return
@@ -1503,6 +1565,7 @@ function GridViewInner({
       ds.current = null
       setDragId(null)
       setHoveredCategoryId(null)
+      stopEdgeScroll()
       if (ghostRef.current) ghostRef.current.style.display = "none"
       if (cursorGhostRef.current) cursorGhostRef.current.style.display = "none"
       setShifts((prev) => {
@@ -1579,6 +1642,8 @@ function GridViewInner({
       onBlockMove,
       onBlockResize,
       getHourAtX,
+      collapsed,
+      stopEdgeScroll,
     ]
   )
 
@@ -1668,8 +1733,9 @@ function GridViewInner({
       document.removeEventListener("pointermove", pm, { capture: true })
       document.removeEventListener("pointerup", pu, { capture: true })
       document.removeEventListener("pointercancel", pc, { capture: true })
+      stopEdgeScroll()
     }
-  }, [dragId])
+  }, [dragId, stopEdgeScroll])
 
   const [nowH, setNowH] = useState(
     () => new Date().getHours() + new Date().getMinutes() / 60
