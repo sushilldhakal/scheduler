@@ -88,7 +88,7 @@ export default function DemoPage() {
 
       <div
         className="scheduler-wrapper w-full overflow-hidden not-prose"
-        style={{ height: showAudit && auditLog.length > 0 ? 'calc(100vh - 180px)' : 'calc(100vh - 80px)' }}
+        style={{ height: showAudit && auditLog.length > 0 ? 'height-full' : 'height-full' }}
       >
         <Scheduler
           categories={categories}
