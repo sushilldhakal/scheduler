@@ -441,3 +441,23 @@ const handleVisibleRangeChange = async (start: Date, end: Date) => {
 ```
 
 `prefetchThreshold` (0–1): how far the user scrolls before the callback fires. `0.7` = fire at 70% of scroll range, loading ahead of the edge.
+
+---
+
+## Install only what you need
+
+Each domain preset has its own registry entry — install just the files your use case needs.
+
+| Preset | Command |
+|--------|---------|
+| Workforce Roster | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-roster.json` |
+| TV / EPG Guide | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-tv.json` |
+| Conference | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-conference.json` |
+| Music Festival | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-festival.json` |
+| Healthcare Rota | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-healthcare.json` |
+| Project Gantt | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-gantt.json` |
+| Venue Bookings | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-venue.json` |
+
+TV, Festival, and Venue use the **timeline engine** (~32 files). Roster, Conference, Healthcare, and Gantt use the **grid engine** (~49 files). The full bundle installs everything.
+
+[→ Full installation guide](/docs/getting-started/installation)

@@ -24,7 +24,7 @@ export function baseOptions(): BaseLayoutProps {
       },
       {
         text: 'Examples',
-        url: '/docs/examples/full-roster',
+        url: '/docs/examples',
         active: 'nested-url',
       },
     ],
