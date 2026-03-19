@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Scheduler, createSchedulerConfig, type Block } from '@sushill/shadcn-scheduler'
+import { Scheduler, createGanttConfig, type Block } from '@sushill/shadcn-scheduler'
 import { ganttTeams, ganttMembers, ganttTasks } from '@/lib/demo/ganttData'
 import { DemoShell } from '../_demoShell'
 
