@@ -37,6 +37,8 @@ export interface SchedulerContextValue {
   locale?: string
   /** When true, root gets dir="rtl" and layout mirrors. */
   isRTL?: boolean
+  /** When true, resize handles allow endH > 24 for overnight shifts. */
+  allowOvernight?: boolean
   /** Format time for display. When timezone is set uses Intl in that zone; else fmt12(h). */
   getTimeLabel: (isoDate: string, hour: number) => string
   /** Format date for display. Uses locale when set. */
@@ -114,10 +116,11 @@ export function SchedulerProvider({
       timezone: config?.timezone,
       locale: config?.locale,
       isRTL: config?.isRTL,
+      allowOvernight: config?.allowOvernight,
       getTimeLabel,
       getDateLabel,
     }),
-    [categories, employees, labels, getColor, settings, nextUidFn, slots, config?.snapMinutes, config?.timezone, config?.locale, config?.isRTL, getTimeLabel, getDateLabel]
+    [categories, employees, labels, getColor, settings, nextUidFn, slots, config?.snapMinutes, config?.timezone, config?.locale, config?.isRTL, config?.allowOvernight, getTimeLabel, getDateLabel]
   )
 
   return (

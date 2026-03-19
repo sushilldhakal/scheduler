@@ -8,13 +8,26 @@ const config = createSchedulerConfig({ preset: 'roster', initialScrollToNow: tru
 
 export default function RosterDemo() {
   const [mounted, setMounted] = useState(false)
+  const [initialDate, setInitialDate] = useState<Date | null>(null)
   const [shifts, setShifts] = useState<Block[]>(testShifts)
-  useEffect(() => setMounted(true), [])
+
+  useEffect(() => {
+    setMounted(true)
+    setInitialDate(new Date())
+  }, [])
+
   return (
     <DemoShell title="Workforce Roster" description="Shift scheduling with drag & drop, publish workflow, and conflict detection" docsHref="/docs/examples/roster">
-      {mounted ? (
-        <Scheduler categories={categories} employees={employees} shifts={shifts}
-          onShiftsChange={setShifts} initialView="week" config={config} />
+      {mounted && initialDate ? (
+        <Scheduler
+          categories={categories}
+          employees={employees}
+          shifts={shifts}
+          onShiftsChange={setShifts}
+          initialView="week"
+          initialDate={initialDate}
+          config={config}
+        />
       ) : <div className="w-full h-full animate-pulse bg-muted" />}
     </DemoShell>
   )

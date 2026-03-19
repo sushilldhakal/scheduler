@@ -139,6 +139,13 @@ export interface SchedulerConfig {
   isRTL?: boolean
   /** 0 = Sunday first, 1 = Monday first. Default 1. Passed to getWeekDates. */
   firstDay?: 0 | 1
+  /**
+   * When true, resize handles can push endH past midnight (endH > 24).
+   * The block renders clamped to the day boundary; the overflow renders
+   * as a continuation block on the next day automatically.
+   * Use for healthcare rotas, overnight shifts, 24h TV schedules.
+   */
+  allowOvernight?: boolean
 }
 
 export interface SchedulerSettingsContext {

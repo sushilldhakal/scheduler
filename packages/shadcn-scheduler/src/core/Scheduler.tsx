@@ -35,6 +35,8 @@ export interface SchedulerProps {
   settings?: Partial<Settings>
   initialView?: string
   initialDate?: Date
+  /** Initial zoom level (0.5 | 0.75 | 1 | 1.25 | 1.5 | 2). Default: 1. */
+  initialZoom?: number
   /**
    * Custom action buttons to render before the Add Shift button.
    * Pass a ReactNode or a function that receives actions (copyLastWeek, publishAllDrafts, draftCount) to build custom UI.
@@ -95,6 +97,7 @@ export function Scheduler({
   settings: settingsProp,
   initialView = "week",
   initialDate,
+  initialZoom = 1,
   headerActions,
   footerSlot,
   bufferDays = 15,
@@ -171,7 +174,7 @@ export function Scheduler({
     })
   }, [employees])
   const [copiedShift, setCopiedShift] = useState<Block | null>(null)
-  const [zoom, setZoom] = useState<number>(1)
+  const [zoom, setZoom] = useState<number>(initialZoom)
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null)
   const [announcement, setAnnouncement] = useState<string>("")
   const scrollToNowRef = useRef<(() => void) | null>(null)

@@ -113,6 +113,7 @@ const PRESETS: Record<SchedulerPresetName, Partial<SchedulerConfig>> = {
     },
     defaultSettings: { ...DEFAULT_SETTINGS },
     views: { gantt: false, now: false },
+    allowOvernight: true,
   },
   gantt: {
     labels: {
@@ -165,6 +166,7 @@ export function createSchedulerConfig(
     views: mergeViews(presetConfig.views, overrides.views),
     showLiveIndicator: overrides.showLiveIndicator ?? presetConfig.showLiveIndicator,
     snapMinutes: overrides.snapMinutes ?? presetConfig.snapMinutes,
+    allowOvernight: overrides.allowOvernight ?? presetConfig.allowOvernight,
   }
 }
 

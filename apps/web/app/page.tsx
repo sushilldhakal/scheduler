@@ -9,6 +9,7 @@ import {
 } from '@sushill/shadcn-scheduler'
 import { categories, employees, testShifts } from '@/lib/demo/testData'
 import { ArrowRight, Github, Check, Calendar, Users, Zap, Layers, Moon, Move, ChevronRight, Copy, Terminal } from 'lucide-react'
+import { useWidth } from '@/components/docs/width-context'
 
 const config = createSchedulerConfig({ initialScrollToNow: true })
 
@@ -63,9 +64,16 @@ export default function HomePage() {
   const [shifts, setShifts] = useState<Block[]>(testShifts)
   const [copied, setCopied] = useState(false)
   const [activeFeature, setActiveFeature] = useState(0)
+  const [initialDate, setInitialDate] = useState<Date | null>(null)
+  const { fullWidth } = useWidth()
+
+  const containerClass = fullWidth
+    ? 'mx-auto w-full px-4 sm:px-6'
+    : 'mx-auto max-w-7xl px-4 sm:px-6'
 
   useEffect(() => {
     setMounted(true)
+    setInitialDate(new Date())
     const t = setInterval(() => setActiveFeature(i => (i + 1) % features.length), 3000)
     return () => clearInterval(t)
   }, [])
@@ -94,7 +102,7 @@ export default function HomePage() {
           style={{ background: 'radial-gradient(ellipse, hsl(var(--primary)/0.12) 0%, transparent 70%)' }}
         />
 
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 pt-24 pb-0 flex flex-col flex-1">
+        <div className={`relative ${containerClass} pt-24 pb-0 flex flex-col flex-1`}>
           {/* Badge */}
           <div className="flex justify-center mb-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/60 backdrop-blur px-4 py-1.5 text-xs font-medium text-muted-foreground"
@@ -163,6 +171,7 @@ export default function HomePage() {
                   shifts={shifts}
                   onShiftsChange={setShifts}
                   initialView="week"
+                  initialDate={initialDate ?? new Date()}
                   config={config}
                 />
               ) : (
@@ -175,7 +184,7 @@ export default function HomePage() {
 
       {/* ── Social proof strip ── */}
       <section className="border-b border-border bg-muted/20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
+        <div className={`${containerClass} py-8 flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground`}>
           <span className="flex items-center gap-2"><span className="text-2xl font-bold text-foreground"><AnimatedCounter target={7} /></span> domain presets</span>
           <span className="text-border">|</span>
           <span className="flex items-center gap-2"><span className="text-2xl font-bold text-foreground"><AnimatedCounter target={6} /></span> view types</span>
@@ -190,7 +199,7 @@ export default function HomePage() {
 
       {/* ── Domains ── */}
       <section className="border-b border-border py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className={containerClass}>
           <div className="text-center mb-12">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Seven domains. One component.</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground">Works for your industry</h2>
@@ -218,7 +227,7 @@ export default function HomePage() {
 
       {/* ── Features ── */}
       <section className="border-b border-border py-20 bg-muted/10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className={containerClass}>
           <div className="text-center mb-12">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Built for production</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground">Everything a real scheduler needs</h2>
@@ -246,7 +255,7 @@ export default function HomePage() {
 
       {/* ── Install steps ── */}
       <section className="border-b border-border py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 grid lg:grid-cols-2 gap-16 items-center">
+        <div className={`${containerClass} grid lg:grid-cols-2 gap-16 items-center`}>
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Get running fast</p>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">Up and running in minutes</h2>

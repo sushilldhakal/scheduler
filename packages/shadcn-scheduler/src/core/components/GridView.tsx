@@ -190,7 +190,7 @@ function GridViewInner({
   onBlockResize,
   onBlockPublish,
 }: GridViewProps): React.ReactElement {
-  const { categories, employees, nextUid, getColor, labels, settings, slots, snapMinutes, getTimeLabel } = useSchedulerContext()
+  const { categories, employees, nextUid, getColor, labels, settings, slots, snapMinutes, allowOvernight, getTimeLabel } = useSchedulerContext()
   const CATEGORIES =
     mobileResourceIndex !== undefined && onMobileResourceChange
       ? [categories[mobileResourceIndex]].filter(Boolean)
@@ -1263,9 +1263,9 @@ function GridViewInner({
         if (readOnly) return
         e.preventDefault()
         const dir = e.key === "ArrowRight" ? 1 : -1
-        const newStart = snapLocal(clamp(shift.startH + dir * snapHours, 0, 24 - (shift.endH - shift.startH)))
+        const newStart = snapLocal(clamp(shift.startH + dir * snapHours, 0, (allowOvernight ? 48 : 24) - (shift.endH - shift.startH)))
         const dur = shift.endH - shift.startH
-        const newEnd = snapLocal(clamp(newStart + dur, 0, 24))
+        const newEnd = snapLocal(clamp(newStart + dur, 0, allowOvernight ? 48 : 24))
         setShifts((prev) =>
           prev.map((s) =>
             s.id === shift.id ? { ...s, startH: newStart, endH: newEnd } : s
@@ -1424,7 +1424,7 @@ function GridViewInner({
         categoryId = newCat.id
       } else if (d.type === "resize-right") {
         const pxPerH = isWeekView ? PX_WEEK : isDayViewMultiDay ? HOUR_W : HOUR_W
-        ne = snapH(clamp(d.endH + (x - d.sx) / pxPerH, d.startH + SNAP, 24))
+        ne = snapH(clamp(d.endH + (x - d.sx) / pxPerH, d.startH + SNAP, allowOvernight ? 48 : 24))
         ns = d.startH
         categoryId = d.categoryId
         dayDelta = 0
@@ -1661,7 +1661,7 @@ function GridViewInner({
             return updated
           } else if (d.type === "resize-right") {
             const ne = snapLocal(
-              clamp(d.endH + (x - d.sx) / (isWeekView ? PX_WEEK : HOUR_W), d.startH + snapHours, 24)
+              clamp(d.endH + (x - d.sx) / (isWeekView ? PX_WEEK : HOUR_W), d.startH + snapHours, allowOvernight ? 48 : 24)
             )
             const updated = { ...s, endH: ne }
             onBlockResize?.(updated)
