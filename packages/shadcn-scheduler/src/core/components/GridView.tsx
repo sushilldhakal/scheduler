@@ -2217,7 +2217,7 @@ function GridViewInner({
         </div>
       </div>
 
-      <ResizablePanelGroup orientation="horizontal" className="flex-1 overflow-hidden">
+      <ResizablePanelGroup orientation="horizontal" className="flex-1 overflow-hidden relative">
         <ResizablePanel
           panelRef={sidebarPanelRef}
           defaultSize="20%"
@@ -2400,36 +2400,38 @@ function GridViewInner({
         </div>
         </ResizablePanel>
 
-        {/* ResizableHandle — shadcn pattern with withHandle grip + collapse circle button */}
-        <ResizableHandle withHandle className="w-2">
-          <button
-            onClick={toggleSidebar}
-            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            style={{
-              position: "absolute",
-              bottom: 12,
-              left: "50%",
-              transform: "translateX(-50%)",
-              zIndex: 30,
-              width: 22,
-              height: 22,
-              borderRadius: "50%",
-              background: "var(--background)",
-              border: "1.5px solid var(--border)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 1px 6px rgba(0,0,0,0.14)",
-              color: "var(--muted-foreground)",
-              padding: 0,
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.color = "var(--primary)" }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--muted-foreground)" }}
-          >
-            {sidebarCollapsed ? <ChevronsRight size={11} /> : <ChevronsLeft size={11} />}
-          </button>
-        </ResizableHandle>
+        {/* ResizableHandle — shadcn standard, no children so nothing gets clipped */}
+        <ResizableHandle withHandle className="w-2" />
+
+        {/* Collapse toggle — positioned absolute over the handle from outside it.
+            Must be OUTSIDE ResizableHandle because the library clips overflow on the separator. */}
+        <button
+          onClick={toggleSidebar}
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          style={{
+            position: "absolute",
+            bottom: 12,
+            left: sidebarCollapsed ? 4 : sidebarWidth + 2,
+            zIndex: 40,
+            width: 22,
+            height: 22,
+            borderRadius: "50%",
+            background: "var(--background)",
+            border: "1.5px solid var(--border)",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 1px 6px rgba(0,0,0,0.18)",
+            color: "var(--muted-foreground)",
+            padding: 0,
+            transition: "left 150ms ease, border-color 120ms, color 120ms",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.color = "var(--primary)" }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--muted-foreground)" }}
+        >
+          {sidebarCollapsed ? <ChevronsRight size={11} /> : <ChevronsLeft size={11} />}
+        </button>
 
         <ResizablePanel defaultSize="80%" className="overflow-hidden flex flex-col">
         <div
