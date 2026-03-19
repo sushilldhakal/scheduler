@@ -2221,7 +2221,8 @@ function GridViewInner({
                               onToggleCollapse: () => toggleCollapse(cat.id),
                             })
                           ) : (
-                            <>\n                              <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0, marginTop: 2 }} />
+                            <>
+                              <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0, marginTop: 2 }} />
                               <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
                                 <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                   {cat.name}
