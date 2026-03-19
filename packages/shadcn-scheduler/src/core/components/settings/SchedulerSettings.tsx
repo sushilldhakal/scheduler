@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { Settings, FileDown, Image, FileSpreadsheet } from "lucide-react"
+import { Settings, FileDown, Image, FileSpreadsheet, CalendarCheck } from "lucide-react"
 import { Button } from "../ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 import { useSchedulerContext } from "../../context"
@@ -7,7 +7,7 @@ import { ChangeBadgeVariantInput } from "./ChangeBadgeVariantInput"
 import { ChangeVisibleHoursInput } from "./ChangeVisibleHoursInput"
 import { ChangeWorkingHoursInput } from "./ChangeWorkingHoursInput"
 import { ChangeRowModeInput } from "./ChangeRowModeInput"
-import { exportToCSV, exportToImage, exportToPDF } from "../../utils/export"
+import { exportToCSV, exportToImage, exportToPDF, exportToICS } from "../../utils/export"
 import type { BadgeVariant, RowMode } from "../../types"
 import type { SchedulerSettingsContext } from "../../types"
 
@@ -54,6 +54,15 @@ export function SchedulerSettings({
       await exportToPDF(containerRef.current, "scheduler.pdf")
     } catch (e) {
       setExportError(e instanceof Error ? e.message : "PDF export failed")
+    }
+  }
+
+  const handleExportICS = (): void => {
+    setExportError(null)
+    try {
+      exportToICS(shifts, "scheduler-export.ics")
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : "iCal export failed")
     }
   }
 
@@ -137,6 +146,17 @@ export function SchedulerSettings({
                       PDF
                     </Button>
                   </>
+                )}
+                {shifts.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={handleExportICS}
+                  >
+                    <CalendarCheck size={14} />
+                    iCal
+                  </Button>
                 )}
               </div>
               {exportError && (

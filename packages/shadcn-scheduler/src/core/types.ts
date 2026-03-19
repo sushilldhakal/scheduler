@@ -196,6 +196,9 @@ export interface SchedulerSlots {
   timeSlotLabel?: (props: TimeSlotLabelSlotProps) => ReactNode
   emptyCell?: (props: EmptyCellSlotProps) => ReactNode
   emptyState?: (props: EmptyStateSlotProps) => ReactNode
+  /** Custom tooltip rendered on block hover. Receives the hovered block and its category resource.
+   *  When provided, replaces the default tooltip entirely — position/portal handling is unchanged. */
+  tooltip?: (block: Block, resource: Resource) => ReactNode
 }
 /** A vertical marker line rendered over the grid at a specific date+hour. */
 export interface SchedulerMarker {

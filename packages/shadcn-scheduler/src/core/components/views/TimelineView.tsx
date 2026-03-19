@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useCallback, useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type { Block, Resource , SchedulerMarker } from "../../types"
 import type { DragCommit } from "../../layout/dragEngine"
@@ -114,6 +115,14 @@ function TimelineViewInner({
     const t = setInterval(() => { const d = new Date(); setNowH(d.getHours() + d.getMinutes() / 60) }, 60000)
     return () => clearInterval(t)
   }, [])
+
+  // ── Tooltip ───────────────────────────────────────────────────────────────
+  const [tooltipBlockId, setTooltipBlockId] = useState<string | null>(null)
+  const tooltipTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const tooltipLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const blockRefsRef = useRef<Record<string, HTMLElement | null>>({})
+  const TOOLTIP_HOVER_MS = 200
+  const TOOLTIP_LEAVE_MS = 150
 
   // ── Dimensions ────────────────────────────────────────────────────────────
   const hourWidth    = HOUR_W * zoom
@@ -361,6 +370,76 @@ function TimelineViewInner({
               ) : null
             )}
 
+            {/* Marker lines */}
+            {markers.map((marker) => {
+              const di = dates.findIndex((d) => sameDay(d, marker.date))
+              if (di < 0) return null
+              const h = marker.hour ?? settings.visibleFrom
+              if (h < settings.visibleFrom || h > settings.visibleTo) return null
+              const left = di * dayWidth + (h - settings.visibleFrom) * hourWidth
+              const color = marker.color ?? "var(--destructive)"
+              return (
+                <div
+                  key={marker.id}
+                  data-scheduler-marker={marker.id}
+                  style={{
+                    position: "absolute",
+                    left,
+                    top: 0,
+                    width: 2,
+                    height: rowVirtualizer.getTotalSize(),
+                    background: color,
+                    zIndex: 16,
+                    pointerEvents: marker.draggable ? "auto" : "none",
+                    cursor: marker.draggable ? "ew-resize" : "default",
+                  }}
+                  onPointerDown={marker.draggable ? (e) => {
+                    e.stopPropagation()
+                    e.currentTarget.setPointerCapture(e.pointerId)
+                    const el = gridScrollRef.current
+                    if (!el || !onMarkersChange) return
+                    const onMove = (me: PointerEvent) => {
+                      const rect = el.getBoundingClientRect()
+                      const x = el.scrollLeft + me.clientX - rect.left
+                      const newDi = Math.max(0, Math.min(dates.length - 1, Math.floor(x / dayWidth)))
+                      const offsetX = x - newDi * dayWidth
+                      const newH = Math.max(settings.visibleFrom, Math.min(settings.visibleTo, settings.visibleFrom + offsetX / hourWidth))
+                      const newDate = dates[newDi]
+                      if (!newDate) return
+                      onMarkersChange(markers.map((m) => m.id === marker.id
+                        ? { ...m, date: toDateISO(newDate), hour: Math.round(newH * 4) / 4 }
+                        : m
+                      ))
+                    }
+                    const onUp = () => {
+                      document.removeEventListener("pointermove", onMove)
+                      document.removeEventListener("pointerup", onUp)
+                    }
+                    document.addEventListener("pointermove", onMove)
+                    document.addEventListener("pointerup", onUp)
+                  } : undefined}
+                >
+                  {marker.label && (
+                    <span style={{
+                      position: "absolute",
+                      top: 4,
+                      left: 4,
+                      fontSize: 10,
+                      whiteSpace: "nowrap",
+                      color,
+                      fontWeight: 600,
+                      pointerEvents: "none",
+                      background: "var(--background)",
+                      padding: "0 3px",
+                      borderRadius: 2,
+                    }}>
+                      {marker.label}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+
             {/* Rows */}
             {rowVirtualizer.getVirtualItems().map((vr) => {
               const emp = filteredEmployees[vr.index]
@@ -443,6 +522,7 @@ function TimelineViewInner({
                         key={shift.id}
                         type="button"
                         data-scheduler-block
+                        ref={(el) => { blockRefsRef.current[shift.id] = el }}
                         className="absolute overflow-hidden rounded-md border text-left text-xs font-medium transition-shadow hover:shadow-md"
                         style={{
                           left, top, width: widthPx, height,
@@ -453,6 +533,16 @@ function TimelineViewInner({
                           borderColor: isDraft ? c.border : `${c.bg}88`,
                           borderStyle: isDraft ? "dashed" : "solid",
                           boxShadow: isLive ? "0 0 0 2px var(--primary)" : undefined,
+                        }}
+                        onPointerEnter={() => {
+                          if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current)
+                          tooltipTimerRef.current = setTimeout(() => setTooltipBlockId(shift.id), TOOLTIP_HOVER_MS)
+                        }}
+                        onPointerLeave={() => {
+                          if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current)
+                          tooltipTimerRef.current = null
+                          if (tooltipLeaveTimerRef.current) clearTimeout(tooltipLeaveTimerRef.current)
+                          tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS)
                         }}
                         onPointerDown={(e) => {
                           e.stopPropagation()
@@ -478,6 +568,61 @@ function TimelineViewInner({
           </div>
         </div>
       </div>
+
+      {/* Hover tooltip portal */}
+      {tooltipBlockId && (() => {
+        const shift = shifts.find((s) => s.id === tooltipBlockId)
+        if (!shift) return null
+        const blockEl = blockRefsRef.current[tooltipBlockId]
+        const r = blockEl?.getBoundingClientRect()
+        if (!r) return null
+        const cat = categoryMap[shift.categoryId]
+        if (!cat) return null
+        const c = getColor(cat.colorIdx)
+        const dur = shift.endH - shift.startH
+        const hrs = dur % 1 === 0 ? `${dur}h` : `${dur.toFixed(1)}h`
+        const showBelow = r.top < 140
+        const popTop  = showBelow ? r.bottom + 8 : r.top - 8
+        const popLeft = Math.min(Math.max(r.left + r.width / 2, 120), window.innerWidth - 120)
+        return createPortal(
+          <div
+            onPointerEnter={() => { if (tooltipLeaveTimerRef.current) clearTimeout(tooltipLeaveTimerRef.current) }}
+            onPointerLeave={() => { tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS) }}
+            style={{
+              position: "fixed",
+              top: showBelow ? popTop : undefined,
+              bottom: showBelow ? undefined : `${window.innerHeight - popTop}px`,
+              left: popLeft,
+              transform: "translateX(-50%)",
+              zIndex: 99999,
+              background: "var(--popover)",
+              border: "1px solid var(--border)",
+              borderRadius: 10,
+              padding: slots.tooltip ? 0 : "10px 14px",
+              minWidth: slots.tooltip ? undefined : 190,
+              maxWidth: slots.tooltip ? undefined : 280,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              pointerEvents: "auto",
+              overflow: "hidden",
+            }}
+          >
+            {slots.tooltip ? slots.tooltip(shift, cat) : (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{shift.employee}</span>
+                </div>
+                <div style={{ fontSize: 11, color: c.bg, fontWeight: 600, marginBottom: 5 }}>{cat.name}</div>
+                <div style={{ fontSize: 11, color: "var(--foreground)", fontWeight: 600 }}>
+                  {fmt12(shift.startH)} – {fmt12(shift.endH)}
+                  <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>{hrs}</span>
+                </div>
+              </>
+            )}
+          </div>,
+          document.body
+        )
+      })()}
     </div>
   )
 }

@@ -237,6 +237,9 @@ function GridViewInner({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
   /** Multi-select: set of selected block IDs */
   const [selectedBlockIds, setSelectedBlockIds] = useState<Set<string>>(new Set())
+  /** Rubber-band drag selection rect — null when not active */
+  const [selRect, setSelRect] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
+  const selRectStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null)
 
   const [staffPanel, setStaffPanel] = useState<StaffPanelState | null>(null)
   const staffDragRef = useRef<{ empId: string; fromCategoryId: string; empName: string; pointerId: number } | null>(null)
@@ -1710,6 +1713,63 @@ function GridViewInner({
     ]
   )
 
+  // ── Rubber-band selection ────────────────────────────────────────────────
+  const onRubberBandPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    // Only start rubber-band on primary button, not on blocks/resize handles/empty-cell targets
+    if (e.button !== 0) return
+    const target = e.target as HTMLElement
+    if (target.closest("[data-scheduler-block]") || target.closest("[data-resize]") || target.closest("[data-empty-cell]")) return
+    if (ds.current) return // drag already active
+    const el = scrollRef.current
+    if (!el) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    const rect = el.getBoundingClientRect()
+    const x = el.scrollLeft + e.clientX - rect.left
+    const y = el.scrollTop  + e.clientY - rect.top
+    selRectStartRef.current = { x, y, scrollLeft: el.scrollLeft, scrollTop: el.scrollTop }
+    setSelRect({ x0: x, y0: y, x1: x, y1: y })
+  }, [])
+
+  const onRubberBandPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!selRectStartRef.current) return
+    const el = scrollRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const x1 = el.scrollLeft + e.clientX - rect.left
+    const y1 = el.scrollTop  + e.clientY - rect.top
+    setSelRect({ x0: selRectStartRef.current.x, y0: selRectStartRef.current.y, x1, y1 })
+  }, [])
+
+  const onRubberBandPointerUp = useCallback(() => {
+    if (!selRectStartRef.current || !selRect) { selRectStartRef.current = null; setSelRect(null); return }
+    selRectStartRef.current = null
+    // Compute normalised rect
+    const minX = Math.min(selRect.x0, selRect.x1)
+    const maxX = Math.max(selRect.x0, selRect.x1)
+    const minY = Math.min(selRect.y0, selRect.y1)
+    const maxY = Math.max(selRect.y0, selRect.y1)
+    // Only activate if dragged at least 8px — prevents accidental selection on click
+    if (maxX - minX < 8 && maxY - minY < 8) { setSelRect(null); return }
+    // Find blocks whose DOM rects intersect the selection rect
+    const newSelected = new Set<string>()
+    for (const [id, el] of Object.entries(blockRefsRef.current)) {
+      if (!el) continue
+      const scrollEl = scrollRef.current
+      if (!scrollEl) continue
+      const scrollRect = scrollEl.getBoundingClientRect()
+      const br = el.getBoundingClientRect()
+      const bLeft  = scrollEl.scrollLeft + br.left  - scrollRect.left
+      const bTop   = scrollEl.scrollTop  + br.top   - scrollRect.top
+      const bRight = bLeft + br.width
+      const bBot   = bTop  + br.height
+      if (bRight > minX && bLeft < maxX && bBot > minY && bTop < maxY) {
+        newSelected.add(id)
+      }
+    }
+    if (newSelected.size > 0) setSelectedBlockIds(prev => new Set([...prev, ...newSelected]))
+    setSelRect(null)
+  }, [selRect])
+
   const onGridPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       gridPointerIdsRef.current.add(e.pointerId)
@@ -2484,10 +2544,10 @@ function GridViewInner({
                 }}
                 tabIndex={0}
                 onKeyDown={onGridKeyDown}
-                onPointerDown={onGridPointerDown}
-                onPointerMove={onPM}
-                onPointerUp={onGridPointerUp}
-                onPointerCancel={onPC}
+                onPointerDown={(e) => { onRubberBandPointerDown(e); onGridPointerDown(e) }}
+                onPointerMove={(e) => { onRubberBandPointerMove(e); onPM(e) }}
+                onPointerUp={(e) => { onRubberBandPointerUp(); onGridPointerUp(e) }}
+                onPointerCancel={(e) => { selRectStartRef.current = null; setSelRect(null); onPC(e) }}
               >
             {/* Drop-zone ghost: snapped, shows landing position — no dashed border */}
             <div
@@ -2534,6 +2594,30 @@ function GridViewInner({
                 willChange: "transform",
               }}
             />
+
+            {/* Rubber-band selection rect */}
+            {selRect && (() => {
+              const left   = Math.min(selRect.x0, selRect.x1)
+              const top    = Math.min(selRect.y0, selRect.y1)
+              const width  = Math.abs(selRect.x1 - selRect.x0)
+              const height = Math.abs(selRect.y1 - selRect.y0)
+              return (
+                <div
+                  style={{
+                    position: "absolute",
+                    left,
+                    top,
+                    width,
+                    height,
+                    border: "1.5px dashed var(--primary)",
+                    background: "color-mix(in srgb, var(--primary) 8%, transparent)",
+                    borderRadius: 4,
+                    pointerEvents: "none",
+                    zIndex: 50,
+                  }}
+                />
+              )
+            })()}
 
             {/* Row hover highlight during drag */}
             {dragId && hoveredCategoryId && (() => {
@@ -2774,6 +2858,84 @@ function GridViewInner({
               ) : null
             )}
 
+            {/* Marker lines — vertical lines at specific date+hour positions */}
+            {markers.map((marker) => {
+              const markerDi = dates.findIndex((d) => sameDay(d, marker.date))
+              if (markerDi < 0) return null
+              const h = marker.hour ?? settings.visibleFrom
+              if (h < settings.visibleFrom || h > settings.visibleTo) return null
+              const left = isWeekView
+                ? markerDi * COL_W_WEEK + (h - settings.visibleFrom) * PX_WEEK
+                : isDayViewMultiDay
+                  ? markerDi * DAY_WIDTH + (h - settings.visibleFrom) * HOUR_W
+                  : (h - settings.visibleFrom) * HOUR_W
+              const color = marker.color ?? "var(--destructive)"
+              return (
+                <div
+                  key={marker.id}
+                  data-scheduler-marker={marker.id}
+                  style={{
+                    position: "absolute",
+                    left,
+                    top: 0,
+                    width: 2,
+                    height: totalHVirtual,
+                    background: color,
+                    zIndex: 16,
+                    pointerEvents: marker.draggable ? "auto" : "none",
+                    cursor: marker.draggable ? "ew-resize" : "default",
+                  }}
+                  onPointerDown={marker.draggable ? (e) => {
+                    e.stopPropagation()
+                    e.currentTarget.setPointerCapture(e.pointerId)
+                    const el = scrollRef.current
+                    if (!el || !onMarkersChange) return
+                    const onMove = (me: PointerEvent) => {
+                      const rect = el.getBoundingClientRect()
+                      const x = el.scrollLeft + me.clientX - rect.left
+                      const newDi = isWeekView
+                        ? Math.floor(x / COL_W_WEEK)
+                        : isDayViewMultiDay ? Math.floor(x / DAY_WIDTH) : 0
+                      const clampedDi = Math.max(0, Math.min(dates.length - 1, newDi))
+                      const offsetX = isWeekView ? x - clampedDi * COL_W_WEEK : isDayViewMultiDay ? x - clampedDi * DAY_WIDTH : x
+                      const newH = Math.max(settings.visibleFrom, Math.min(settings.visibleTo, settings.visibleFrom + offsetX / (isWeekView ? PX_WEEK : HOUR_W)))
+                      const newDate = dates[clampedDi]
+                      if (!newDate) return
+                      onMarkersChange(markers.map((m) => m.id === marker.id
+                        ? { ...m, date: toDateISO(newDate), hour: Math.round(newH * 4) / 4 }
+                        : m
+                      ))
+                    }
+                    const onUp = () => {
+                      document.removeEventListener("pointermove", onMove)
+                      document.removeEventListener("pointerup", onUp)
+                    }
+                    document.addEventListener("pointermove", onMove)
+                    document.addEventListener("pointerup", onUp)
+                  } : undefined}
+                >
+                  {marker.label && (
+                    <span style={{
+                      position: "absolute",
+                      top: 4,
+                      left: 4,
+                      fontSize: 10,
+                      whiteSpace: "nowrap",
+                      color,
+                      fontWeight: 600,
+                      pointerEvents: "none",
+                      background: "var(--background)",
+                      padding: "0 3px",
+                      borderRadius: 2,
+                    }}>
+                      {marker.label}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+
+            {/* Rows */}
             {rowVirtualizer.getVirtualItems().map((vr) => {
               const row = flatRows[vr.index]
               if (!row) return null
@@ -3465,35 +3627,40 @@ function GridViewInner({
               background: "var(--popover)",
               border: "1px solid var(--border)",
               borderRadius: 10,
-              padding: "10px 14px",
-              minWidth: 190,
-              maxWidth: 280,
+              padding: slots.tooltip ? 0 : "10px 14px",
+              minWidth: slots.tooltip ? undefined : 190,
+              maxWidth: slots.tooltip ? undefined : 280,
               boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
               pointerEvents: "auto",
+              overflow: "hidden",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{shift.employee}</span>
-            </div>
-            <div style={{ fontSize: 11, color: c.bg, fontWeight: 600, marginBottom: 5 }}>{cat.name}</div>
-            <div style={{ fontSize: 11, color: "var(--foreground)", fontWeight: 600 }}>
-              {getTimeLabel(shift.date, shift.startH)} – {getTimeLabel(shift.date, shift.endH)}
-              <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>{hrs}</span>
-            </div>
-            {shift.breakStartH !== undefined && (
-              <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 3 }}>
-                Break: {getTimeLabel(shift.date, shift.breakStartH!)}–{getTimeLabel(shift.date, shift.breakEndH!)}
-              </div>
-            )}
-            {hasConflict && (
-              <div style={{ marginTop: 7, padding: "4px 8px", borderRadius: 6, background: "var(--destructive)", color: "var(--destructive-foreground)", fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-                <AlertTriangle size={10} />
-                Shift conflict — cannot publish
-              </div>
-            )}
-            {isDraft && !hasConflict && (
-              <div style={{ marginTop: 5, fontSize: 10, color: "var(--muted-foreground)" }}>Draft — not published</div>
+            {slots.tooltip ? slots.tooltip(shift, cat) : (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{shift.employee}</span>
+                </div>
+                <div style={{ fontSize: 11, color: c.bg, fontWeight: 600, marginBottom: 5 }}>{cat.name}</div>
+                <div style={{ fontSize: 11, color: "var(--foreground)", fontWeight: 600 }}>
+                  {getTimeLabel(shift.date, shift.startH)} – {getTimeLabel(shift.date, shift.endH)}
+                  <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>{hrs}</span>
+                </div>
+                {shift.breakStartH !== undefined && (
+                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 3 }}>
+                    Break: {getTimeLabel(shift.date, shift.breakStartH!)}–{getTimeLabel(shift.date, shift.breakEndH!)}
+                  </div>
+                )}
+                {hasConflict && (
+                  <div style={{ marginTop: 7, padding: "4px 8px", borderRadius: 6, background: "var(--destructive)", color: "var(--destructive-foreground)", fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                    <AlertTriangle size={10} />
+                    Shift conflict — cannot publish
+                  </div>
+                )}
+                {isDraft && !hasConflict && (
+                  <div style={{ marginTop: 5, fontSize: 10, color: "var(--muted-foreground)" }}>Draft — not published</div>
+                )}
+              </>
             )}
           </div>,
           document.body
@@ -3523,6 +3690,27 @@ function GridViewInner({
           <span style={{ fontWeight: 600, color: "var(--foreground)" }}>
             {selectedBlockIds.size} selected
           </span>
+          <button
+            type="button"
+            onClick={() => {
+              setShifts((prev) => prev.map((s) =>
+                selectedBlockIds.has(s.id) ? { ...s, status: "published" as const } : s
+              ))
+              setSelectedBlockIds(new Set())
+            }}
+            style={{
+              background: "var(--primary)",
+              color: "var(--primary-foreground)",
+              border: "none",
+              borderRadius: 6,
+              padding: "4px 12px",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Publish
+          </button>
           <button
             type="button"
             onClick={deleteSelectedBlocks}
