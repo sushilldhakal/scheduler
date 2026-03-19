@@ -1,88 +1,128 @@
 ---
 title: Installation
-description: Install shadcn-scheduler, configure peer dependencies, and set up Tailwind.
+description: Install shadcn-scheduler — own the full source or use the npm package.
 ---
 
 # Installation
 
-## Requirements
+shadcn-scheduler gives you **two installation paths**. The key difference is ownership.
 
-- React 18+
-- Tailwind CSS 3 or 4
-- shadcn/ui (for CSS variables — the scheduler reads `--background`, `--border`, `--primary` etc.)
+## Option 1 — shadcn registry (recommended — you own the code)
 
-## Option 1 — npm (recommended)
+```bash
+npx shadcn@latest add https://shadcn-scheduler.vercel.app/registry.json
+```
+
+This copies **all 56 source files** directly into `components/scheduler/` in your project:
+
+```
+components/scheduler/
+  index.ts                          ← import from here
+  core/
+    Scheduler.tsx                   ← the main component
+    GridView.tsx                    ← the grid engine (~3500 lines)
+    context.tsx
+    types.ts
+    constants.ts
+    config.ts
+    hooks/
+      useAuditTrail.ts
+      useFlatRows.ts
+      useMediaQuery.ts
+      useScrollToNow.ts
+    components/
+      modals/ShiftModal.tsx
+      modals/AddShiftModal.tsx
+      views/DayWeekViews.tsx
+      views/MonthView.tsx
+      views/YearView.tsx
+      views/ListView.tsx
+      views/TimelineView.tsx
+      ui/context-menu.tsx
+      ui/resizable.tsx
+      settings/SchedulerSettings.tsx
+      ...
+  domains/
+    default/index.tsx               ← roster preset
+    tv/index.tsx
+    healthcare/index.tsx
+    ...
+```
+
+You import from your own components folder:
+
+```tsx
+import { Scheduler } from '@/components/scheduler'
+```
+
+**Why this matters:** You can edit `GridView.tsx`, add fields to `types.ts`, change the drag behaviour, add a new view — anything you want. No fork, no patch file, no fighting a third-party package.
+
+## Option 2 — npm package
+
+If you prefer not to own the source, use the npm package:
 
 ```bash
 npm install @sushill/shadcn-scheduler
-```
-
-```bash
-# or with pnpm
+# pnpm
 pnpm add @sushill/shadcn-scheduler
-
-# or with yarn
+# yarn
 yarn add @sushill/shadcn-scheduler
 ```
-
-Then import in your component:
 
 ```tsx
 import { Scheduler } from '@sushill/shadcn-scheduler'
 ```
 
-## Option 2 — shadcn registry
+This is simpler to keep updated (`npm update`) but you can't modify the internals.
 
-If you use the shadcn CLI, you can add the scheduler directly to your project:
+---
 
-```bash
-npx shadcn@latest add scheduler
-```
+## Requirements
 
-This copies the source into your `components/` folder so you can modify it freely.
+- React 18+
+- Tailwind CSS 3 or 4
+- shadcn/ui CSS variables (or add them manually — see below)
 
 ## Peer dependencies
 
-The scheduler relies on these packages. They're listed as peer dependencies so you control the versions:
+Both install paths need these packages:
 
 ```bash
-npm install react-resizable-panels @radix-ui/react-context-menu @radix-ui/react-popover
+npm install @tanstack/react-virtual react-resizable-panels @radix-ui/react-context-menu @radix-ui/react-popover lucide-react react-day-picker
 ```
 
 | Package | Version | Why |
 |---------|---------|-----|
-| `react` | ≥18 | Core |
-| `react-dom` | ≥18 | Core |
-| `tailwindcss` | ≥3 | Styling |
-| `lucide-react` | ≥0.260 | Icons |
-| `@tanstack/react-virtual` | ≥3 | Row virtualisation |
+| `@tanstack/react-virtual` | ≥3 | Row virtualisation (200+ staff) |
 | `react-resizable-panels` | ≥2 | Resizable sidebar |
 | `@radix-ui/react-context-menu` | ≥1 | Right-click menu |
 | `@radix-ui/react-popover` | ≥1 | Hover popover |
+| `react-day-picker` | ≥8 | Date picker in modals |
+| `lucide-react` | ≥0.260 | Icons |
+| `class-variance-authority` | ≥0.7 | Variant classes |
+| `clsx` + `tailwind-merge` | ≥2 | Class utilities |
 
 ## Tailwind configuration
 
-Add the scheduler to your Tailwind `content` array so classes aren't purged:
+Add the scheduler to your Tailwind `content` array:
 
 ```ts
 // tailwind.config.ts
-import type { Config } from 'tailwindcss'
-
 export default {
   content: [
     './app/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
-    // Add this line:
+    // If using npm package, also add:
     './node_modules/@sushill/shadcn-scheduler/dist/**/*.{js,mjs}',
   ],
-} satisfies Config
+}
 ```
 
 ## CSS variables
 
-The scheduler reads shadcn/ui CSS variables from your global stylesheet. If you're already using shadcn/ui, you're done — nothing extra needed.
+The scheduler reads standard shadcn/ui CSS variables. If you're already on shadcn/ui — nothing extra needed.
 
-If you're **not** using shadcn/ui, add these variables to your global CSS:
+If you're not on shadcn/ui, add these to your global CSS:
 
 ```css
 :root {
@@ -103,24 +143,35 @@ If you're **not** using shadcn/ui, add these variables to your global CSS:
 .dark {
   --background: 240 10% 3.9%;
   --foreground: 0 0% 98%;
-  /* etc. */
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --border: 240 3.7% 15.9%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 240 5.9% 10%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
 }
 ```
 
 ## Verify the install
 
 ```tsx
-import { Scheduler } from '@sushill/shadcn-scheduler'
+// If using registry install:
+import { Scheduler } from '@/components/scheduler'
 
-const categories = [{ id: 'c1', name: 'Team', kind: 'category' as const, colorIdx: 0 }]
-const employees = [{ id: 'e1', name: 'Alex', kind: 'employee' as const, categoryId: 'c1', colorIdx: 0 }]
+// If using npm:
+import { Scheduler } from '@sushill/shadcn-scheduler'
 
 export default function Test() {
   return (
     <div className="h-[500px]">
       <Scheduler
-        categories={categories}
-        employees={employees}
+        categories={[{ id: 'c1', name: 'Team', kind: 'category', colorIdx: 0 }]}
+        employees={[{ id: 'e1', name: 'Alex', kind: 'employee', categoryId: 'c1', colorIdx: 0 }]}
         shifts={[]}
         onShiftsChange={() => {}}
         initialView="week"
@@ -130,6 +181,6 @@ export default function Test() {
 }
 ```
 
-If you see a weekly grid with "Team" in the sidebar — you're set.
+If you see a weekly grid — you're set.
 
 [→ Open demo](/demo)
