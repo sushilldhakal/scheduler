@@ -1,19 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Scheduler, createFestivalConfig, type Block } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig, type Block } from '@sushill/shadcn-scheduler'
 import { festivalStages, festivalArtists, festivalSets } from '@/lib/demo/festivalData'
 import { DemoShell } from '../_demoShell'
 
-const config = createFestivalConfig({ defaultSettings: { visibleFrom: 12, visibleTo: 24 }, snapMinutes: 15 })
-
-export default function FestivalDemo() {
-  const [mounted, setMounted] = useState(false)
-  const [initialDate, setInitialDate] = useState<Date | null>(null)
-  const [sets, setSets] = useState<Block[]>(festivalSets)
-
-  useEffect(() => {
-    setMounted(true)
-    setInitialDate(new Date())
+const config = createSchedulerConfig({ preset: 'festival', defaultSettings: { visibleFrom: 12, visibleTo: 24 }, snapMinutes: 15 })
   }, [])
 
   return (
@@ -26,7 +17,6 @@ export default function FestivalDemo() {
           onShiftsChange={setSets}
           initialView="timeline"
           initialDate={initialDate}
-          initialZoom={2}
           config={config}
         />
       ) : <div className="w-full h-full animate-pulse bg-muted" />}

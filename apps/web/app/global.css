@@ -138,15 +138,42 @@
   padding-inline: 12px;
 }
 
-/* fullWidth mode: docs layout fills entire viewport width */
+/* ── fullWidth mode ─────────────────────────────────────────────────────────
+   When the user toggles "full width", the outer wrapper gets both classes.
+   We override #nd-docs-layout to:
+   1. Remove the max-width cap so it fills the viewport
+   2. Force a 3-column grid: sidebar(268px) | content(1fr) | toc(268px)
+   3. Assign each region to its named grid area
+   This mirrors the JS audit: grid-template-areas + grid-template-columns   */
+
 .w-full.docs-full-width #nd-docs-layout {
-  margin-inline: 8px;
-  padding-inline: 12px;
   width: calc(100vw - 16px) !important;
   max-width: calc(100vw - 16px) !important;
+  margin-inline: 8px;
+  padding-inline: 0;
+  /* Explicit 3-column grid — sidebar left, content middle, TOC right */
+  display: grid !important;
+  grid-template-areas: "sidebar main toc" !important;
+  grid-template-columns: 268px 1fr 268px !important;
 }
 
-/* #nd-page always fills the space between the sidebar and TOC */
+/* Pin each region to its grid area */
+.w-full.docs-full-width #nd-sidebar {
+  grid-area: sidebar !important;
+}
+
+.w-full.docs-full-width #nd-page {
+  grid-area: main !important;
+  max-width: none !important;
+  width: auto !important;
+  min-width: 0;
+}
+
+.w-full.docs-full-width #nd-toc {
+  grid-area: toc !important;
+}
+
+/* ── Normal mode: #nd-page always fills between sidebar and TOC ─────────── */
 #nd-page {
   flex: 1;
   min-width: 0;

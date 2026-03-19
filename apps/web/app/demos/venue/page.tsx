@@ -1,19 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Scheduler, createVenueConfig, type Block } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig, type Block } from '@sushill/shadcn-scheduler'
 import { venueSpaces, venueClients, bookings } from '@/lib/demo/venueData'
 import { DemoShell } from '../_demoShell'
 
-const config = createVenueConfig({ defaultSettings: { visibleFrom: 8, visibleTo: 24 }, snapMinutes: 30 })
-
-export default function VenueDemo() {
-  const [mounted, setMounted] = useState(false)
-  const [initialDate, setInitialDate] = useState<Date | null>(null)
-  const [bks, setBks] = useState<Block[]>(bookings)
-
-  useEffect(() => {
-    setMounted(true)
-    setInitialDate(new Date())
+const config = createSchedulerConfig({ preset: 'venue', defaultSettings: { visibleFrom: 8, visibleTo: 24 }, snapMinutes: 30 })
   }, [])
 
   return (
@@ -26,7 +17,6 @@ export default function VenueDemo() {
           onShiftsChange={setBks}
           initialView="timeline"
           initialDate={initialDate}
-          initialZoom={2}
           config={config}
         />
       ) : <div className="w-full h-full animate-pulse bg-muted" />}

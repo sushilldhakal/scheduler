@@ -38,8 +38,9 @@ export const DocsLayoutClient = memo(function DocsLayoutClient({
     () => ({
       '--fd-sidebar-width': '268px',
       '--fd-toc-width': '252px',
+      ...(fullWidth ? { '--fd-layout-width': '100vw' } : {}),
     } as React.CSSProperties),
-    []
+    [fullWidth]
   )
 
   const options = useMemo(() => baseOptions(), [])

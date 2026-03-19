@@ -1,19 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Scheduler, createRosterConfig, type Block } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig, type Block } from '@sushill/shadcn-scheduler'
 import { categories, employees, testShifts } from '@/lib/demo/testData'
 import { DemoShell } from '../_demoShell'
 
-const config = createRosterConfig({ initialScrollToNow: true, snapMinutes: 30 })
-
-export default function RosterDemo() {
-  const [mounted, setMounted] = useState(false)
-  const [initialDate, setInitialDate] = useState<Date | null>(null)
-  const [shifts, setShifts] = useState<Block[]>(testShifts)
-
-  useEffect(() => {
-    setMounted(true)
-    setInitialDate(new Date())
+const config = createSchedulerConfig({ preset: 'roster', snapMinutes: 30 })
   }, [])
 
   return (
