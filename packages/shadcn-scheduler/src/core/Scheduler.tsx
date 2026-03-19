@@ -159,6 +159,17 @@ export function Scheduler({
   const [selEmps, setSelEmps] = useState<Set<string>>(
     () => new Set(employees.map((e) => e.id))
   )
+  // Auto-sync selEmps when employees prop changes — new staff added dynamically will appear
+  React.useEffect(() => {
+    setSelEmps((prev) => {
+      const next = new Set(prev)
+      let changed = false
+      employees.forEach((e) => {
+        if (!next.has(e.id)) { next.add(e.id); changed = true }
+      })
+      return changed ? next : prev
+    })
+  }, [employees])
   const [copiedShift, setCopiedShift] = useState<Block | null>(null)
   const [zoom, setZoom] = useState<number>(1)
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null)

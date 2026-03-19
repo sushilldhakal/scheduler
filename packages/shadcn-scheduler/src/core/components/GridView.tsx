@@ -664,26 +664,24 @@ function GridViewInner({
     return idx
   }, [displayShifts])
 
-  /** Sidebar-sorted categories — re-orders CATEGORIES based on sortBy/sortDir */
+  /** Sidebar-sorted categories — pre-computes aggregates to avoid O(n²) filter inside comparator */
   const SORTED_CATEGORIES = useMemo(() => {
     if (!sortBy) return CATEGORIES
-    return [...CATEGORIES].sort((a, b) => {
-      if (sortBy === "name") {
+    if (sortBy === "name") {
+      return [...CATEGORIES].sort((a, b) => {
         const cmp = a.name.localeCompare(b.name)
         return sortDir === "asc" ? cmp : -cmp
-      }
-      let av = 0, bv = 0
-      if (sortBy === "hours" || sortBy === "scheduled") {
-        const aShifts = shifts.filter((s) => s.categoryId === a.id)
-        const bShifts = shifts.filter((s) => s.categoryId === b.id)
-        if (sortBy === "hours") {
-          av = aShifts.reduce((s, x) => s + (x.endH - x.startH), 0)
-          bv = bShifts.reduce((s, x) => s + (x.endH - x.startH), 0)
-        } else {
-          av = aShifts.length
-          bv = bShifts.length
-        }
-      }
+      })
+    }
+    // Pre-compute per-category value once — O(n) scan instead of O(n log n) × O(n) filter
+    const catMap = new Map<string, number>()
+    for (const s of shifts) {
+      const prev = catMap.get(s.categoryId) ?? 0
+      catMap.set(s.categoryId, prev + (sortBy === "hours" ? (s.endH - s.startH) : 1))
+    }
+    return [...CATEGORIES].sort((a, b) => {
+      const av = catMap.get(a.id) ?? 0
+      const bv = catMap.get(b.id) ?? 0
       return sortDir === "asc" ? av - bv : bv - av
     })
   }, [CATEGORIES, sortBy, sortDir, shifts])
@@ -696,33 +694,40 @@ function GridViewInner({
   const rowMode = settings.rowMode ?? "category"
   const flatRows = useFlatRows(SORTED_CATEGORIES, ALL_EMPLOYEES, collapsed, rowMode)
 
+  // Pre-compute max packed tracks per category across all dates — O(dates × categories × shifts)
+  // Separated so virtualizer estimateSize can use it without re-running flatRows loop
+  const maxTracksPerCat = useMemo((): Map<string, number> => {
+    const map = new Map<string, number>()
+    for (const [key, dayShifts] of shiftIndex.entries()) {
+      const catId = key.split(":")[0]
+      if (!catId) continue
+      const h = getCategoryRowHeight(catId, dayShifts)
+      const prev = map.get(catId) ?? 0
+      if (h > prev) map.set(catId, h)
+    }
+    return map
+  }, [shiftIndex])
+
   const categoryHeights = useMemo((): Record<string, number> => {
-    const map: Record<string, number> = {}
+    const result: Record<string, number> = {}
     flatRows.forEach((row) => {
       const key = row.kind === "employee" && row.employee
         ? `emp:${row.employee.id}`
         : `cat:${row.category.id}`
       if (row.kind === "category") {
         if (rowMode === "category" && !collapsed.has(row.category.id)) {
-          // Category mode: row grows to fit all stacked shifts
-          let maxH = ROLE_HDR + SHIFT_H
-          dates.forEach((date) => {
-            const dayShifts = shiftIndex.get(`${row.category.id}:${toDateISO(date)}`) ?? []
-            const h = getCategoryRowHeight(row.category.id, dayShifts)
-            if (h > maxH) maxH = h
-          })
-          map[key] = maxH
+          // Use pre-computed max height — no inner dates.forEach loop
+          result[key] = Math.max(maxTracksPerCat.get(row.category.id) ?? 0, ROLE_HDR + SHIFT_H)
         } else {
-          // Individual mode or collapsed: header is ROLE_HDR only
-          map[key] = ROLE_HDR
+          result[key] = ROLE_HDR
         }
         return
       }
-      // Individual mode: fixed 50px per employee row (compact, one row per person)
-      map[key] = 50
+      // Individual mode: fixed 50px per employee row
+      result[key] = 50
     })
-    return map
-  }, [shiftIndex, dates, flatRows, rowMode, collapsed, isLoading])
+    return result
+  }, [maxTracksPerCat, flatRows, rowMode, collapsed])
 
   // NOTE: vrTopsRef is updated from virtualizer vr.start values every render
   const vrTopsRef = useRef<Record<string, number>>({})
@@ -1777,6 +1782,24 @@ function GridViewInner({
   onPMRef.current = onPM
   onPURef.current = onPU
   onPCRef.current = onPC
+
+  // Native passive scroll listener — zero-lag header sync (fires before paint, no React overhead)
+  // The React onScroll prop fires after React's batching delay causing header to lag behind grid
+  const onWeekScrollRef = useRef(onWeekScroll)
+  const onDayScrollRef = useRef(onDayScroll)
+  onWeekScrollRef.current = onWeekScroll
+  onDayScrollRef.current = onDayScroll
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const handler = (e: Event) => {
+      // Immediately sync header — no React batching delay
+      if (headerRef.current) headerRef.current.scrollLeft = (e.currentTarget as HTMLDivElement).scrollLeft
+      if (sidebarRef.current) sidebarRef.current.scrollTop = (e.currentTarget as HTMLDivElement).scrollTop
+    }
+    el.addEventListener("scroll", handler, { passive: true })
+    return () => el.removeEventListener("scroll", handler)
+  }, [])  // empty deps — refs are stable
   useEffect(() => {
     if (!dragId) return
     const pm = (e: PointerEvent) => onPMRef.current(e as unknown as React.PointerEvent<HTMLDivElement>)
@@ -2371,7 +2394,7 @@ function GridViewInner({
               </div>
             )
           })()}
-          {/* Resize handle — drag to resize sidebar width */}
+          {/* Resize handle — subtle grip strip, primary on hover */}
           <div
             onPointerDown={onSidebarResizeStart}
             onPointerMove={onSidebarResizeMove}
@@ -2380,27 +2403,35 @@ function GridViewInner({
             style={{
               position: "absolute",
               top: 0,
-              right: 0,
-              width: 8,
+              right: -3,
+              width: 6,
               height: "100%",
               cursor: "col-resize",
               zIndex: 20,
-              background: "var(--border)",
-              borderLeft: "2px solid var(--foreground)",
-              opacity: 0.8,
-              transition: "opacity 150ms, background 150ms",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "transparent",
+              transition: "background 120ms",
             }}
             onMouseEnter={(e) => {
               const el = e.currentTarget as HTMLElement
-              el.style.opacity = "1"
-              el.style.background = "var(--muted-foreground)"
+              el.style.background = "var(--primary)"
+              el.style.opacity = "0.35"
             }}
             onMouseLeave={(e) => {
               const el = e.currentTarget as HTMLElement
-              el.style.opacity = "0.8"
-              el.style.background = "var(--border)"
+              el.style.background = "transparent"
+              el.style.opacity = "1"
             }}
-          />
+          >
+            {/* Grip dots — visible hint that this is draggable */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 3, pointerEvents: "none" }}>
+              {[0,1,2,3,4].map((i) => (
+                <div key={i} style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--border)" }} />
+              ))}
+            </div>
+          </div>
         </div>
 
         <div
