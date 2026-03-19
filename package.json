@@ -17,5 +17,8 @@
     "type": "git",
     "url": "git+https://github.com/sushilldhakal/scheduler.git"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "react-resizable-panels": "^4.7.3"
+  }
 }

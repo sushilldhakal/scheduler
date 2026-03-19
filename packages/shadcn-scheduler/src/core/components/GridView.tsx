@@ -42,7 +42,8 @@ import { StaffPanel } from "./StaffPanel"
 import { RoleWarningModal } from "./modals/RoleWarningModal"
 import { AddShiftModal } from "./modals/AddShiftModal"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuLabel, ContextMenuTrigger } from "./ui/context-menu"
-import { Plus, Copy, ClipboardPaste, Trash2, AlertTriangle, Pencil, Scissors } from "lucide-react"
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "./ui/resizable"
+import { Plus, Copy, ClipboardPaste, Trash2, AlertTriangle, Pencil, Scissors, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { cn } from "../lib/utils"
 
 interface DragState {
@@ -218,8 +219,16 @@ function GridViewInner({
   /** Row highlighted during block drag — set by drag engine via onHoverCategory */
   const [hoveredCategoryId, setHoveredCategoryId] = useState<string | null>(null)
   /** Resizable sidebar width */
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const sidebarPanelRef = useRef<import("./ui/resizable").PanelImperativeHandle | null>(null)
+  // sidebarWidth mirrors the panel pixel size for the header stub alignment
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_W)
-  const sidebarDragRef = useRef<{ startX: number; startW: number } | null>(null)
+  const toggleSidebar = useCallback(() => {
+    const panel = sidebarPanelRef.current
+    if (!panel) return
+    if (sidebarCollapsed) { panel.expand(); setSidebarCollapsed(false) }
+    else { panel.collapse(); setSidebarCollapsed(true) }
+  }, [sidebarCollapsed])
   /** Sort: "name" | "hours" | "scheduled" | null */
   const [sortBy, setSortBy] = useState<"name" | "hours" | "scheduled" | null>(null)
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
@@ -273,22 +282,6 @@ function GridViewInner({
     })
   }, [])
 
-  // ── Sidebar resize ──────────────────────────────────────────
-  const onSidebarResizeStart = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.currentTarget.setPointerCapture(e.pointerId)
-    sidebarDragRef.current = { startX: e.clientX, startW: sidebarWidth }
-  }, [sidebarWidth])
-
-  const onSidebarResizeMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (!sidebarDragRef.current) return
-    const delta = e.clientX - sidebarDragRef.current.startX
-    setSidebarWidth(Math.max(120, Math.min(400, sidebarDragRef.current.startW + delta)))
-  }, [])
-
-  const onSidebarResizeEnd = useCallback(() => {
-    sidebarDragRef.current = null
-  }, [])
 
   // ── Sidebar sort ────────────────────────────────────────────
   const toggleSort = useCallback((col: "name" | "hours" | "scheduled") => {
@@ -2224,12 +2217,22 @@ function GridViewInner({
         </div>
       </div>
 
-      <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>
+      <ResizablePanelGroup orientation="horizontal" style={{ flex: 1, overflow: "hidden" }}>
+        <ResizablePanel
+          panelRef={sidebarPanelRef}
+          defaultSize={18}
+          minSize={8}
+          maxSize={35}
+          collapsible
+          collapsedSize={0}
+          onResize={(size) => setSidebarWidth(size.inPixels)}
+          style={{ overflow: "hidden" }}
+        >
         <div
           ref={sidebarRef}
           style={{
-            width: sidebarWidth,
-            flexShrink: 0,
+            width: "100%",
+            height: "100%",
             borderRight: "1px solid var(--border)",
             overflowY: "hidden",
             background: "var(--muted)",
@@ -2394,50 +2397,45 @@ function GridViewInner({
               </div>
             )
           })()}
-          {/* Resize handle — subtle grip strip, primary on hover */}
-          <div
-            onPointerDown={onSidebarResizeStart}
-            onPointerMove={onSidebarResizeMove}
-            onPointerUp={onSidebarResizeEnd}
-            onPointerCancel={onSidebarResizeEnd}
+        </div>
+        </ResizablePanel>
+
+        {/* Shadcn ResizableHandle with collapse toggle button */}
+        <ResizableHandle style={{ position: "relative", width: 8, background: "var(--border)", flexShrink: 0 }}>
+          <button
+            onClick={toggleSidebar}
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             style={{
               position: "absolute",
-              top: 0,
-              right: -3,
-              width: 6,
-              height: "100%",
-              cursor: "col-resize",
-              zIndex: 20,
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 30,
+              width: 20,
+              height: 20,
+              borderRadius: "50%",
+              background: "var(--background)",
+              border: "1.5px solid var(--border)",
+              cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "transparent",
-              transition: "background 120ms",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+              color: "var(--muted-foreground)",
+              padding: 0,
             }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLElement
-              el.style.background = "var(--primary)"
-              el.style.opacity = "0.35"
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLElement
-              el.style.background = "transparent"
-              el.style.opacity = "1"
-            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--primary)"; e.currentTarget.style.color = "var(--primary)" }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--muted-foreground)" }}
           >
-            {/* Grip dots — visible hint that this is draggable */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 3, pointerEvents: "none" }}>
-              {[0,1,2,3,4].map((i) => (
-                <div key={i} style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--border)" }} />
-              ))}
-            </div>
-          </div>
-        </div>
+            {sidebarCollapsed ? <ChevronsRight size={11} /> : <ChevronsLeft size={11} />}
+          </button>
+        </ResizableHandle>
 
+        <ResizablePanel defaultSize={82} style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
         <div
           ref={scrollRef}
           onScroll={isWeekView ? onWeekScroll : onDayScroll}
-          style={{ flex: 1, overflowX: "auto", overflowY: "auto" }}
+          style={{ flex: 1, overflowX: "auto", overflowY: "auto", scrollbarGutter: "stable" } as React.CSSProperties}
         >
           <div
             style={{
@@ -3418,7 +3416,8 @@ function GridViewInner({
             )}
           </div>
         </div>
-      </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
 
       {/* Hover popover — rendered via portal so it escapes all scroll/overflow/contain clipping */}
       {tooltipBlockId && (() => {
