@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
+import { createPortal } from "react-dom"
 import type { Block, Resource } from "../types"
 import { useSchedulerContext } from "../context"
 import { useVirtualizer } from "@tanstack/react-virtual"
@@ -1473,29 +1474,16 @@ function GridViewInner({
         label.style.fontWeight = "700"
       }
 
-      // ── Cursor ghost: follows raw pointer offset by where the user grabbed ──
-      const cursorGhostEl = cursorGhostRef.current
-      if (cursorGhostEl && d.type === "move") {
-        // Use stored gridRect + grabOffset — no getBoundingClientRect per frame
+      // ── Real block follows cursor — lifted card feel ─────────────────────────
+      if (d.type === "move") {
         const sr = d.gridRect
         if (sr) {
-          const grabX = d.grabOffsetX
-          const grabY = d.grabOffsetY
-          const cursorLeft = (scrollRef.current?.scrollLeft ?? 0) + (e.clientX - sr.left) - grabX
-          const cursorTop  = (scrollRef.current?.scrollTop ?? 0) + (e.clientY - sr.top) - grabY
-          cursorGhostEl.style.display    = "flex"
-          cursorGhostEl.style.left       = "0"
-          cursorGhostEl.style.top        = "0"
-          cursorGhostEl.style.transform  = `translate(${cursorLeft}px, ${cursorTop}px)`
-          cursorGhostEl.style.width      = `${width}px`
-          cursorGhostEl.style.height     = `${SHIFT_H - 6}px`
-          cursorGhostEl.style.background = `linear-gradient(135deg,${c.bg},${c.bg}cc)`
-          cursorGhostEl.style.boxShadow  = `0 16px 32px -8px ${c.bg}60, 0 8px 16px -4px rgba(0,0,0,0.2)`
-          cursorGhostEl.style.opacity    = "0.92"
-          cursorGhostEl.style.borderRadius = "6px"
-          cursorGhostEl.style.border     = `1px solid ${c.bg}88`
-          cursorGhostEl.style.pointerEvents = "none"
-          cursorGhostEl.style.zIndex     = "100"
+          const cursorLeft = (scrollRef.current?.scrollLeft ?? 0) + (e.clientX - sr.left) - d.grabOffsetX
+          const cursorTop  = (scrollRef.current?.scrollTop ?? 0) + (e.clientY - sr.top) - d.grabOffsetY
+          const liftedEl = blockRefsRef.current[d.id]
+          if (liftedEl) {
+            liftedEl.style.transform = `translate(${cursorLeft}px, ${cursorTop}px)`
+          }
         }
       }
     },
@@ -1504,13 +1492,17 @@ function GridViewInner({
 
   const onPC = useCallback(
     (e: React.PointerEvent<HTMLDivElement>): void => {
+      // Reset lifted block transform before nulling ds so we have the id
+      if (ds.current?.type === "move") {
+        const el = blockRefsRef.current[ds.current.id]
+        if (el) el.style.transform = ""
+      }
       ds.current = null
       setDragId(null)
       setHoveredCategoryId(null)
       clearBlockLongPress()
       stopEdgeScroll()
       if (ghostRef.current) ghostRef.current.style.display = "none"
-      if (cursorGhostRef.current) cursorGhostRef.current.style.display = "none"
     },
     [clearBlockLongPress, stopEdgeScroll]
 
@@ -1525,12 +1517,13 @@ function GridViewInner({
       if (d.type === "move") {
         // Guard: if the drop target is a collapsed category, treat as a cancel — don't commit
         if (collapsed.has(newCat.id)) {
+          const el = blockRefsRef.current[d.id]
+          if (el) el.style.transform = ""
           ds.current = null
           setDragId(null)
           setHoveredCategoryId(null)
           stopEdgeScroll()
           if (ghostRef.current) ghostRef.current.style.display = "none"
-          if (cursorGhostRef.current) cursorGhostRef.current.style.display = "none"
           return
         }
         const di0 = isWeekView || isDayViewMultiDay ? getDateIdx(d.sx) : 0
@@ -1554,21 +1547,24 @@ function GridViewInner({
         if (origShift && wouldConflictAt(shifts, d.id, { date: newDate, categoryId: newCat.id, startH: ns, endH: ns + d.dur })) {
           setDropConflictId(d.id)
           setTimeout(() => setDropConflictId(null), 800)
+          const conflictEl = blockRefsRef.current[d.id]
+          if (conflictEl) conflictEl.style.transform = ""
           ds.current = null
           setDragId(null)
           setHoveredCategoryId(null)
           stopEdgeScroll()
           if (ghostRef.current) ghostRef.current.style.display = "none"
-          if (cursorGhostRef.current) cursorGhostRef.current.style.display = "none"
           return
         }
       }
+      // Normal successful drop — reset transform before React re-renders position
+      const droppedEl = blockRefsRef.current[d.id]
+      if (droppedEl) droppedEl.style.transform = ""
       ds.current = null
       setDragId(null)
       setHoveredCategoryId(null)
       stopEdgeScroll()
       if (ghostRef.current) ghostRef.current.style.display = "none"
-      if (cursorGhostRef.current) cursorGhostRef.current.style.display = "none"
       setShifts((prev) => {
         const next = prev.map((s) => {
           if (s.id !== d.id) return s
@@ -2225,18 +2221,19 @@ function GridViewInner({
                               onToggleCollapse: () => toggleCollapse(cat.id),
                             })
                           ) : (
-                            <>
-                              <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
-                              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                {cat.name}
-                              </span>
-                              {(totalHours > 0 || scheduled > 0) && (
-                                <span style={{ fontSize: 9, color: "var(--muted-foreground)", whiteSpace: "nowrap", flexShrink: 0 }}>
-                                  {totalHours > 0 ? `${totalHours.toFixed(1)}h` : ""}
-                                  {totalHours > 0 && scheduled > 0 ? " · " : ""}
-                                  {scheduled > 0 ? `${scheduled} shift${scheduled !== 1 ? "s" : ""}` : ""}
+                            <>\n                              <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0, marginTop: 2 }} />
+                              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                  {cat.name}
                                 </span>
-                              )}
+                                {(totalHours > 0 || scheduled > 0) && (
+                                  <span style={{ fontSize: 9, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {totalHours > 0 ? `${totalHours.toFixed(1)}h` : ""}
+                                    {totalHours > 0 && scheduled > 0 ? " · " : ""}
+                                    {scheduled > 0 ? `${scheduled} shift${scheduled !== 1 ? "s" : ""}` : ""}
+                                  </span>
+                                )}
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => toggleCollapse(cat.id)}
@@ -2406,26 +2403,7 @@ function GridViewInner({
                 }}
               />
             </div>
-            {/* Cursor ghost: follows raw pointer — feels like lifting a physical card */}
-            <div
-              ref={cursorGhostRef}
-              data-scheduler-cursor-ghost
-              style={{
-                display: "none",
-                position: "absolute",
-                pointerEvents: "none",
-                zIndex: 100,
-                borderRadius: 6,
-                alignItems: "center",
-                justifyContent: "flex-start",
-                paddingLeft: 8,
-                fontSize: 10,
-                fontWeight: 600,
-                color: "rgba(255,255,255,0.9)",
-                gap: 4,
-                willChange: "transform",
-              }}
-            />
+
             {/* Row hover highlight during drag */}
             {dragId && hoveredCategoryId && (() => {
               const top = categoryTops[hoveredCategoryId] ?? 0
@@ -2885,8 +2863,14 @@ function GridViewInner({
                       transition: isDrag ? "transform 100ms ease-out, box-shadow 100ms ease-out" : isDeleting ? "opacity 150ms ease-out" : "transform 150ms ease-out",
                       contain: "layout style", willChange: isDrag ? "transform" : "auto",
                     }
-                    if (isDrag) blockStyle.transform = "scale(1.04)"
-                    else if (isActivating) blockStyle.transform = "scale(1.06)"
+                    if (isDrag) {
+                      blockStyle.left = 0
+                      blockStyle.top = 0
+                      blockStyle.zIndex = 200
+                      blockStyle.pointerEvents = "none"
+                      blockStyle.boxShadow = `0 20px 48px -8px ${c.bg}70, 0 8px 24px -4px rgba(0,0,0,0.25)`
+                      // transform set by DOM in onPM, reset on drop in onPU/onPC
+                    } else if (isActivating) blockStyle.transform = "scale(1.06)"
                     return (
                       <ContextMenu key={shift.id}>
                         <ContextMenuTrigger asChild>
@@ -2903,64 +2887,7 @@ function GridViewInner({
                         className={cn("group/block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring", isNew && "animate-[scaleIn_120ms_ease-out]", (isDropConflict || hasConflict) && "ring-2 ring-destructive border-destructive", isDraft && "opacity-90", isLive && "shadow-[0_0_0_2px_var(--primary)/0.4]")}
                         style={blockStyle}
                       >
-                        {tooltipBlockId === shift.id && (() => {
-                          const dur = shift.endH - shift.startH
-                          const hrs = dur % 1 === 0 ? `${dur}h` : `${dur.toFixed(1)}h`
-                          const blockEl = blockRefsRef.current[shift.id]
-                          const r = blockEl?.getBoundingClientRect()
-                          if (!r) return null
-                          // Smart position: prefer above, flip to below if < 140px from top
-                          const showBelow = r.top < 140
-                          const popTop = showBelow ? r.bottom + 6 : r.top - 6
-                          const popLeft = r.left + r.width / 2
-                          return (
-                            <div
-                              onPointerEnter={() => { if (tooltipLeaveTimerRef.current) clearTimeout(tooltipLeaveTimerRef.current) }}
-                              onPointerLeave={() => { tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS) }}
-                              style={{
-                                position: "fixed",
-                                top: showBelow ? popTop : undefined,
-                                bottom: showBelow ? undefined : `${window.innerHeight - popTop}px`,
-                                left: popLeft,
-                                transform: "translateX(-50%)",
-                                zIndex: 99999,
-                                background: "var(--popover)",
-                                border: "1px solid var(--border)",
-                                borderRadius: 10,
-                                padding: "10px 12px",
-                                minWidth: 190,
-                                maxWidth: 260,
-                                boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-                                pointerEvents: "auto",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
-                                <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
-                                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{shift.employee}</span>
-                              </div>
-                              <div style={{ fontSize: 11, color: c.bg, fontWeight: 600, marginBottom: 4 }}>{cat.name}</div>
-                              <div style={{ fontSize: 11, color: "var(--foreground)", fontWeight: 600 }}>
-                                {getTimeLabel(shift.date, shift.startH)} – {getTimeLabel(shift.date, shift.endH)}
-                                <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>{hrs}</span>
-                              </div>
-                              {shift.breakStartH !== undefined && (
-                                <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 3 }}>
-                                  Break: {getTimeLabel(shift.date, shift.breakStartH!)}–{getTimeLabel(shift.date, shift.breakEndH!)}
-                                </div>
-                              )}
-                              {hasConflict && (
-                                <div style={{ marginTop: 6, padding: "4px 8px", borderRadius: 6, background: "var(--destructive)", color: "var(--destructive-foreground)", fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-                                  <AlertTriangle size={10} />
-                                  Shift conflict — cannot publish
-                                </div>
-                              )}
-                              {isDraft && !hasConflict && (
-                                <div style={{ marginTop: 4, fontSize: 10, color: "var(--muted-foreground)" }}>Draft — not published</div>
-                              )}
-                            </div>
-                          )
-                        })()}
+
 
                         {/* Break gap indicator */}
                         {shift.breakStartH !== undefined && shift.breakEndH !== undefined && (() => {
@@ -3158,8 +3085,13 @@ function GridViewInner({
                     contain: "layout style paint",
                     willChange: isDrag ? "transform" : "auto",
                   }
-                  if (isDrag) blockStyle.transform = "scale(1.04)"
-                  else if (isActivating) blockStyle.transform = "scale(1.06)"
+                  if (isDrag) {
+                    blockStyle.left = 0
+                    blockStyle.top = 0
+                    blockStyle.zIndex = 200
+                    blockStyle.pointerEvents = "none"
+                    blockStyle.boxShadow = `0 20px 48px -8px ${c.bg}70, 0 8px 24px -4px rgba(0,0,0,0.25)`
+                  } else if (isActivating) blockStyle.transform = "scale(1.06)"
                   const showTooltip = tooltipBlockId === shift.id
                   const conflictCount = getConflictCount(shifts, shift.id)
                   const blockSlotProps = {
@@ -3199,64 +3131,7 @@ function GridViewInner({
                     >
                       {slots.block ? slots.block(blockSlotProps) : (
                         <>
-                          {showTooltip && (() => {
-                          const dur = shift.endH - shift.startH
-                          const hrs = dur % 1 === 0 ? `${dur}h` : `${dur.toFixed(1)}h`
-                          const blockEl = blockRefsRef.current[shift.id]
-                          const r = blockEl?.getBoundingClientRect()
-                          if (!r) return null
-                          // Smart position: prefer above, flip to below if < 140px from top
-                          const showBelow = r.top < 140
-                          const popTop = showBelow ? r.bottom + 6 : r.top - 6
-                          const popLeft = r.left + r.width / 2
-                          return (
-                              <div
-                                onPointerEnter={() => { if (tooltipLeaveTimerRef.current) clearTimeout(tooltipLeaveTimerRef.current) }}
-                                onPointerLeave={() => { tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS) }}
-                                style={{
-                                  position: "fixed",
-                                  top: showBelow ? popTop : undefined,
-                                  bottom: showBelow ? undefined : `${window.innerHeight - popTop}px`,
-                                  left: popLeft,
-                                  transform: "translateX(-50%)",
-                                  zIndex: 99999,
-                                  background: "var(--popover)",
-                                  border: "1px solid var(--border)",
-                                  borderRadius: 10,
-                                  padding: "10px 12px",
-                                  minWidth: 190,
-                                  maxWidth: 260,
-                                  boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-                                  pointerEvents: "auto",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
-                                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
-                                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{shift.employee}</span>
-                                </div>
-                                <div style={{ fontSize: 11, color: c.bg, fontWeight: 600, marginBottom: 4 }}>{cat.name}</div>
-                                <div style={{ fontSize: 11, color: "var(--foreground)", fontWeight: 600 }}>
-                                  {getTimeLabel(shift.date, shift.startH)} – {getTimeLabel(shift.date, shift.endH)}
-                                  <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>{hrs}</span>
-                                </div>
-                                {shift.breakStartH !== undefined && (
-                                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 3 }}>
-                                    Break: {getTimeLabel(shift.date, shift.breakStartH!)}–{getTimeLabel(shift.date, shift.breakEndH!)}
-                                  </div>
-                                )}
-                                {hasConflict && (
-                                  <div style={{ marginTop: 6, padding: "4px 8px", borderRadius: 6, background: "var(--destructive)", color: "var(--destructive-foreground)", fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-                                    <AlertTriangle size={10} />
-                                    Shift conflict — cannot publish
-                                  </div>
-                                )}
-                                {isDraft && !hasConflict && (
-                                  <div style={{ marginTop: 4, fontSize: 10, color: "var(--muted-foreground)" }}>Draft — not published</div>
-                                )}
-                              </div>
-                          )
-                        })()}
+                          
                           <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 12px", flex: 1, minWidth: 0, overflow: "hidden" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 3, minWidth: 0 }}>
                               {hasConflict && <AlertTriangle size={9} className="shrink-0 text-destructive" style={{ flexShrink: 0 }} />}
@@ -3356,7 +3231,10 @@ function GridViewInner({
                       <ContextMenuItem
                           onClick={() => {
                             setCopiedShift?.(shift)
-                            if (onDeleteShift) setShiftToDeleteConfirm(shift)
+                            if (onDeleteShift) {
+                              setShifts((prev) => prev.filter((s) => s.id !== shift.id))
+                              onBlockDelete?.(shift)
+                            }
                           }}
                           className="gap-2"
                         >
@@ -3423,6 +3301,72 @@ function GridViewInner({
           </div>
         </div>
       </div>
+
+      {/* Hover popover — rendered via portal so it escapes all scroll/overflow/contain clipping */}
+      {tooltipBlockId && (() => {
+        const shift = shifts.find((s) => s.id === tooltipBlockId)
+        if (!shift) return null
+        const blockEl = blockRefsRef.current[tooltipBlockId]
+        const r = blockEl?.getBoundingClientRect()
+        if (!r) return null
+        const cat = CATEGORIES.find((c) => c.id === shift.categoryId)
+        if (!cat) return null
+        const c = getColor(cat.colorIdx)
+        const dur = shift.endH - shift.startH
+        const hrs = dur % 1 === 0 ? `${dur}h` : `${dur.toFixed(1)}h`
+        const hasConflict = conflictIds.has(shift.id)
+        const isDraft = shift.status === "draft"
+        const showBelow = r.top < 140
+        const popTop = showBelow ? r.bottom + 8 : r.top - 8
+        const popLeft = Math.min(Math.max(r.left + r.width / 2, 120), window.innerWidth - 120)
+        return createPortal(
+          <div
+            onPointerEnter={() => { if (tooltipLeaveTimerRef.current) clearTimeout(tooltipLeaveTimerRef.current) }}
+            onPointerLeave={() => { tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS) }}
+            style={{
+              position: "fixed",
+              top: showBelow ? popTop : undefined,
+              bottom: showBelow ? undefined : `${window.innerHeight - popTop}px`,
+              left: popLeft,
+              transform: "translateX(-50%)",
+              zIndex: 99999,
+              background: "var(--popover)",
+              border: "1px solid var(--border)",
+              borderRadius: 10,
+              padding: "10px 14px",
+              minWidth: 190,
+              maxWidth: 280,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              pointerEvents: "auto",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{shift.employee}</span>
+            </div>
+            <div style={{ fontSize: 11, color: c.bg, fontWeight: 600, marginBottom: 5 }}>{cat.name}</div>
+            <div style={{ fontSize: 11, color: "var(--foreground)", fontWeight: 600 }}>
+              {getTimeLabel(shift.date, shift.startH)} – {getTimeLabel(shift.date, shift.endH)}
+              <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>{hrs}</span>
+            </div>
+            {shift.breakStartH !== undefined && (
+              <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 3 }}>
+                Break: {getTimeLabel(shift.date, shift.breakStartH!)}–{getTimeLabel(shift.date, shift.breakEndH!)}
+              </div>
+            )}
+            {hasConflict && (
+              <div style={{ marginTop: 7, padding: "4px 8px", borderRadius: 6, background: "var(--destructive)", color: "var(--destructive-foreground)", fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                <AlertTriangle size={10} />
+                Shift conflict — cannot publish
+              </div>
+            )}
+            {isDraft && !hasConflict && (
+              <div style={{ marginTop: 5, fontSize: 10, color: "var(--muted-foreground)" }}>Draft — not published</div>
+            )}
+          </div>,
+          document.body
+        )
+      })()}
 
       {/* Multi-select bulk action bar */}
       {selectedBlockIds.size > 0 && (
