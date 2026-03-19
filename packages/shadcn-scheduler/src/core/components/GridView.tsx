@@ -2932,16 +2932,23 @@ function GridViewInner({
                             />
                           )
                         })()}
-                        <div className="flex min-w-0 flex-1 items-center gap-1 px-2">
-                          {hasConflict && <AlertTriangle size={10} className="shrink-0 text-destructive" />}
-                          <span className="truncate text-[10px] font-semibold leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.95)" }}>
-                            {shift.employee}
-                          </span>
+                        <div className="flex min-w-0 flex-col justify-center px-2 flex-1 overflow-hidden">
+                          <div className="flex items-center gap-1 min-w-0">
+                            {hasConflict && <AlertTriangle size={10} className="shrink-0 text-destructive" />}
+                            <span className="truncate text-[10px] font-semibold leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.95)" }}>
+                              {shift.employee} <span style={{ opacity: 0.75, fontWeight: 500 }}>{(shift.endH - shift.startH) % 1 === 0 ? `${shift.endH - shift.startH}hr` : `${(shift.endH - shift.startH).toFixed(1)}hr`}</span>
+                            </span>
+                          </div>
+                          {width >= 80 && (
+                            <span className="truncate text-[9px] leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.7)", marginTop: 1 }}>
+                              {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}
+                            </span>
+                          )}
                         </div>
-                        {/* Copy + Delete actions — visible on hover */}
-                        {!isTouchDevice && width >= 72 && (
+                        {/* Copy + Delete actions — always visible on desktop */}
+                        {!isTouchDevice && (
                           <div
-                            className="absolute right-2 top-0 flex h-full items-center gap-0.5 pr-1 opacity-0 group-hover/block:opacity-100 transition-opacity"
+                            className="absolute right-2 top-0 flex h-full items-center gap-0.5 pr-1 transition-opacity"
                             style={{ zIndex: 20, pointerEvents: "auto" }}
                           >
                             <button
@@ -2965,13 +2972,13 @@ function GridViewInner({
                           </div>
                         )}
                         {showResize && (
-                          <div data-resize="left" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)} className={cn("absolute left-0 top-0 h-full cursor-w-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")} style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: `${c.bg}30`, borderRadius: "6px 0 0 6px" }}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /></div>
+                          <div data-resize="left" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)} className="absolute left-0 top-0 h-full cursor-w-resize flex items-center justify-center" style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: "var(--primary)", borderRadius: "6px 0 0 6px" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /></div>
                           </div>
                         )}
                         {showResize && (
-                          <div data-resize="right" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)} className={cn("absolute right-0 top-0 h-full cursor-e-resize flex items-center justify-center", !isTouchDevice && "opacity-0 group-hover/block:opacity-100")} style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: `${c.bg}30`, borderRadius: "0 6px 6px 0" }}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} /></div>
+                          <div data-resize="right" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)} className="absolute right-0 top-0 h-full cursor-e-resize flex items-center justify-center" style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: "var(--primary)", borderRadius: "0 6px 6px 0" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /></div>
                           </div>
                         )}
                       </div>
@@ -3125,11 +3132,18 @@ function GridViewInner({
                               <div className="text-muted-foreground">{getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}</div>
                             </div>
                           )}
-                          <div className="flex min-w-0 flex-1 items-center gap-1 px-2">
-                            {hasConflict && <AlertTriangle size={10} className="shrink-0 text-destructive" />}
-                            <span className="truncate text-[10px] font-semibold leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.95)" }}>
-                              {shift.employee}
-                            </span>
+                          <div className="flex min-w-0 flex-col justify-center px-2 flex-1 overflow-hidden">
+                            <div className="flex items-center gap-1 min-w-0">
+                              {hasConflict && <AlertTriangle size={10} className="shrink-0 text-destructive" />}
+                              <span className="truncate text-[10px] font-semibold leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.95)" }}>
+                                {shift.employee} <span style={{ opacity: 0.75, fontWeight: 500 }}>{(shift.endH - shift.startH) % 1 === 0 ? `${shift.endH - shift.startH}hr` : `${(shift.endH - shift.startH).toFixed(1)}hr`}</span>
+                              </span>
+                            </div>
+                            {width >= 80 && (
+                              <span className="truncate text-[9px] leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.7)", marginTop: 1 }}>
+                                {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}
+                              </span>
+                            )}
                           </div>
                           {/* Break gap indicator */}
                           {shift.breakStartH !== undefined && shift.breakEndH !== undefined && (() => {
@@ -3153,10 +3167,10 @@ function GridViewInner({
                               />
                             )
                           })()}
-                          {/* Copy + Delete actions — visible on hover */}
-                          {!isTouchDevice && width >= 72 && (
+                          {/* Copy + Delete actions — always visible on desktop */}
+                          {!isTouchDevice && (
                           <div
-                            className="absolute right-2 top-0 flex h-full items-center gap-0.5 pr-1 opacity-0 group-hover/block:opacity-100 transition-opacity"
+                            className="absolute right-2 top-0 flex h-full items-center gap-0.5 pr-1 transition-opacity"
                             style={{ zIndex: 20, pointerEvents: "auto" }}
                           >
                             <button
@@ -3184,14 +3198,11 @@ function GridViewInner({
                               data-resize="left"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
 
-                              className={cn(
-                                "absolute left-0 top-0 flex h-full cursor-w-resize items-center justify-center",
-                                !isTouchDevice && "opacity-0 group-hover/block:opacity-100"
-                              )}
+                              className="absolute left-0 top-0 flex h-full cursor-w-resize items-center justify-center"
                               style={{
                                 width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9,
                                 minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined,
-                                background: `${c.bg}33`,
+                                background: "var(--primary)",
                                 borderRadius: "6px 0 0 6px",
                               }}
                             >
@@ -3207,14 +3218,11 @@ function GridViewInner({
                               data-resize="right"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
 
-                              className={cn(
-                                "absolute right-0 top-0 flex h-full cursor-e-resize items-center justify-center",
-                                !isTouchDevice && "opacity-0 group-hover/block:opacity-100"
-                              )}
+                              className="absolute right-0 top-0 flex h-full cursor-e-resize items-center justify-center"
                               style={{
                                 width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9,
                                 minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined,
-                                background: `${c.bg}33`,
+                                background: "var(--primary)",
                                 borderRadius: "0 6px 6px 0",
                               }}
                             >
