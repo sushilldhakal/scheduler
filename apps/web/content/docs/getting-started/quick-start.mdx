@@ -1,48 +1,67 @@
 ---
 title: Quick start
-description: Minimum code to get a working scheduler on screen in 5 minutes.
+description: A working scheduler on screen in under 5 minutes.
 ---
 
 # Quick start
 
-This guide shows the **smallest possible setup** to render a working scheduler
-on screen in a few minutes.
+This guide gets you from zero to a working scheduler as fast as possible. We'll build a simple workforce roster with three employees and a handful of shifts.
 
 ## 1. Define your data
 
-Start with a couple of categories, employees, and shifts:
+The scheduler works with three types of data: **categories** (teams/roles), **employees** (staff), and **shifts** (the blocks on the grid).
 
 ```tsx
-const categories = [
-  { id: 'front-desk', name: 'Front Desk', kind: 'category', colorIdx: 0 },
-];
+import type { Block, Resource } from '@sushill/shadcn-scheduler'
 
-const employees = [
-  { id: 'e1', name: 'Alex', kind: 'employee', categoryId: 'front-desk', colorIdx: 0 },
-];
+// Categories = rows in the sidebar (teams, roles, departments)
+const categories: Resource[] = [
+  { id: 'c1', name: 'Front Desk', kind: 'category', colorIdx: 0 },
+  { id: 'c2', name: 'Kitchen', kind: 'category', colorIdx: 2 },
+]
 
-const initialShifts = [
+// Employees = staff members belonging to a category
+const employees: Resource[] = [
+  { id: 'e1', name: 'Alice', kind: 'employee', categoryId: 'c1', colorIdx: 0 },
+  { id: 'e2', name: 'Bob', kind: 'employee', categoryId: 'c1', colorIdx: 0 },
+  { id: 'e3', name: 'Carlos', kind: 'employee', categoryId: 'c2', colorIdx: 2 },
+]
+
+// Shifts = blocks rendered on the grid
+const initialShifts: Block[] = [
   {
     id: 's1',
-    categoryId: 'front-desk',
+    categoryId: 'c1',
     employeeId: 'e1',
-    date: '2026-03-16',
-    startH: 9,
-    endH: 17,
-    employee: 'Alex',
+    employee: 'Alice',
+    date: '2026-03-19',  // YYYY-MM-DD
+    startH: 9,           // 9:00 AM
+    endH: 17,            // 5:00 PM
     status: 'published',
   },
-];
+  {
+    id: 's2',
+    categoryId: 'c1',
+    employeeId: 'e2',
+    employee: 'Bob',
+    date: '2026-03-19',
+    startH: 14,
+    endH: 22,
+    status: 'draft',
+  },
+]
 ```
 
-## 2. Render the scheduler
+## 2. Render the component
 
 ```tsx
-import { useState } from 'react';
-import { Scheduler } from '@sushill/shadcn-scheduler';
+'use client'  // Next.js: scheduler is a client component
 
-export default function QuickStartPage() {
-  const [shifts, setShifts] = useState(initialShifts);
+import { useState } from 'react'
+import { Scheduler } from '@sushill/shadcn-scheduler'
+
+export default function SchedulerPage() {
+  const [shifts, setShifts] = useState(initialShifts)
 
   return (
     <div className="h-[600px]">
@@ -54,13 +73,79 @@ export default function QuickStartPage() {
         initialView="week"
       />
     </div>
-  );
+  )
 }
 ```
 
-This gives you a working **week** view with drag-and-drop and basic editing.
-From here you can:
+**That's it.** You now have a fully interactive weekly schedule with:
+- Drag and drop shifts between categories and time slots
+- Right-click context menu (Edit, Copy, Cut, Delete)
+- Resizable sidebar
+- Dark mode support
 
-- Switch to a preset domain (e.g. `<Scheduler.roster />`)
-- Enable more views (day, month, year, timeline, list)
-- Start customising render slots and callbacks.
+[→ See it live](/demo)
+
+## 3. Handle shift changes
+
+`onShiftsChange` fires whenever shifts are created, moved, resized, or deleted. Use it to sync with your backend:
+
+```tsx
+const handleShiftsChange = async (newShifts: Block[]) => {
+  setShifts(newShifts)
+  // Sync with your API
+  await fetch('/api/shifts', {
+    method: 'PUT',
+    body: JSON.stringify(newShifts),
+  })
+}
+
+<Scheduler
+  shifts={shifts}
+  onShiftsChange={handleShiftsChange}
+  // ...
+/>
+```
+
+## 4. Switch views
+
+Change `initialView` to start in a different view:
+
+```tsx
+// Available views:
+// "day" | "week" | "month" | "year" | "list" | "timeline"
+
+<Scheduler
+  initialView="day"    // Single day with scrolling
+  // initialView="week"   // 7-day week (default)
+  // initialView="month"  // Monthly calendar
+  // initialView="timeline" // Horizontal timeline
+/>
+```
+
+## 5. Use a domain preset
+
+The scheduler ships with 7 preset configurations. Using a preset sets sensible defaults for labels, colours, and view options:
+
+```tsx
+import { createRosterConfig } from '@sushill/shadcn-scheduler'
+
+const config = createRosterConfig({
+  initialScrollToNow: true,
+  workingHours: {
+    0: null,  // Sunday closed
+    1: { from: 8, to: 18 },
+    2: { from: 8, to: 18 },
+    // ... etc
+  },
+})
+
+<Scheduler config={config} ... />
+```
+
+Available presets: `createRosterConfig`, `createTvConfig`, `createConferenceConfig`, `createFestivalConfig`, `createHealthcareConfig`, `createGanttConfig`, `createVenueConfig`.
+
+## Next steps
+
+- [Props reference](/docs/components) — all available props
+- [Customization examples](/docs/examples) — real-world scenarios
+- [Live demo](/demo) — try it interactively

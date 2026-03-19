@@ -1,76 +1,135 @@
 ---
 title: Installation
-description: Installing shadcn-scheduler, peer dependencies, and Tailwind configuration.
+description: Install shadcn-scheduler, configure peer dependencies, and set up Tailwind.
 ---
 
 # Installation
 
-You can install `shadcn-scheduler` either via the **shadcn/ui registry** or as a
-plain npm package. The registry flow is recommended if you're already using
-shadcn/ui components.
+## Requirements
 
-## 1. Install from the shadcn registry
+- React 18+
+- Tailwind CSS 3 or 4
+- shadcn/ui (for CSS variables — the scheduler reads `--background`, `--border`, `--primary` etc.)
+
+## Option 1 — npm (recommended)
+
+```bash
+npm install @sushill/shadcn-scheduler
+```
+
+```bash
+# or with pnpm
+pnpm add @sushill/shadcn-scheduler
+
+# or with yarn
+yarn add @sushill/shadcn-scheduler
+```
+
+Then import in your component:
+
+```tsx
+import { Scheduler } from '@sushill/shadcn-scheduler'
+```
+
+## Option 2 — shadcn registry
+
+If you use the shadcn CLI, you can add the scheduler directly to your project:
 
 ```bash
 npx shadcn@latest add scheduler
 ```
 
-This will:
+This copies the source into your `components/` folder so you can modify it freely.
 
-- Copy the scheduler source files into your repo
-- Register the component in your `components.json`
-- Ensure required Tailwind and CSS imports are in place
+## Peer dependencies
 
-After that, you can import from your local components, e.g.
-
-```tsx
-import { Scheduler } from '@/components/scheduler';
-```
-
-## 2. Install from npm
-
-If you prefer to consume the package directly:
+The scheduler relies on these packages. They're listed as peer dependencies so you control the versions:
 
 ```bash
-npm install @sushill/shadcn-scheduler
-# or
-pnpm add @sushill/shadcn-scheduler
+npm install react-resizable-panels @radix-ui/react-context-menu @radix-ui/react-popover
 ```
 
-Then import the component from the package:
+| Package | Version | Why |
+|---------|---------|-----|
+| `react` | ≥18 | Core |
+| `react-dom` | ≥18 | Core |
+| `tailwindcss` | ≥3 | Styling |
+| `lucide-react` | ≥0.260 | Icons |
+| `@tanstack/react-virtual` | ≥3 | Row virtualisation |
+| `react-resizable-panels` | ≥2 | Resizable sidebar |
+| `@radix-ui/react-context-menu` | ≥1 | Right-click menu |
+| `@radix-ui/react-popover` | ≥1 | Hover popover |
 
-```tsx
-import { Scheduler } from '@sushill/shadcn-scheduler';
-```
+## Tailwind configuration
 
-## 3. Peer dependencies
-
-`sadchn-scheduler` expects the following peers in your project:
-
-- `react`, `react-dom`
-- `next` (for Next.js apps)
-- `tailwindcss` and a Tailwind config
-- `shadcn/ui` (if you're using the registry variant)
-
-Make sure these are installed and up to date before using the scheduler.
-
-## 4. Tailwind configuration
-
-Add the scheduler paths to your Tailwind `content` array so classes are not
-purged during build. For a typical Next app:
+Add the scheduler to your Tailwind `content` array so classes aren't purged:
 
 ```ts
 // tailwind.config.ts
+import type { Config } from 'tailwindcss'
+
 export default {
   content: [
-    './pages/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
-    './components/scheduler/**/*.{ts,tsx}', // wherever the scheduler lives
+    // Add this line:
+    './node_modules/@sushill/shadcn-scheduler/dist/**/*.{js,mjs}',
   ],
-  // ...rest of config
-};
+} satisfies Config
 ```
 
-Finally, ensure your global CSS imports the base styles used by the scheduler
-and Fumadocs UI (if you are using this docs site setup).
+## CSS variables
+
+The scheduler reads shadcn/ui CSS variables from your global stylesheet. If you're already using shadcn/ui, you're done — nothing extra needed.
+
+If you're **not** using shadcn/ui, add these variables to your global CSS:
+
+```css
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.7% 15.9%;
+  --border: 240 5.9% 90%;
+  --primary: 240 5.9% 10%;
+  --primary-foreground: 0 0% 98%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+}
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  /* etc. */
+}
+```
+
+## Verify the install
+
+```tsx
+import { Scheduler } from '@sushill/shadcn-scheduler'
+
+const categories = [{ id: 'c1', name: 'Team', kind: 'category' as const, colorIdx: 0 }]
+const employees = [{ id: 'e1', name: 'Alex', kind: 'employee' as const, categoryId: 'c1', colorIdx: 0 }]
+
+export default function Test() {
+  return (
+    <div className="h-[500px]">
+      <Scheduler
+        categories={categories}
+        employees={employees}
+        shifts={[]}
+        onShiftsChange={() => {}}
+        initialView="week"
+      />
+    </div>
+  )
+}
+```
+
+If you see a weekly grid with "Team" in the sidebar — you're set.
+
+[→ Open demo](/demo)

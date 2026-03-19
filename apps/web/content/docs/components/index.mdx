@@ -1,7 +1,215 @@
 ---
-title: Components
-description: All building blocks that make up shadcn-scheduler.
+title: Props Reference
+description: Complete reference for all Scheduler props, types, and configuration.
 ---
 
-Use these components to compose custom scheduling experiences on top of shadcn-scheduler.
+# Props Reference
 
+## `<Scheduler />`
+
+The main component. All props are optional except `categories`, `employees`, `shifts`, and `onShiftsChange`.
+
+### Required props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `categories` | `Resource[]` | The row groups (teams, roles, departments) |
+| `employees` | `Resource[]` | Staff members — each belongs to a category |
+| `shifts` | `Block[]` | The blocks rendered on the grid |
+| `onShiftsChange` | `(shifts: Block[]) => void` | Called whenever shifts are created, moved, resized, or deleted |
+
+### View props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `initialView` | `ViewType` | `"week"` | Starting view |
+| `config` | `SchedulerConfig` | — | Domain preset config (see below) |
+
+**ViewType values:** `"day"`, `"week"`, `"month"`, `"year"`, `"list"`, `"timeline"`
+
+### Callback props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `onShiftClick` | `(block: Block, resource: Resource) => void` | Called when user clicks a shift block |
+| `onAddShift` | `(date: Date, categoryId?: string, empId?: string) => void` | Called when user clicks the `+` button on a cell |
+| `onBlockMoved` | `(block: Block, newDate: string, newStartH: number, newEndH: number) => void` | Called after a drag-drop move |
+| `onBlockCreate` | `(block: Block) => void` | Called when a new block is created |
+| `onBlockDelete` | `(block: Block) => void` | Called when a block is deleted |
+| `onBlockMove` | `(block: Block) => void` | Called during every pointermove while dragging |
+| `onBlockResize` | `(block: Block) => void` | Called during resize |
+| `onBlockPublish` | `(block: Block) => void` | Called when a draft block is published |
+| `onDeleteShift` | `(shiftId: string) => void` | Override default delete behaviour |
+| `onAuditEvent` | `(entry: AuditEntry) => void` | Receives every audit trail event |
+| `onVisibleRangeChange` | `(start: Date, end: Date) => void` | Reports visible date range — use for data prefetching |
+
+### Display props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `readOnly` | `boolean` | `false` | Disables all editing interactions |
+| `isLoading` | `boolean` | `false` | Shows loading skeletons |
+| `zoom` | `number` | `1` | Zoom level (0.5–2). Use with `setZoom` for controlled zoom |
+| `setZoom` | `Dispatch<SetStateAction<number>>` | — | Controls zoom externally |
+| `bufferDays` | `number` | `15` | Days to render before/after focused date in day view |
+| `prefetchThreshold` | `number` | `0.8` | Scroll ratio (0–1) at which `onVisibleRangeChange` fires |
+
+### Render slot props
+
+Override any part of the scheduler UI with your own React components:
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `headerSlot` | `() => ReactNode` | Renders above the scheduler toolbar |
+| `footerSlot` | `({ onSettingsChange }) => ReactNode` | Renders in the toolbar footer area |
+| `blockSlot` | `(block: Block) => ReactNode` | Custom content inside each shift block |
+| `sidebarSlot` | `(resource: Resource) => ReactNode` | Custom sidebar row content |
+
+---
+
+## `Block` type
+
+```ts
+interface Block {
+  id: string
+  categoryId: string
+  employeeId: string
+  employee: string        // Display name (shown on block)
+  date: string            // YYYY-MM-DD
+  startH: number          // 0–24 (e.g. 9 = 9:00 AM, 13.5 = 1:30 PM)
+  endH: number            // 0–24
+  status: 'draft' | 'published'
+  draggable?: boolean     // default true
+  resizable?: boolean     // default true
+  color?: string          // override category colour
+  breakStartH?: number    // break start (optional)
+  breakEndH?: number      // break end (optional)
+  meta?: Record<string, unknown>  // your custom data
+}
+```
+
+### Half-hour shifts
+
+Use decimal hours for half-hour precision:
+
+```ts
+// 9:30 AM to 5:30 PM
+{ startH: 9.5, endH: 17.5 }
+
+// 1:00 AM to 2:30 AM  
+{ startH: 1, endH: 2.5 }
+```
+
+---
+
+## `Resource` type
+
+```ts
+interface Resource {
+  id: string
+  name: string
+  kind: 'category' | 'employee'
+  colorIdx: number          // 0–11, maps to the scheduler's colour palette
+  categoryId?: string       // required for employees
+  role?: string             // displayed in sidebar
+  avatar?: string           // URL, shown in sidebar
+  meta?: Record<string, unknown>
+}
+```
+
+---
+
+## `SchedulerConfig`
+
+Created with `createSchedulerConfig()` or a domain preset function:
+
+```ts
+const config = createSchedulerConfig({
+  // Working hours per day (0=Sunday … 6=Saturday, null=closed)
+  workingHours: {
+    0: null,                     // Sunday: closed
+    1: { from: 8, to: 18 },     // Monday: 8am–6pm
+    2: { from: 8, to: 18 },
+    3: { from: 8, to: 18 },
+    4: { from: 8, to: 18 },
+    5: { from: 8, to: 18 },
+    6: { from: 10, to: 14 },    // Saturday: 10am–2pm
+  },
+
+  // Visible hour range (what the grid shows)
+  visibleFrom: 7,    // Start at 7am
+  visibleTo: 22,     // End at 10pm
+
+  // Snap grid in minutes (15 or 30)
+  snapMinutes: 30,
+
+  // Custom labels
+  labels: {
+    category: 'Department',
+    employee: 'Staff member',
+    shift: 'Booking',
+    draft: 'Pending',
+    published: 'Confirmed',
+  },
+
+  // Scroll to current time on load
+  initialScrollToNow: true,
+})
+```
+
+---
+
+## Domain preset functions
+
+Each preset calls `createSchedulerConfig` with sensible defaults for that domain:
+
+```ts
+import {
+  createRosterConfig,
+  createTvConfig,
+  createConferenceConfig,
+  createFestivalConfig,
+  createHealthcareConfig,
+  createGanttConfig,
+  createVenueConfig,
+} from '@sushill/shadcn-scheduler'
+
+// Workforce roster
+const config = createRosterConfig({ initialScrollToNow: true })
+
+// TV / EPG guide
+const config = createTvConfig()
+
+// Conference / event
+const config = createConferenceConfig()
+```
+
+---
+
+## `AuditEntry` type
+
+Every user action produces an audit entry:
+
+```ts
+interface AuditEntry {
+  id: string
+  timestamp: Date
+  action: 'create' | 'move' | 'resize' | 'delete' | 'publish' | 'unpublish' | 'copy' | 'cut' | 'paste'
+  blockId: string
+  employeeName: string
+  categoryName: string
+  before?: Partial<Block>
+  after?: Partial<Block>
+}
+```
+
+```tsx
+<Scheduler
+  onAuditEvent={(entry) => {
+    console.log(`${entry.action}: ${entry.employeeName} — ${entry.blockId}`)
+    // Save to your audit log
+  }}
+/>
+```
+
+[→ Live demo](/demo) | [→ Examples](/docs/examples)

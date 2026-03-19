@@ -1,8 +1,48 @@
 ---
-title: Conflict detection demo
-description: Overlapping blocks with red warning badges.
+title: Conflict detection
+description: Automatic red border warnings when two shifts overlap for the same employee.
 ---
 
-# Conflict detection demo
+# Conflict detection
 
-Overlapping blocks are highlighted with red warning badges to show scheduling conflicts.
+The scheduler automatically detects when two shifts overlap for the same employee and shows a red ring around both conflicting blocks. Conflicting shifts also can't be published until the conflict is resolved.
+
+[→ Try it live](/demo)
+
+## How it works
+
+Conflict detection is automatic — no configuration needed. Two shifts conflict when:
+- They share the same `employeeId`
+- They share the same `date`
+- Their time ranges overlap (`startH < otherEndH && endH > otherStartH`)
+
+```tsx
+const shifts = [
+  { id: 's1', employeeId: 'e1', date: '2026-03-19', startH: 9, endH: 17, status: 'published' },
+  { id: 's2', employeeId: 'e1', date: '2026-03-19', startH: 14, endH: 22, status: 'draft' },
+  // ↑ s1 and s2 both conflict — red ring on both
+]
+```
+
+## Hover popover shows conflict warning
+
+Hovering a conflicting block shows a red banner in the popover:
+
+> ⚠ Shift conflict — cannot publish
+
+## Prevent publishing conflicting shifts
+
+The publish button in the edit modal is disabled when a conflict exists:
+
+```tsx
+// In ShiftModal, the publish button checks hasConflict:
+<button disabled={hasConflict}>
+  Publish
+</button>
+```
+
+## Resolve conflicts
+
+Move or resize either block so they no longer overlap, then publish.
+
+[→ Demo with conflicts](/demo)
