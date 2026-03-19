@@ -10,7 +10,7 @@ Configure the scheduler as an Electronic Programme Guide — channels as rows, p
 [→ Try it live](/demo)
 
 ```tsx
-import { Scheduler, createTvConfig } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig } from '@sushill/shadcn-scheduler'
 
 const channels = [
   { id: 'bbc1',  name: 'BBC One',   kind: 'category' as const, colorIdx: 0 },
@@ -26,7 +26,7 @@ const programmes = [
     date: '2026-03-19', startH: 19.5, endH: 20, status: 'published' as const },
 ]
 
-const config = createTvConfig()
+const config = createSchedulerConfig({ preset: 'tv' })
 
 <Scheduler
   categories={channels}

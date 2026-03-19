@@ -175,13 +175,13 @@ import {
 } from '@sushill/shadcn-scheduler'
 
 // Workforce roster
-const config = createRosterConfig({ initialScrollToNow: true })
+const config = createSchedulerConfig({ preset: 'roster', { initialScrollToNow: true } })
 
 // TV / EPG guide
-const config = createTvConfig()
+const config = createSchedulerConfig({ preset: 'tv' })
 
 // Conference / event
-const config = createConferenceConfig()
+const config = createSchedulerConfig({ preset: 'conference' })
 ```
 
 ---

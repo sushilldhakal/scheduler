@@ -10,7 +10,7 @@ Visualise project timelines with tasks as blocks spanning multiple days. Teams a
 [→ Try it live](/demo)
 
 ```tsx
-import { Scheduler, createGanttConfig } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig } from '@sushill/shadcn-scheduler'
 
 const teams = [
   { id: 'frontend', name: 'Frontend',  kind: 'category' as const, colorIdx: 0 },
@@ -23,7 +23,7 @@ const tasks = [
     date: '2026-03-19', startH: 0, endH: 8, status: 'published' as const },
 ]
 
-const config = createGanttConfig()
+const config = createSchedulerConfig({ preset: 'gantt' })
 // Labels: Project, Team member, Task
 // Day-wide blocks (startH=0, endH=24 for full-day tasks)
 ```

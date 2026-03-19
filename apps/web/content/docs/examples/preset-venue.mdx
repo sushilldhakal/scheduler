@@ -10,7 +10,7 @@ Manage room reservations, facility bookings, and space utilisation with the venu
 [→ Try it live](/demo)
 
 ```tsx
-import { Scheduler, createVenueConfig } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig } from '@sushill/shadcn-scheduler'
 
 const spaces = [
   { id: 'r1', name: 'Meeting Room 1', kind: 'category' as const, colorIdx: 0 },
@@ -18,7 +18,7 @@ const spaces = [
   { id: 'r3', name: 'Event Space',    kind: 'category' as const, colorIdx: 3 },
 ]
 
-const config = createVenueConfig()
+const config = createSchedulerConfig({ preset: 'venue' })
 // Labels: Room, Guest, Booking, Tentative, Confirmed
 
 <Scheduler

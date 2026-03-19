@@ -10,7 +10,7 @@ Manage ward rotas, on-call schedules, and shift handovers with the healthcare pr
 [→ Try it live](/demo)
 
 ```tsx
-import { Scheduler, createHealthcareConfig } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig } from '@sushill/shadcn-scheduler'
 
 const wards = [
   { id: 'a&e',  name: 'A&E',         kind: 'category' as const, colorIdx: 0 },
@@ -18,7 +18,7 @@ const wards = [
   { id: 'ward', name: 'General Ward',kind: 'category' as const, colorIdx: 2 },
 ]
 
-const config = createHealthcareConfig()
+const config = createSchedulerConfig({ preset: 'healthcare' })
 // Labels: Ward, Staff member, Rota slot, Pending approval, Confirmed
 // 24-hour visible range for overnight shifts
 // 30-minute snap

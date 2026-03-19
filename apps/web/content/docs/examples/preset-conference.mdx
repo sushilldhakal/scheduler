@@ -10,7 +10,7 @@ Schedule conference sessions across multiple rooms, with speakers as resources a
 [→ Try it live](/demo)
 
 ```tsx
-import { Scheduler, createConferenceConfig } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig } from '@sushill/shadcn-scheduler'
 
 const rooms = [
   { id: 'main',     name: 'Main Stage',  kind: 'category' as const, colorIdx: 0 },
@@ -23,7 +23,7 @@ const speakers = [
   { id: 's2', name: 'Workshop Lead',   kind: 'employee' as const, categoryId: 'workshop', colorIdx: 1 },
 ]
 
-const config = createConferenceConfig()
+const config = createSchedulerConfig({ preset: 'conference' })
 
 <Scheduler
   categories={rooms}

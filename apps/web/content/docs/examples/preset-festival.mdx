@@ -10,7 +10,7 @@ Schedule acts across multiple stages for a multi-day festival. Stages are catego
 [→ Try it live](/demo)
 
 ```tsx
-import { Scheduler, createFestivalConfig } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig } from '@sushill/shadcn-scheduler'
 
 const stages = [
   { id: 'main',    name: 'Main Stage',   kind: 'category' as const, colorIdx: 5 },
@@ -18,6 +18,6 @@ const stages = [
   { id: 'acoustic',name: 'Acoustic Tent',kind: 'category' as const, colorIdx: 2 },
 ]
 
-const config = createFestivalConfig()
+const config = createSchedulerConfig({ preset: 'festival' })
 // Sensible defaults: visibleFrom=12 (noon), visibleTo=2 (2am), snapMinutes=15
 ```

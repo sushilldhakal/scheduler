@@ -129,7 +129,7 @@ The scheduler ships with 7 preset configurations. Using a preset sets sensible d
 ```tsx
 import { createRosterConfig } from '@sushill/shadcn-scheduler'
 
-const config = createRosterConfig({
+const config = createSchedulerConfig({ preset: 'roster', {
   initialScrollToNow: true,
   workingHours: {
     0: null,  // Sunday closed
@@ -137,7 +137,7 @@ const config = createRosterConfig({
     2: { from: 8, to: 18 },
     // ... etc
   },
-})
+} })
 
 <Scheduler config={config} ... />
 ```

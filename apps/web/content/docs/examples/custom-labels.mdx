@@ -52,10 +52,10 @@ Domain presets set the right labels automatically:
 
 ```tsx
 import { createHealthcareConfig } from '@sushill/shadcn-scheduler'
-const config = createHealthcareConfig()
+const config = createSchedulerConfig({ preset: 'healthcare' })
 // Labels: Ward, Staff member, Rota slot, etc.
 
 import { createTvConfig } from '@sushill/shadcn-scheduler'
-const tvConfig = createTvConfig()
+const tvConfig = createSchedulerConfig({ preset: 'tv' })
 // Labels: Channel, Programme, Broadcast slot, etc.
 ```

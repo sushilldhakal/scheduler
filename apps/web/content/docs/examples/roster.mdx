@@ -12,7 +12,7 @@ A realistic workforce roster with multiple departments, employees, and pre-popul
 ```tsx
 'use client'
 import { useState } from 'react'
-import { Scheduler, createRosterConfig, type Block, type Resource } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig, type Block, type Resource } from '@sushill/shadcn-scheduler'
 
 const categories: Resource[] = [
   { id: 'front-desk', name: 'Front Desk', kind: 'category', colorIdx: 0 },
@@ -38,7 +38,7 @@ const initialShifts: Block[] = [
   { id: 's5', categoryId: 'management', employeeId: 'e5', employee: 'Edward',  date: today, startH: 9,  endH: 18, status: 'published' },
 ]
 
-const config = createRosterConfig({
+const config = createSchedulerConfig({ preset: 'roster', {
   initialScrollToNow: true,
   workingHours: {
     0: null,
@@ -49,7 +49,7 @@ const config = createRosterConfig({
     5: { from: 7, to: 23 },
     6: { from: 8, to: 20 },
   },
-})
+} })
 
 export default function RosterPage() {
   const [shifts, setShifts] = useState(initialShifts)

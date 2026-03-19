@@ -12,7 +12,7 @@ The timeline view renders resources as rows and time as columns, with blocks spa
 ```tsx
 <Scheduler
   initialView="timeline"
-  config={createTvConfig()}
+  config={createSchedulerConfig({ preset: 'tv' })}
   // ... other props
 />
 ```

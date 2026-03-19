@@ -10,9 +10,9 @@ The roster preset configures the scheduler for workforce shift management — em
 [→ Try it live](/demo)
 
 ```tsx
-import { Scheduler, createRosterConfig } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig } from '@sushill/shadcn-scheduler'
 
-const config = createRosterConfig({
+const config = createSchedulerConfig({ preset: 'roster', {
   initialScrollToNow: true,
   workingHours: {
     0: null,                      // Sunday closed
@@ -33,7 +33,7 @@ const config = createRosterConfig({
     draft: 'Draft',
     published: 'Published',
   },
-})
+} })
 
 <Scheduler
   categories={departments}
