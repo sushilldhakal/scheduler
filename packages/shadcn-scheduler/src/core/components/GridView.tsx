@@ -2883,7 +2883,7 @@ function GridViewInner({
                       border: isDraft ? `1.5px dashed ${c.bg}` : isSelected ? `2px solid ${c.bg}` : `1px solid ${c.bg}88`,
                       boxShadow: isDrag ? `0 20px 40px -8px ${c.bg}60, 0 8px 16px -4px rgba(0,0,0,0.2)` : isDraft ? "none" : `0 2px 6px ${c.bg}44`,
                       transition: isDrag ? "transform 100ms ease-out, box-shadow 100ms ease-out" : isDeleting ? "opacity 150ms ease-out" : "transform 150ms ease-out",
-                      contain: "layout style paint", willChange: isDrag ? "transform" : "auto",
+                      contain: "layout style", willChange: isDrag ? "transform" : "auto",
                     }
                     if (isDrag) blockStyle.transform = "scale(1.04)"
                     else if (isActivating) blockStyle.transform = "scale(1.06)"
@@ -2906,55 +2906,56 @@ function GridViewInner({
                         {tooltipBlockId === shift.id && (() => {
                           const dur = shift.endH - shift.startH
                           const hrs = dur % 1 === 0 ? `${dur}h` : `${dur.toFixed(1)}h`
-                          // Smart position: use top if block is in lower 60% of viewport, else bottom
                           const blockEl = blockRefsRef.current[shift.id]
-                          const blockRect = blockEl?.getBoundingClientRect()
-                          const spaceAbove = blockRect ? blockRect.top : 999
-                          const showBelow = spaceAbove < 120
+                          const r = blockEl?.getBoundingClientRect()
+                          if (!r) return null
+                          // Smart position: prefer above, flip to below if < 140px from top
+                          const showBelow = r.top < 140
+                          const popTop = showBelow ? r.bottom + 6 : r.top - 6
+                          const popLeft = r.left + r.width / 2
                           return (
                             <div
                               onPointerEnter={() => { if (tooltipLeaveTimerRef.current) clearTimeout(tooltipLeaveTimerRef.current) }}
                               onPointerLeave={() => { tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS) }}
                               style={{
-                                position: "absolute",
-                                [showBelow ? "top" : "bottom"]: "calc(100% + 6px)",
-                                left: "50%",
+                                position: "fixed",
+                                top: showBelow ? popTop : undefined,
+                                bottom: showBelow ? undefined : `${window.innerHeight - popTop}px`,
+                                left: popLeft,
                                 transform: "translateX(-50%)",
-                                zIndex: 9999,
+                                zIndex: 99999,
                                 background: "var(--popover)",
                                 border: "1px solid var(--border)",
                                 borderRadius: 10,
                                 padding: "10px 12px",
-                                minWidth: 180,
-                                maxWidth: 240,
-                                boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
+                                minWidth: 190,
+                                maxWidth: 260,
+                                boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
                                 pointerEvents: "auto",
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
                                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
-                                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{shift.employee}</span>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{shift.employee}</span>
                               </div>
-                              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 3 }}>
-                                {cat.name}
-                              </div>
+                              <div style={{ fontSize: 11, color: c.bg, fontWeight: 600, marginBottom: 4 }}>{cat.name}</div>
                               <div style={{ fontSize: 11, color: "var(--foreground)", fontWeight: 600 }}>
                                 {getTimeLabel(shift.date, shift.startH)} – {getTimeLabel(shift.date, shift.endH)}
                                 <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>{hrs}</span>
                               </div>
                               {shift.breakStartH !== undefined && (
-                                <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2 }}>
-                                  Break {getTimeLabel(shift.date, shift.breakStartH!)}–{getTimeLabel(shift.date, shift.breakEndH!)}
+                                <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 3 }}>
+                                  Break: {getTimeLabel(shift.date, shift.breakStartH!)}–{getTimeLabel(shift.date, shift.breakEndH!)}
                                 </div>
                               )}
                               {hasConflict && (
                                 <div style={{ marginTop: 6, padding: "4px 8px", borderRadius: 6, background: "var(--destructive)", color: "var(--destructive-foreground)", fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
                                   <AlertTriangle size={10} />
-                                  Shift conflict
+                                  Shift conflict — cannot publish
                                 </div>
                               )}
-                              {isDraft && (
+                              {isDraft && !hasConflict && (
                                 <div style={{ marginTop: 4, fontSize: 10, color: "var(--muted-foreground)" }}>Draft — not published</div>
                               )}
                             </div>
@@ -3199,59 +3200,63 @@ function GridViewInner({
                       {slots.block ? slots.block(blockSlotProps) : (
                         <>
                           {showTooltip && (() => {
-                            const dur = shift.endH - shift.startH
-                            const hrs = dur % 1 === 0 ? `${dur}h` : `${dur.toFixed(1)}h`
-                            const blockEl = blockRefsRef.current[shift.id]
-                            const blockRect = blockEl?.getBoundingClientRect()
-                            const spaceAbove = blockRect ? blockRect.top : 999
-                            const showBelow = spaceAbove < 120
-                            return (
+                          const dur = shift.endH - shift.startH
+                          const hrs = dur % 1 === 0 ? `${dur}h` : `${dur.toFixed(1)}h`
+                          const blockEl = blockRefsRef.current[shift.id]
+                          const r = blockEl?.getBoundingClientRect()
+                          if (!r) return null
+                          // Smart position: prefer above, flip to below if < 140px from top
+                          const showBelow = r.top < 140
+                          const popTop = showBelow ? r.bottom + 6 : r.top - 6
+                          const popLeft = r.left + r.width / 2
+                          return (
                               <div
                                 onPointerEnter={() => { if (tooltipLeaveTimerRef.current) clearTimeout(tooltipLeaveTimerRef.current) }}
                                 onPointerLeave={() => { tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS) }}
                                 style={{
-                                  position: "absolute",
-                                  [showBelow ? "top" : "bottom"]: "calc(100% + 6px)",
-                                  left: "50%",
+                                  position: "fixed",
+                                  top: showBelow ? popTop : undefined,
+                                  bottom: showBelow ? undefined : `${window.innerHeight - popTop}px`,
+                                  left: popLeft,
                                   transform: "translateX(-50%)",
-                                  zIndex: 9999,
+                                  zIndex: 99999,
                                   background: "var(--popover)",
                                   border: "1px solid var(--border)",
                                   borderRadius: 10,
                                   padding: "10px 12px",
-                                  minWidth: 180,
-                                  maxWidth: 240,
-                                  boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
+                                  minWidth: 190,
+                                  maxWidth: 260,
+                                  boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
                                   pointerEvents: "auto",
                                   whiteSpace: "nowrap",
                                 }}
                               >
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
                                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{shift.employee}</span>
+                                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)" }}>{shift.employee}</span>
                                 </div>
-                                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 3 }}>{cat.name}</div>
+                                <div style={{ fontSize: 11, color: c.bg, fontWeight: 600, marginBottom: 4 }}>{cat.name}</div>
                                 <div style={{ fontSize: 11, color: "var(--foreground)", fontWeight: 600 }}>
                                   {getTimeLabel(shift.date, shift.startH)} – {getTimeLabel(shift.date, shift.endH)}
                                   <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>{hrs}</span>
                                 </div>
                                 {shift.breakStartH !== undefined && (
-                                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2 }}>
-                                    Break {getTimeLabel(shift.date, shift.breakStartH!)}–{getTimeLabel(shift.date, shift.breakEndH!)}
+                                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 3 }}>
+                                    Break: {getTimeLabel(shift.date, shift.breakStartH!)}–{getTimeLabel(shift.date, shift.breakEndH!)}
                                   </div>
                                 )}
                                 {hasConflict && (
                                   <div style={{ marginTop: 6, padding: "4px 8px", borderRadius: 6, background: "var(--destructive)", color: "var(--destructive-foreground)", fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
                                     <AlertTriangle size={10} />
-                                    Shift conflict
+                                    Shift conflict — cannot publish
                                   </div>
                                 )}
-                                {isDraft && (
+                                {isDraft && !hasConflict && (
                                   <div style={{ marginTop: 4, fontSize: 10, color: "var(--muted-foreground)" }}>Draft — not published</div>
                                 )}
                               </div>
-                            )
-                          })()}
+                          )
+                        })()}
                           <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 12px", flex: 1, minWidth: 0, overflow: "hidden" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 3, minWidth: 0 }}>
                               {hasConflict && <AlertTriangle size={9} className="shrink-0 text-destructive" style={{ flexShrink: 0 }} />}
