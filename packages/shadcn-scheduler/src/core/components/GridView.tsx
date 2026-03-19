@@ -2903,12 +2903,63 @@ function GridViewInner({
                         className={cn("group/block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring", isNew && "animate-[scaleIn_120ms_ease-out]", (isDropConflict || hasConflict) && "ring-2 ring-destructive border-destructive", isDraft && "opacity-90", isLive && "shadow-[0_0_0_2px_var(--primary)/0.4]")}
                         style={blockStyle}
                       >
-                        {tooltipBlockId === shift.id && (
-                          <div className="absolute bottom-full left-1/2 z-50 mb-1 -translate-x-1/2 rounded-md border border-border bg-popover px-2 py-1.5 text-xs text-popover-foreground shadow-md pointer-events-auto">
-                            <div className="font-semibold">{shift.employee}</div>
-                            <div className="text-muted-foreground">{getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}</div>
-                          </div>
-                        )}
+                        {tooltipBlockId === shift.id && (() => {
+                          const dur = shift.endH - shift.startH
+                          const hrs = dur % 1 === 0 ? `${dur}h` : `${dur.toFixed(1)}h`
+                          // Smart position: use top if block is in lower 60% of viewport, else bottom
+                          const blockEl = blockRefsRef.current[shift.id]
+                          const blockRect = blockEl?.getBoundingClientRect()
+                          const spaceAbove = blockRect ? blockRect.top : 999
+                          const showBelow = spaceAbove < 120
+                          return (
+                            <div
+                              onPointerEnter={() => { if (tooltipLeaveTimerRef.current) clearTimeout(tooltipLeaveTimerRef.current) }}
+                              onPointerLeave={() => { tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS) }}
+                              style={{
+                                position: "absolute",
+                                [showBelow ? "top" : "bottom"]: "calc(100% + 6px)",
+                                left: "50%",
+                                transform: "translateX(-50%)",
+                                zIndex: 9999,
+                                background: "var(--popover)",
+                                border: "1px solid var(--border)",
+                                borderRadius: 10,
+                                padding: "10px 12px",
+                                minWidth: 180,
+                                maxWidth: 240,
+                                boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
+                                pointerEvents: "auto",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                                <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
+                                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{shift.employee}</span>
+                              </div>
+                              <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 3 }}>
+                                {cat.name}
+                              </div>
+                              <div style={{ fontSize: 11, color: "var(--foreground)", fontWeight: 600 }}>
+                                {getTimeLabel(shift.date, shift.startH)} – {getTimeLabel(shift.date, shift.endH)}
+                                <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>{hrs}</span>
+                              </div>
+                              {shift.breakStartH !== undefined && (
+                                <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2 }}>
+                                  Break {getTimeLabel(shift.date, shift.breakStartH!)}–{getTimeLabel(shift.date, shift.breakEndH!)}
+                                </div>
+                              )}
+                              {hasConflict && (
+                                <div style={{ marginTop: 6, padding: "4px 8px", borderRadius: 6, background: "var(--destructive)", color: "var(--destructive-foreground)", fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                                  <AlertTriangle size={10} />
+                                  Shift conflict
+                                </div>
+                              )}
+                              {isDraft && (
+                                <div style={{ marginTop: 4, fontSize: 10, color: "var(--muted-foreground)" }}>Draft — not published</div>
+                              )}
+                            </div>
+                          )
+                        })()}
 
                         {/* Break gap indicator */}
                         {shift.breakStartH !== undefined && shift.breakEndH !== undefined && (() => {
@@ -2934,25 +2985,25 @@ function GridViewInner({
                             />
                           )
                         })()}
-                        <div className="flex min-w-0 flex-1 items-center gap-1 px-2">
-                          {hasConflict && <AlertTriangle size={10} className="shrink-0 text-destructive" />}
-                          <span className="truncate text-[10px] font-semibold leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.95)" }}>
-                            {shift.employee}
-                          </span>
-                          {width >= 72 && (
-                            <span className="truncate text-[9px] leading-none shrink-0" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.7)" }}>
-                              {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}
+                        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 12px", flex: 1, minWidth: 0, overflow: "hidden" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 3, minWidth: 0 }}>
+                            {hasConflict && <AlertTriangle size={9} className="shrink-0 text-destructive" style={{ flexShrink: 0 }} />}
+                            <span style={{ fontSize: 10, fontWeight: 700, color: isDraft ? c.bg : "rgba(255,255,255,0.97)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: "1.2" }}>
+                              {shift.employee}
                             </span>
-                          )}
+                          </div>
+                          <span style={{ fontSize: 9, color: isDraft ? c.bg : "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: "1.2", marginTop: 1 }}>
+                            {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}
+                          </span>
                         </div>
 
                         {showResize && (
-                          <div data-resize="left" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)} className="absolute left-0 top-0 h-full cursor-w-resize flex items-center justify-center" style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: "var(--primary)", borderRadius: "6px 0 0 6px" }}>
+                          <div data-resize="left" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)} className="absolute left-0 top-0 h-full cursor-ew-resize flex items-center justify-center" style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: "var(--primary)", borderRadius: "6px 0 0 6px" }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /></div>
                           </div>
                         )}
                         {showResize && (
-                          <div data-resize="right" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)} className="absolute right-0 top-0 h-full cursor-e-resize flex items-center justify-center" style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: "var(--primary)", borderRadius: "0 6px 6px 0" }}>
+                          <div data-resize="right" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)} className="absolute right-0 top-0 h-full cursor-ew-resize flex items-center justify-center" style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: "var(--primary)", borderRadius: "0 6px 6px 0" }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /></div>
                           </div>
                         )}
@@ -2979,7 +3030,11 @@ function GridViewInner({
                         <ContextMenuItem
                           onClick={() => {
                             setCopiedShift?.(shift)
-                            if (onDeleteShift) setShiftToDeleteConfirm(shift)
+                            if (onDeleteShift) {
+                              // Cut = copy to buffer + immediately remove from grid
+                              setShifts((prev) => prev.filter((s) => s.id !== shift.id))
+                              onBlockDelete?.(shift)
+                            }
                           }}
                           className="gap-2"
                         >
@@ -3143,22 +3198,70 @@ function GridViewInner({
                     >
                       {slots.block ? slots.block(blockSlotProps) : (
                         <>
-                          {showTooltip && (
-                            <div className="absolute bottom-full left-1/2 z-50 mb-1 -translate-x-1/2 rounded-md border border-border bg-popover px-2 py-1.5 text-xs text-popover-foreground shadow-md pointer-events-auto">
-                              <div className="font-semibold">{shift.employee}</div>
-                              <div className="text-muted-foreground">{getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}</div>
-                            </div>
-                          )}
-                          <div className="flex min-w-0 flex-1 items-center gap-1 px-2">
-                            {hasConflict && <AlertTriangle size={10} className="shrink-0 text-destructive" />}
-                            <span className="truncate text-[10px] font-semibold leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.95)" }}>
-                              {shift.employee}
-                            </span>
-                            {width >= 72 && (
-                              <span className="truncate text-[9px] leading-none shrink-0" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.7)" }}>
-                                {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}
+                          {showTooltip && (() => {
+                            const dur = shift.endH - shift.startH
+                            const hrs = dur % 1 === 0 ? `${dur}h` : `${dur.toFixed(1)}h`
+                            const blockEl = blockRefsRef.current[shift.id]
+                            const blockRect = blockEl?.getBoundingClientRect()
+                            const spaceAbove = blockRect ? blockRect.top : 999
+                            const showBelow = spaceAbove < 120
+                            return (
+                              <div
+                                onPointerEnter={() => { if (tooltipLeaveTimerRef.current) clearTimeout(tooltipLeaveTimerRef.current) }}
+                                onPointerLeave={() => { tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS) }}
+                                style={{
+                                  position: "absolute",
+                                  [showBelow ? "top" : "bottom"]: "calc(100% + 6px)",
+                                  left: "50%",
+                                  transform: "translateX(-50%)",
+                                  zIndex: 9999,
+                                  background: "var(--popover)",
+                                  border: "1px solid var(--border)",
+                                  borderRadius: 10,
+                                  padding: "10px 12px",
+                                  minWidth: 180,
+                                  maxWidth: 240,
+                                  boxShadow: "0 8px 24px rgba(0,0,0,0.14)",
+                                  pointerEvents: "auto",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{shift.employee}</span>
+                                </div>
+                                <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginBottom: 3 }}>{cat.name}</div>
+                                <div style={{ fontSize: 11, color: "var(--foreground)", fontWeight: 600 }}>
+                                  {getTimeLabel(shift.date, shift.startH)} – {getTimeLabel(shift.date, shift.endH)}
+                                  <span style={{ fontWeight: 400, color: "var(--muted-foreground)", marginLeft: 6 }}>{hrs}</span>
+                                </div>
+                                {shift.breakStartH !== undefined && (
+                                  <div style={{ fontSize: 10, color: "var(--muted-foreground)", marginTop: 2 }}>
+                                    Break {getTimeLabel(shift.date, shift.breakStartH!)}–{getTimeLabel(shift.date, shift.breakEndH!)}
+                                  </div>
+                                )}
+                                {hasConflict && (
+                                  <div style={{ marginTop: 6, padding: "4px 8px", borderRadius: 6, background: "var(--destructive)", color: "var(--destructive-foreground)", fontSize: 10, fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                                    <AlertTriangle size={10} />
+                                    Shift conflict
+                                  </div>
+                                )}
+                                {isDraft && (
+                                  <div style={{ marginTop: 4, fontSize: 10, color: "var(--muted-foreground)" }}>Draft — not published</div>
+                                )}
+                              </div>
+                            )
+                          })()}
+                          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 12px", flex: 1, minWidth: 0, overflow: "hidden" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 3, minWidth: 0 }}>
+                              {hasConflict && <AlertTriangle size={9} className="shrink-0 text-destructive" style={{ flexShrink: 0 }} />}
+                              <span style={{ fontSize: 10, fontWeight: 700, color: isDraft ? c.bg : "rgba(255,255,255,0.97)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: "1.2" }}>
+                                {shift.employee}
                               </span>
-                            )}
+                            </div>
+                            <span style={{ fontSize: 9, color: isDraft ? c.bg : "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: "1.2", marginTop: 1 }}>
+                              {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}
+                            </span>
                           </div>
                           {/* Break gap indicator */}
                           {shift.breakStartH !== undefined && shift.breakEndH !== undefined && (() => {
@@ -3188,7 +3291,7 @@ function GridViewInner({
                               data-resize="left"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
 
-                              className="absolute left-0 top-0 flex h-full cursor-w-resize items-center justify-center"
+                              className="absolute left-0 top-0 flex h-full cursor-ew-resize items-center justify-center"
                               style={{
                                 width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9,
                                 minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined,
@@ -3208,7 +3311,7 @@ function GridViewInner({
                               data-resize="right"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
 
-                              className="absolute right-0 top-0 flex h-full cursor-e-resize items-center justify-center"
+                              className="absolute right-0 top-0 flex h-full cursor-ew-resize items-center justify-center"
                               style={{
                                 width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9,
                                 minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined,

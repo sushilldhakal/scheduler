@@ -131,20 +131,28 @@ export function ShiftModal({
       }}
     >
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: c.bg, textTransform: "uppercase", letterSpacing: 1 }}>
-          {category.name}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: c.bg, textTransform: "uppercase", letterSpacing: 1 }}>
+              {category.name}
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, background: isDraft ? "var(--muted)" : `${c.bg}18`, borderRadius: 20, padding: "3px 10px" }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: isDraft ? "var(--muted-foreground)" : c.bg }} />
+            <span style={{ fontSize: 10, fontWeight: 700, color: isDraft ? "var(--muted-foreground)" : c.bg }}>
+              {isDraft ? labels.draft : labels.published}
+            </span>
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--accent)", borderRadius: 20, padding: "3px 10px" }}>
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: isDraft ? "var(--muted-foreground)" : "var(--primary)" }} />
-          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent-foreground)" }}>
-            {isDraft ? labels.draft : labels.published}
-          </span>
+        <div style={{ fontSize: 20, fontWeight: 800, color: "var(--foreground)", lineHeight: 1.2 }}>
+          {draft.employee}
         </div>
-      </div>
-
-      <div style={{ fontSize: 18, fontWeight: 800, color: "var(--foreground)", marginBottom: 2 }}>
-        {draft.employee}
+        <div style={{ fontSize: 11, color: "var(--muted-foreground)", marginTop: 2 }}>
+          {getTimeLabel(draft.date, draft.startH)} – {getTimeLabel(draft.date, draft.endH)}
+          {" · "}{(() => { const d = draft.endH - draft.startH; return d % 1 === 0 ? `${d}h` : `${d.toFixed(1)}h` })()}
+        </div>
       </div>
 
       {hasConflict && (
@@ -183,6 +191,14 @@ export function ShiftModal({
             </PopoverContent>
           </Popover>
           {errors.date && <div style={{ fontSize: 11, color: "var(--destructive)", marginTop: 4 }}>{errors.date}</div>}
+        </div>
+
+        {/* Category — moved here so order is: Date → Category → Time → Break */}
+        <div>
+          <label style={LBL}>Category</label>
+          <select value={draft.categoryId} onChange={(e) => setDraft({ ...draft, categoryId: e.target.value })} style={SEL}>
+            {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+          </select>
         </div>
 
         {/* Start / End time */}
@@ -299,13 +315,6 @@ export function ShiftModal({
           )}
         </div>
 
-        {/* Category */}
-        <div>
-          <label style={LBL}>Category</label>
-          <select value={draft.categoryId} onChange={(e) => setDraft({ ...draft, categoryId: e.target.value })} style={SEL}>
-            {categories.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-          </select>
-        </div>
       </div>
 
       {/* Buttons */}
