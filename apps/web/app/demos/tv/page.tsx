@@ -1,10 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Scheduler, createTvConfig, type Block } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig, type Block } from '@sushill/shadcn-scheduler'
 import { channels, channelEmployees, programmes } from '@/lib/demo/tvData'
 import { DemoShell } from '../_demoShell'
 
-const config = createTvConfig({ defaultSettings: { visibleFrom: 6, visibleTo: 24 }, snapMinutes: 15 })
+const config = createSchedulerConfig({ preset: 'tv', defaultSettings: { visibleFrom: 6, visibleTo: 24 }, snapMinutes: 15 })
 
 export default function TvDemo() {
   const [mounted, setMounted] = useState(false)
@@ -25,9 +25,7 @@ export default function TvDemo() {
           shifts={progs}
           onShiftsChange={setProgs}
           initialView="day"
-          initialDate={initialDate}
-          initialZoom={2}
-          config={config}
+          initialDate={initialDate} config={config}
         />
       ) : <div className="w-full h-full animate-pulse bg-muted" />}
     </DemoShell>

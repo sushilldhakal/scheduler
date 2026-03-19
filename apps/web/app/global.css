@@ -138,13 +138,15 @@
   padding-inline: 12px;
 }
 
-/* When fullWidth is active (outer wrapper has no max-w-7xl), let the docs layout fill the viewport */
-.docs-full-width #nd-docs-layout {
-  max-width: 100%;
-  margin-inline: 0;
+/* fullWidth mode: docs layout fills entire viewport width */
+.w-full.docs-full-width #nd-docs-layout {
+  margin-inline: 8px;
+  padding-inline: 12px;
+  width: calc(100vw - 16px) !important;
+  max-width: calc(100vw - 16px) !important;
 }
 
-/* #nd-page always takes all remaining space between sidebar (268px) and TOC (252px) */
+/* #nd-page always fills the space between the sidebar and TOC */
 #nd-page {
   flex: 1;
   min-width: 0;

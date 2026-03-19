@@ -1,14 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Scheduler, createHealthcareConfig, type Block } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig, type Block } from '@sushill/shadcn-scheduler'
 import { wards, staff, rotas } from '@/lib/demo/healthcareData'
 import { DemoShell } from '../_demoShell'
 
 // createHealthcareConfig automatically sets allowOvernight: true
-const config = createHealthcareConfig({
-  defaultSettings: { visibleFrom: 0, visibleTo: 24 },
-  snapMinutes: 30,
-})
+const config = createSchedulerConfig({ preset: 'healthcare', defaultSettings: { visibleFrom: 0, visibleTo: 24 }, snapMinutes: 30 })
 
 export default function HealthcareDemo() {
   const [mounted, setMounted] = useState(false)

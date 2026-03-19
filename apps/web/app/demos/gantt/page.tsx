@@ -1,13 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Scheduler, createGanttConfig, type Block } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig, type Block } from '@sushill/shadcn-scheduler'
 import { ganttTeams, ganttMembers, ganttTasks } from '@/lib/demo/ganttData'
 import { DemoShell } from '../_demoShell'
 
-const config = createGanttConfig({
-  defaultSettings: { visibleFrom: 7, visibleTo: 18 },
-  snapMinutes: 60,
-})
+const config = createSchedulerConfig({ preset: 'gantt', defaultSettings: { visibleFrom: 7, visibleTo: 18 }, snapMinutes: 60 })
 
 export default function GanttDemo() {
   const [mounted, setMounted] = useState(false)
