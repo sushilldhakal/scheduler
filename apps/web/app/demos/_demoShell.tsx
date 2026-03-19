@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { ArrowLeft, ExternalLink, Maximize2, Minimize2 } from 'lucide-react'
+import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { useWidth } from '@/components/docs/width-context'
 
 interface DemoShellProps {
@@ -11,7 +11,7 @@ interface DemoShellProps {
 }
 
 export function DemoShell({ title, description, docsHref, children }: DemoShellProps) {
-  const { fullWidth, toggleFullWidth } = useWidth()
+  const { fullWidth } = useWidth()
 
   const containerClass = fullWidth
     ? 'mx-auto w-full px-4 sm:px-6'
@@ -19,7 +19,7 @@ export function DemoShell({ title, description, docsHref, children }: DemoShellP
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Header bar — content wrapped in containerClass so it respects width toggle */}
+      {/* Header bar */}
       <div className="shrink-0 border-b border-border bg-background/95 backdrop-blur">
         <div className={`${containerClass} flex items-center gap-4 py-2.5`}>
           <Link
@@ -33,14 +33,6 @@ export function DemoShell({ title, description, docsHref, children }: DemoShellP
             <span className="text-sm font-semibold text-foreground">{title}</span>
             <span className="ml-2 text-xs text-muted-foreground hidden sm:inline">{description}</span>
           </div>
-          <button
-            type="button"
-            onClick={toggleFullWidth}
-            className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-            aria-label={fullWidth ? 'Switch to contained width' : 'Switch to full width'}
-          >
-            {fullWidth ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-          </button>
           <Link
             href={docsHref}
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
@@ -50,7 +42,7 @@ export function DemoShell({ title, description, docsHref, children }: DemoShellP
         </div>
       </div>
 
-      {/* Scheduler content — also wrapped in containerClass */}
+      {/* Scheduler content */}
       <div className={`${containerClass} flex-1 min-h-0 flex flex-col`}>
         {children}
       </div>
