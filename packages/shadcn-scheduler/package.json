@@ -93,20 +93,21 @@
   "author": "Sushil Dhakal",
   "license": "MIT",
   "peerDependencies": {
-    "react": ">=18.0.0",
-    "react-dom": ">=18.0.0",
-    "lucide-react": ">=0.260.0",
-    "tailwindcss": ">=3.0.0",
+    "@radix-ui/react-checkbox": ">=1.0.0",
     "@radix-ui/react-popover": ">=1.0.0",
+    "@radix-ui/react-slot": ">=1.0.0",
     "@radix-ui/react-tabs": ">=1.0.0",
     "@radix-ui/react-toggle-group": ">=1.0.0",
-    "@radix-ui/react-checkbox": ">=1.0.0",
-    "@radix-ui/react-slot": ">=1.0.0",
-    "react-day-picker": ">=8.0.0",
+    "@tanstack/react-virtual": ">=3.0.0",
     "class-variance-authority": ">=0.7.0",
     "clsx": ">=2.0.0",
+    "lucide-react": ">=0.260.0",
+    "react": ">=18.0.0",
+    "react-day-picker": ">=8.0.0",
+    "react-dom": ">=18.0.0",
     "tailwind-merge": ">=2.0.0",
-    "@tanstack/react-virtual": ">=3.0.0"
+    "tailwindcss": ">=3.0.0",
+    "@radix-ui/react-context-menu": ">=1.0.0"
   },
   "peerDependenciesMeta": {
     "@tanstack/react-virtual": {
@@ -114,16 +115,20 @@
     }
   },
   "devDependencies": {
-    "@tanstack/react-virtual": "^3.0.0",
     "@radix-ui/react-checkbox": "^1.0.4",
-    "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-popover": "^1.0.7",
+    "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-tabs": "^1.0.4",
     "@radix-ui/react-toggle-group": "^1.0.4",
+    "@tanstack/react-virtual": "^3.0.0",
+    "@testing-library/react": "^16.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "html2canvas": "^1.4.1",
+    "jsdom": "^25.0.0",
+    "jspdf": "^2.5.2",
     "lucide-react": "^0.263.0",
     "react": "^18.2.0",
     "react-day-picker": "^8.10.0",
@@ -132,10 +137,9 @@
     "tailwindcss": "^3.4.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
-    "vitest": "^2.0.0",
-    "@testing-library/react": "^16.0.0",
-    "jsdom": "^25.0.0",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^2.5.2"
+    "vitest": "^2.0.0"
+  },
+  "dependencies": {
+    "@radix-ui/react-context-menu": "^2.2.16"
   }
 }
