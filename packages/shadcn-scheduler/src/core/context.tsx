@@ -47,9 +47,17 @@ export interface SchedulerContextValue {
 
 export const SchedulerContext = createContext<SchedulerContextValue | null>(null)
 
-let uidCounter = 100
+/**
+ * Generates a unique block ID. Uses crypto.randomUUID() when available (all
+ * modern browsers + Node 18+), falling back to Math.random() for older envs.
+ * This replaces the module-level counter which was SSR-unsafe (shared across
+ * requests) and concurrent-render-unsafe (same ID emitted twice before commit).
+ */
 export function nextUid(): string {
-  return `s${uidCounter++}`
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `s${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`
+  }
+  return `s${Math.random().toString(36).slice(2, 14)}`
 }
 
 export interface SchedulerProviderProps {
@@ -71,9 +79,44 @@ export function SchedulerProvider({
   children,
 }: SchedulerProviderProps) {
   const slots = slotsProp ?? {}
+  // Destructure individual label overrides so the memo only re-runs when a
+  // specific label string changes — not when the config object reference changes.
+  const labelCategory    = config?.labels?.category
+  const labelEmployee    = config?.labels?.employee
+  const labelShift       = config?.labels?.shift
+  const labelStaff       = config?.labels?.staff
+  const labelRoster      = config?.labels?.roster
+  const labelAddShift    = config?.labels?.addShift
+  const labelPublish     = config?.labels?.publish
+  const labelDraft       = config?.labels?.draft
+  const labelPublished   = config?.labels?.published
+  const labelSelectStaff = config?.labels?.selectStaff
+  const labelCopyLastWeek      = config?.labels?.copyLastWeek
+  const labelFillFromSchedules = config?.labels?.fillFromSchedules
+  const labelPublishAll  = config?.labels?.publishAll
+  const labelCategories  = config?.labels?.categories
   const labels = useMemo(
-    () => ({ ...DEFAULT_LABELS, ...config?.labels }),
-    [config?.labels]
+    () => ({
+      ...DEFAULT_LABELS,
+      ...(labelCategory    !== undefined && { category: labelCategory }),
+      ...(labelEmployee    !== undefined && { employee: labelEmployee }),
+      ...(labelShift       !== undefined && { shift: labelShift }),
+      ...(labelStaff       !== undefined && { staff: labelStaff }),
+      ...(labelRoster      !== undefined && { roster: labelRoster }),
+      ...(labelAddShift    !== undefined && { addShift: labelAddShift }),
+      ...(labelPublish     !== undefined && { publish: labelPublish }),
+      ...(labelDraft       !== undefined && { draft: labelDraft }),
+      ...(labelPublished   !== undefined && { published: labelPublished }),
+      ...(labelSelectStaff !== undefined && { selectStaff: labelSelectStaff }),
+      ...(labelCopyLastWeek      !== undefined && { copyLastWeek: labelCopyLastWeek }),
+      ...(labelFillFromSchedules !== undefined && { fillFromSchedules: labelFillFromSchedules }),
+      ...(labelPublishAll  !== undefined && { publishAll: labelPublishAll }),
+      ...(labelCategories  !== undefined && { categories: labelCategories }),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [labelCategory, labelEmployee, labelShift, labelStaff, labelRoster,
+     labelAddShift, labelPublish, labelDraft, labelPublished, labelSelectStaff,
+     labelCopyLastWeek, labelFillFromSchedules, labelPublishAll, labelCategories]
   )
 
   const settings: Settings = useMemo(

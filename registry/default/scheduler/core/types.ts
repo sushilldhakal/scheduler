@@ -139,6 +139,13 @@ export interface SchedulerConfig {
   isRTL?: boolean
   /** 0 = Sunday first, 1 = Monday first. Default 1. Passed to getWeekDates. */
   firstDay?: 0 | 1
+  /**
+   * When true, resize handles can push endH past midnight (endH > 24).
+   * The block renders clamped to the day boundary; the overflow renders
+   * as a continuation block on the next day automatically.
+   * Use for healthcare rotas, overnight shifts, 24h TV schedules.
+   */
+  allowOvernight?: boolean
 }
 
 export interface SchedulerSettingsContext {
@@ -189,4 +196,20 @@ export interface SchedulerSlots {
   timeSlotLabel?: (props: TimeSlotLabelSlotProps) => ReactNode
   emptyCell?: (props: EmptyCellSlotProps) => ReactNode
   emptyState?: (props: EmptyStateSlotProps) => ReactNode
+  /** Custom tooltip rendered on block hover. Receives the hovered block and its category resource.
+   *  When provided, replaces the default tooltip entirely — position/portal handling is unchanged. */
+  tooltip?: (block: Block, resource: Resource) => ReactNode
 }
+/** A vertical marker line rendered over the grid at a specific date+hour. */
+export interface SchedulerMarker {
+  id: string
+  /** ISO date string YYYY-MM-DD */
+  date: string
+  /** Decimal hour (e.g. 9.5 = 09:30). If absent, renders at the day boundary (left edge of the day column). */
+  hour?: number
+  label?: string
+  /** CSS color. Defaults to var(--destructive). */
+  color?: string
+  draggable?: boolean
+}
+

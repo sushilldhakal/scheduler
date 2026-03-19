@@ -122,13 +122,7 @@ export function Scheduler({
   const slots = slotsProp ?? {}
   const categories = categoriesProp ?? parentCtx?.categories ?? []
   const employees = employeesProp ?? parentCtx?.employees ?? []
-  if (categories.length === 0 || employees.length === 0) {
-    return (
-      <div className="flex items-center justify-center p-8 text-muted-foreground">
-        Provide categories and employees to the Scheduler or SchedulerProvider.
-      </div>
-    )
-  }
+  const isEmpty = categories.length === 0 || employees.length === 0
 
   const [view, setView] = useState<string>(initialView)
   /** P12-03: visible view after transition (lagged by 150ms on change). */
@@ -817,6 +811,13 @@ export function Scheduler({
 
   if (parentCtx) {
     return content
+  }
+  if (isEmpty) {
+    return (
+      <div className="flex items-center justify-center p-8 text-muted-foreground">
+        Provide categories and employees to the Scheduler or SchedulerProvider.
+      </div>
+    )
   }
   return (
     <SchedulerProvider

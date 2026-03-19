@@ -87,26 +87,29 @@ export class DragEngine {
   /** Uses categoryTops — supports both flat row keys (cat:ID, emp:ID) and legacy cat.id keys */
   private getCategoryAtY(y: number): Resource {
     const { categories, categoryTops, categoryHeights } = this.opts
-    // Phase 4: flat row keys — check emp rows first (more precise), then cat headers
+    // Sort once per call — entries are ~200 rows max, sort is O(n log n) not O(n²).
+    // The O(n²) was in the nested entries.indexOf(entries.find(...)) inside the loop.
+    // Now we do a single linear scan with no nested searches.
     const entries = Object.entries(categoryTops).sort((a, b) => a[1] - b[1])
-    for (const [key, top] of entries) {
+    for (let i = 0; i < entries.length; i++) {
+      const [key, top] = entries[i]!
       const h = categoryHeights[key] ?? 0
       if (y >= top && y < top + h) {
         if (key.startsWith("emp:")) {
-          const empId = key.slice(4)
-          // Find the category this employee belongs to
-          // Walk sorted entries backwards to find the preceding cat: key
-          const catEntry = entries.slice(0, entries.indexOf(entries.find(e => e[0] === key)!))
-            .reverse().find(e => e[0].startsWith("cat:"))
-          if (catEntry) {
-            const catId = catEntry[0].slice(4)
-            return categories.find(c => c.id === catId) ?? categories[categories.length - 1]!
+          // Walk backwards from current index to find nearest preceding cat: entry — O(n) worst case but no nested calls
+          for (let j = i - 1; j >= 0; j--) {
+            const k = entries[j]![0]
+            if (k.startsWith("cat:")) {
+              const catId = k.slice(4)
+              return categories.find(c => c.id === catId) ?? categories[categories.length - 1]!
+            }
           }
+          // No preceding cat: entry — fall through to last category
         } else if (key.startsWith("cat:")) {
           const catId = key.slice(4)
           return categories.find(c => c.id === catId) ?? categories[categories.length - 1]!
         } else {
-          // Legacy plain id key
+          // Legacy plain id key (e.g. TimelineView emp.id without prefix)
           return categories.find(c => c.id === key) ?? categories[categories.length - 1]!
         }
       }

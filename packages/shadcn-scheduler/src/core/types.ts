@@ -129,7 +129,7 @@ export interface SchedulerConfig {
   views?: Partial<Record<ViewKey, boolean>>
   /** When true, show a "live" indicator when current time is within a block's range. Used by e.g. TV preset. */
   showLiveIndicator?: boolean
-  /** Snap grid in fractional hours (e.g. 0.5 = 30 min). If absent, uses engine default. */
+  /** Snap increment in **minutes** (e.g. 30 = 30-minute snapping, 15 = 15-minute snapping). If absent, defaults to 30. */
   snapMinutes?: number
   /** IANA timezone (e.g. America/New_York). When set, time display uses Intl with this timezone. */
   timezone?: string

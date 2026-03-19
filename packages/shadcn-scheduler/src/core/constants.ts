@@ -139,8 +139,10 @@ export const getFirst = (y: number, m: number): number => {
 }
 
 export function fmt12(h: number): string {
-  const w = Math.floor(h),
-    m = Math.round((h - w) * 60)
+  // Wrap overnight hours (e.g. 25 → 1am next day, 31 → 7am next day)
+  const normalized = h >= 24 ? h % 24 : h
+  const w = Math.floor(normalized),
+    m = Math.round((normalized - w) * 60)
   if ((w === 0 || w === 24) && !m) return "12am"
   if (w === 12 && !m) return "12pm"
   const ms = m ? `:${String(m).padStart(2, "0")}` : ""

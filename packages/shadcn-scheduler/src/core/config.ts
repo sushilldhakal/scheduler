@@ -73,7 +73,7 @@ const PRESETS: Record<SchedulerPresetName, Partial<SchedulerConfig>> = {
     initialScrollToNow: true,
     showLiveIndicator: true,
     views: { year: false, list: false },
-    snapMinutes: 0.25,
+    snapMinutes: 15,
   },
   conference: {
     labels: {
