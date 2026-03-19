@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2026-03-19
+
+### Added
+
+- **Row mode setting**: `rowMode: "category" | "individual"` in `Settings`. Category mode (default) stacks all shifts per department row — scales to 200+ staff. Individual mode shows one row per employee under a collapsible category header. Toggle in the Settings gear panel.
+- **Right-click context menu** on shift blocks: Edit, Copy, Cut (removes from grid immediately, paste with Ctrl+V), Delete. Powered by `@radix-ui/react-context-menu`.
+- **Hover popover** on shift blocks: shows employee name, category, time range, duration, break info, conflict warning. Fixed-position portal — escapes all clipping contexts.
+- **2D free drag**: dragged block now physically follows the cursor across the entire grid (any row, any time, any day). Real block element moves via DOM mutation — no separate ghost copy.
+- **Vertical edge-scroll**: dragging near the top or bottom of the grid now scrolls vertically. Combined with horizontal edge-scroll (week/multiday). Both axes use RAF loop with proximity-scaled acceleration.
+- **4px desktop drag threshold**: mouse must move ≥4px before drag mode commits, preventing accidental block moves on click. Touch devices retain the 500ms long-press gate.
+- **Cross-day drag in single-day view**: dragging a block past the right edge moves it to the next day; past the left edge moves it to the previous day.
+- **Break support**: `breakStartH` and `breakEndH` added to `Block` type. Add/edit break in shift modals with duration slider (15m–2h) or exact start/end times. Break gap visualised as a dark notch on the block.
+- **Smart popover positioning**: hover popover flips from above to below when the block is within 140px of the viewport top.
+- **Sidebar improvements**: resizable drag handle, sortable column headers (Name/Hours/Shifts), `Manager · 8.0h · 4 shifts` format, capacity bar per category.
+- `RowMode` type exported from index.ts.
+
+### Changed
+
+- **Drag performance**: `grabOffsetX`, `grabOffsetY`, `gridRect` captured once at pointerdown — eliminates 3× `getBoundingClientRect` reflows per pointermove frame (was 180/sec at 60fps).
+- **Edge scroll**: replaced synchronous `scrollLeft ±= 12` with RAF loop; speed scales 0.1×–1.0× by proximity to edge.
+- **Block content**: name on line 1, time range on line 2 (stacked). `ew-resize` cursor on handles.
+- **Resize handles**: always visible, `var(--primary)` background, `var(--primary-foreground)` dots.
+- **ShiftModal**: date picker popover replaces inline Calendar; category field moved above time; cleaner header with name, category, status badge.
+
+### Fixed
+
+- Collapsed category drop guard: dropping on a collapsed category now cancels cleanly instead of committing the block to an invisible row.
+- `contain: "layout style paint"` removed from block elements — `paint` keyword was silently clipping the hover popover.
+- List view day mode showing "No Shifts": `end` date was set to midnight; now set to 23:59:59 so same-day shifts (parsed as T12:00) are included.
+- 33 broken CSS variables: `var(--border))`, `var(--muted))` etc. (extra closing paren) fixed across GridView, StaffPanel, RoleWarningModal, BottomSheet, MonthView, YearView.
+- Literal `\n` text node rendering in sidebar category header.
+- Cut shift now correctly copies to buffer and removes from grid (previously opened delete confirm instead of removing immediately).
+
 ## [0.3.2] - 2026-03-17
 
 ### Added

@@ -59,7 +59,7 @@ function YearViewInner({ date, shifts, onMonthClick }: YearViewProps): React.Rea
               style={{
                 background: "var(--background)",
                 borderRadius: 12,
-                border: "1px solid var(--border))",
+                border: "1px solid var(--border)",
                 padding: "12px",
                 cursor: "pointer",
                 transition: "box-shadow 0.15s,transform 0.15s",

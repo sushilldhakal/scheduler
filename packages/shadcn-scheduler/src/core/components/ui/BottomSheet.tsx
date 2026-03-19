@@ -69,7 +69,7 @@ export function BottomSheet({
             style={{
               flexShrink: 0,
               padding: "12px 16px",
-              borderBottom: "1px solid var(--border))",
+              borderBottom: "1px solid var(--border)",
             }}
           >
             {title}

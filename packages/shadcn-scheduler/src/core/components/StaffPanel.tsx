@@ -65,7 +65,7 @@ export function StaffPanel({
               width: 280,
               zIndex: 8888,
               background: "var(--background)",
-              borderLeft: `1px solid var(--border))`,
+              borderLeft: `1px solid var(--border)`,
               boxShadow: "-8px 0 24px var(--sch-fg-08)",
               overflowY: "auto",
               padding: "12px 0",

@@ -115,7 +115,7 @@ export function RoleWarningModal({
             onClick={onCancel}
             style={{
               padding: "9px 14px",
-              background: "var(--border))",
+              background: "var(--border)",
               color: "var(--foreground)",
               border: "none",
               borderRadius: 9,

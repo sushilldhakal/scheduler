@@ -178,11 +178,11 @@ function MonthViewInner({
       onPointerUp={onPU}
       onPointerCancel={onPC}
     >
-      <div style={{ width: 180, flexShrink: 0, borderRight: "1px solid var(--border))", overflowY: "auto", background: "var(--muted))" }}>
+      <div style={{ width: 180, flexShrink: 0, borderRight: "1px solid var(--border)", overflowY: "auto", background: "var(--muted)" }}>
         {categories.map((cat) => {
           const c = getColor(cat.colorIdx)
           return (
-            <div key={cat.id} style={{ padding: "12px 16px", borderBottom: "1px solid var(--border))" }}>
+            <div key={cat.id} style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
                 <span style={{ fontSize: 13, fontWeight: 600, color: "var(--foreground)" }}>{cat.name}</span>
@@ -218,7 +218,7 @@ function MonthViewInner({
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(7,1fr)",
-            borderBottom: "2px solid var(--border))",
+            borderBottom: "2px solid var(--border)",
             flexShrink: 0,
           }}
         >
@@ -255,9 +255,9 @@ function MonthViewInner({
               <div
                 key={`e${i}`}
                 style={{
-                  background: "var(--muted))",
-                  borderRight: "1px solid var(--border))",
-                  borderBottom: "1px solid var(--border))",
+                  background: "var(--muted)",
+                  borderRight: "1px solid var(--border)",
+                  borderBottom: "1px solid var(--border)",
                 }}
               />
             )
@@ -274,10 +274,10 @@ function MonthViewInner({
               data-cell-date={ck}
               className={dayShifts.length === 0 && !today ? "bg-muted/30 hover:bg-muted/50" : undefined}
               style={{
-                borderRight: "1px solid var(--border))",
-                borderBottom: "1px solid var(--border))",
+                borderRight: "1px solid var(--border)",
+                borderBottom: "1px solid var(--border)",
                 padding: "5px 4px",
-                background: isOver ? "var(--accent)" : today ? "var(--accent)" : closed ? "var(--muted))" : dayShifts.length === 0 ? "var(--muted) / 0.3)" : "var(--background)",
+                background: isOver ? "var(--accent)" : today ? "var(--accent)" : closed ? "var(--muted)" : dayShifts.length === 0 ? "var(--muted) / 0.3)" : "var(--background)",
                 display: "flex",
                 flexDirection: "column",
                 gap: 2,
@@ -468,7 +468,7 @@ function MonthViewInner({
               marginLeft: 8,
               background: "var(--popover)",
               color: "var(--popover-foreground)",
-              border: "1px solid var(--border))",
+              border: "1px solid var(--border)",
               borderRadius: 8,
               padding: "8px 12px",
               boxShadow: "0 8px 24px rgba(0,0,0,0.12)",

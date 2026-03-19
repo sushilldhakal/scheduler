@@ -825,7 +825,7 @@ function GridViewInner({
   const ds = useRef<DragState | null>(null)
   const ghostRef = useRef<HTMLDivElement | null>(null)
   /** Edge-scroll RAF: direction (-1 left, 0 none, 1 right) + speed multiplier */
-  const edgeScrollRef = useRef<{ dir: number; speed: number } | null>(null)
+  const edgeScrollRef = useRef<{ dirX: number; speedX: number; dirY: number; speedY: number } | null>(null)
   const edgeRafRef = useRef<number | null>(null)
   const layoutRef = useRef({
     categoryTops: {} as Record<string, number>,
@@ -1119,10 +1119,27 @@ function GridViewInner({
       }
 
       if (!isTouch) {
-        // Desktop: start drag immediately on pointer down
+        // Desktop: require ≥4px movement before committing to drag mode
+        // This prevents accidental drags when the user just clicks a block
         e.stopPropagation()
         e.currentTarget.setPointerCapture(e.pointerId)
-        startDrag(e)
+        const downX = e.clientX
+        const downY = e.clientY
+        const DESKTOP_DRAG_THRESHOLD = 4
+
+        const onMove = (mv: PointerEvent): void => {
+          if (Math.hypot(mv.clientX - downX, mv.clientY - downY) >= DESKTOP_DRAG_THRESHOLD) {
+            document.removeEventListener("pointermove", onMove, { capture: true })
+            document.removeEventListener("pointerup", onUp, { capture: true })
+            startDrag(e)
+          }
+        }
+        const onUp = (): void => {
+          document.removeEventListener("pointermove", onMove, { capture: true })
+          document.removeEventListener("pointerup", onUp, { capture: true })
+        }
+        document.addEventListener("pointermove", onMove, { capture: true })
+        document.addEventListener("pointerup", onUp, { capture: true })
         return
       }
 
@@ -1305,8 +1322,8 @@ function GridViewInner({
     edgeScrollRef.current = null
   }, [])
 
-  const startEdgeScroll = useCallback((dir: number, speed: number) => {
-    edgeScrollRef.current = { dir, speed }
+  const startEdgeScroll = useCallback((dirX: number, speedX: number, dirY: number, speedY: number) => {
+    edgeScrollRef.current = { dirX, speedX, dirY, speedY }
     if (edgeRafRef.current !== null) return  // already running
     const tick = () => {
       const state = edgeScrollRef.current
@@ -1314,9 +1331,13 @@ function GridViewInner({
         stopEdgeScroll()
         return
       }
-      const delta = state.dir * state.speed * EDGE_SCROLL_MAX
-      scrollRef.current.scrollLeft += delta
-      if (headerRef.current) headerRef.current.scrollLeft = scrollRef.current.scrollLeft
+      if (state.dirX !== 0) {
+        scrollRef.current.scrollLeft += state.dirX * state.speedX * EDGE_SCROLL_MAX
+        if (headerRef.current) headerRef.current.scrollLeft = scrollRef.current.scrollLeft
+      }
+      if (state.dirY !== 0) {
+        scrollRef.current.scrollTop += state.dirY * state.speedY * EDGE_SCROLL_MAX
+      }
       edgeRafRef.current = requestAnimationFrame(tick)
     }
     edgeRafRef.current = requestAnimationFrame(tick)
@@ -1355,19 +1376,31 @@ function GridViewInner({
       const newCat = getCategoryAtY(y)
       const di = getDateIdx(x)
 
-      // Auto-scroll when dragging near edges so user can reach off-screen days
-      if (d.type === "move" && scrollRef.current && (isWeekView || isDayViewMultiDay)) {
+      // Auto-scroll when dragging near edges — both horizontal (week/multiday) and vertical (all views)
+      if (d.type === "move" && scrollRef.current) {
         const sr = d.gridRect
         if (sr) {
           const px = e.clientX - sr.left
+          const py = e.clientY - sr.top
           const vw = sr.width
-          if (px < EDGE_SCROLL_ZONE && px >= 0) {
-            // Scale speed: 1.0 at edge, 0.1 at EDGE_SCROLL_ZONE boundary
-            const speed = Math.max(0.1, 1 - px / EDGE_SCROLL_ZONE)
-            startEdgeScroll(-1, speed)
-          } else if (px > vw - EDGE_SCROLL_ZONE && px <= vw) {
-            const speed = Math.max(0.1, 1 - (vw - px) / EDGE_SCROLL_ZONE)
-            startEdgeScroll(1, speed)
+          const vh = sr.height
+          let dirX = 0, speedX = 0, dirY = 0, speedY = 0
+          // Horizontal — only in week/multiday where days scroll sideways
+          if (isWeekView || isDayViewMultiDay) {
+            if (px < EDGE_SCROLL_ZONE && px >= 0) {
+              dirX = -1; speedX = Math.max(0.1, 1 - px / EDGE_SCROLL_ZONE)
+            } else if (px > vw - EDGE_SCROLL_ZONE && px <= vw) {
+              dirX = 1; speedX = Math.max(0.1, 1 - (vw - px) / EDGE_SCROLL_ZONE)
+            }
+          }
+          // Vertical — all views (reach rows that are off-screen above/below)
+          if (py < EDGE_SCROLL_ZONE && py >= 0) {
+            dirY = -1; speedY = Math.max(0.1, 1 - py / EDGE_SCROLL_ZONE)
+          } else if (py > vh - EDGE_SCROLL_ZONE && py <= vh) {
+            dirY = 1; speedY = Math.max(0.1, 1 - (vh - py) / EDGE_SCROLL_ZONE)
+          }
+          if (dirX !== 0 || dirY !== 0) {
+            startEdgeScroll(dirX, speedX, dirY, speedY)
           } else {
             stopEdgeScroll()
           }
@@ -1543,7 +1576,19 @@ function GridViewInner({
         const newDateIdx = origShift
           ? clamp(dates.findIndex((dt) => sameDay(dt, origShift.date)) + dayDelta, 0, dates.length - 1)
           : 0
-        const newDate = isWeekView || isDayViewMultiDay ? toDateISO(dates[newDateIdx]) : origShift?.date ?? ""
+        const newDate = isWeekView || isDayViewMultiDay
+          ? toDateISO(dates[newDateIdx])
+          : (() => {
+              // Single-day view: dragging past the right edge → next day, past left edge → prev day
+              if (!origShift) return ""
+              const origD = new Date(origShift.date + "T12:00:00")
+              if (x > DAY_WIDTH) {
+                origD.setDate(origD.getDate() + 1)
+              } else if (x < 0) {
+                origD.setDate(origD.getDate() - 1)
+              }
+              return toDateISO(origD)
+            })()
         if (origShift && wouldConflictAt(shifts, d.id, { date: newDate, categoryId: newCat.id, startH: ns, endH: ns + d.dur })) {
           setDropConflictId(d.id)
           setTimeout(() => setDropConflictId(null), 800)
@@ -1780,8 +1825,8 @@ function GridViewInner({
             alignItems: "center",
             justifyContent: "space-between",
             padding: "8px 12px",
-            borderBottom: "1px solid var(--border))",
-            background: "var(--muted))",
+            borderBottom: "1px solid var(--border)",
+            background: "var(--muted)",
           }}
         >
           <button
@@ -1825,15 +1870,15 @@ function GridViewInner({
         style={{
           display: "flex",
           flexShrink: 0,
-          borderBottom: "2px solid var(--border))",
-          background: "var(--muted))",
+          borderBottom: "2px solid var(--border)",
+          background: "var(--muted)",
         }}
       >
         <div
           style={{
             width: sidebarWidth,
             flexShrink: 0,
-            borderRight: "1px solid var(--border))",
+            borderRight: "1px solid var(--border)",
             display: "flex",
             flexDirection: "column",
             justifyContent: "flex-end",
@@ -2010,7 +2055,7 @@ function GridViewInner({
                     display: "flex",
                     flexDirection: "column",
                     width: TOTAL_W,
-                    background: "var(--muted))",
+                    background: "var(--muted)",
                     flexShrink: 0,
                   }}
                 >
@@ -2079,7 +2124,7 @@ function GridViewInner({
                                 padding: "0 0 4px 6px",
                                 fontSize: dayTimeStep < 1 ? 9 : 10,
                                 fontWeight: 600,
-                                borderRight: "1px solid var(--border))",
+                                borderRight: "1px solid var(--border)",
                                 background: dashed ? DASHED_BG : hourBg(h, settings, d.getDay()),
                                 color: (dayTimeStep < 1 ? Math.abs(h - nowH) < 0.3 : h === Math.floor(nowH)) && isToday(d) ? "var(--primary)" : "var(--muted-foreground)",
                               }}
@@ -2099,7 +2144,7 @@ function GridViewInner({
                     display: "flex",
                     width: DAY_WIDTH,
                     height: HOUR_HDR_H,
-                    background: "var(--muted))",
+                    background: "var(--muted)",
                   }}
                 >
                   {DAY_VISIBLE_SLOTS.map((h) => {
@@ -2117,7 +2162,7 @@ function GridViewInner({
                           padding: "0 0 6px 8px",
                           fontSize: dayTimeStep < 1 ? 9 : 11,
                           fontWeight: 600,
-                          borderRight: "1px solid var(--border))",
+                          borderRight: "1px solid var(--border)",
                           background: dashed ? DASHED_BG : hourBg(h, settings, dates[0].getDay()),
                           color: (dayTimeStep < 1 ? Math.abs(h - nowH) < 0.3 : h === Math.floor(nowH)) ? "var(--primary)" : "var(--muted-foreground)",
                         }}
@@ -2142,9 +2187,9 @@ function GridViewInner({
           style={{
             width: sidebarWidth,
             flexShrink: 0,
-            borderRight: "1px solid var(--border))",
+            borderRight: "1px solid var(--border)",
             overflowY: "hidden",
-            background: "var(--muted))",
+            background: "var(--muted)",
             position: "relative",
           }}
         >
@@ -2278,8 +2323,8 @@ function GridViewInner({
                         left: 0,
                         right: 0,
                         height: vr.size,
-                        borderBottom: "1px solid var(--border))",
-                        background: hoveredCategoryId === cat.id ? `${c.bg}0a` : "var(--muted))",
+                        borderBottom: "1px solid var(--border)",
+                        background: hoveredCategoryId === cat.id ? `${c.bg}0a` : "var(--muted)",
                         display: "flex",
                         alignItems: "flex-start",
                         paddingLeft: 18,
@@ -2502,9 +2547,9 @@ function GridViewInner({
                         top,
                         width: COL_W_WEEK,
                         height: rowH,
-                        background: today ? "var(--accent)" : closed ? "var(--muted))" : "var(--background)",
-                        borderRight: "1px solid var(--border))",
-                        borderBottom: "1px solid var(--border))",
+                        background: today ? "var(--accent)" : closed ? "var(--muted)" : "var(--background)",
+                        borderRight: "1px solid var(--border)",
+                        borderBottom: "1px solid var(--border)",
                       }}
                       onPointerEnter={() => {
                         if (!dragEmpId) return
@@ -3469,7 +3514,7 @@ function GridViewInner({
               padding: 20,
               maxWidth: 340,
               boxShadow: "0 24px 64px rgba(0,0,0,0.22)",
-              border: "1px solid var(--border))",
+              border: "1px solid var(--border)",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -3485,7 +3530,7 @@ function GridViewInner({
                 onClick={() => setShiftToDeleteConfirm(null)}
                 style={{
                   padding: "8px 16px",
-                  background: "var(--muted))",
+                  background: "var(--muted)",
                   color: "var(--foreground)",
                   border: "none",
                   borderRadius: 8,
