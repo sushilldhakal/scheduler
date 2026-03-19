@@ -43,14 +43,14 @@ If you're using **shadcn UI**, you likely already have most of these. Ensure you
 
 ```bash
 npm install react react-dom lucide-react tailwindcss
-npm install @radix-ui/react-popover @radix-ui/react-tabs @radix-ui/react-toggle-group @radix-ui/react-checkbox @radix-ui/react-slot
-npm install react-day-picker class-variance-authority clsx tailwind-merge
+npm install @radix-ui/react-popover @radix-ui/react-tabs @radix-ui/react-toggle-group @radix-ui/react-checkbox @radix-ui/react-slot @radix-ui/react-context-menu
+npm install react-day-picker react-resizable-panels class-variance-authority clsx tailwind-merge
 ```
 
 Or with a single command:
 
 ```bash
-npm install @sushill/shadcn-scheduler react react-dom lucide-react tailwindcss @radix-ui/react-popover @radix-ui/react-tabs @radix-ui/react-toggle-group @radix-ui/react-checkbox @radix-ui/react-slot react-day-picker class-variance-authority clsx tailwind-merge
+npm install @sushill/shadcn-scheduler react react-dom lucide-react tailwindcss @radix-ui/react-popover @radix-ui/react-tabs @radix-ui/react-toggle-group @radix-ui/react-checkbox @radix-ui/react-slot @radix-ui/react-context-menu react-day-picker react-resizable-panels class-variance-authority clsx tailwind-merge
 ```
 
 ### 3. Configure Tailwind (v3 and v4)
@@ -462,6 +462,19 @@ interface SchedulerLabels {
 - **Visible hours** restrict the time range shown for each day.
 
 ## What's New
+
+### 0.4.0
+
+- **Row mode**: Category mode (default) vs individual mode — one row per employee under collapsible category headers. Toggle in Settings.
+- **Right-click context menu**: Edit, Copy, Cut, Delete on shift blocks. Cut copies to buffer; Ctrl+V pastes.
+- **Hover popover**: Employee name, category, time range, duration, break info, conflict warning on block hover.
+- **2D free drag**: Block follows cursor across the grid. Vertical edge-scroll when dragging near top/bottom. 4px desktop drag threshold.
+- **Break support**: `breakStartH` and `breakEndH` on blocks; add/edit in shift modals with duration slider or exact times. Break gap shown as dark notch.
+- **Sidebar**: Resizable handle, sortable Name/Hours/Shifts columns, capacity bar per category.
+- **Webhook callbacks**: `onBlockCreate`, `onBlockDelete`, `onBlockMove`, `onBlockResize`, `onBlockPublish`, `onAuditEvent` for full Block payload.
+- **Performance**: Drag optimizations — grab offset and grid rect captured once; RAF-based edge scroll.
+
+See [CHANGELOG.md](./CHANGELOG.md) for full details.
 
 ### 0.3.2
 

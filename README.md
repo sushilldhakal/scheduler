@@ -49,14 +49,14 @@ If you're using **shadcn UI**, you likely already have most of these. Ensure you
 
 ```bash
 npm install react react-dom lucide-react tailwindcss
-npm install @radix-ui/react-popover @radix-ui/react-tabs @radix-ui/react-toggle-group @radix-ui/react-checkbox @radix-ui/react-slot
-npm install react-day-picker class-variance-authority clsx tailwind-merge
+npm install @radix-ui/react-popover @radix-ui/react-tabs @radix-ui/react-toggle-group @radix-ui/react-checkbox @radix-ui/react-slot @radix-ui/react-context-menu
+npm install react-day-picker react-resizable-panels class-variance-authority clsx tailwind-merge
 ```
 
 Or with a single command:
 
 ```bash
-npm install @sushill/shadcn-scheduler react react-dom lucide-react tailwindcss @radix-ui/react-popover @radix-ui/react-tabs @radix-ui/react-toggle-group @radix-ui/react-checkbox @radix-ui/react-slot react-day-picker class-variance-authority clsx tailwind-merge
+npm install @sushill/shadcn-scheduler react react-dom lucide-react tailwindcss @radix-ui/react-popover @radix-ui/react-tabs @radix-ui/react-toggle-group @radix-ui/react-checkbox @radix-ui/react-slot @radix-ui/react-context-menu react-day-picker react-resizable-panels class-variance-authority clsx tailwind-merge
 ```
 
 ### 3. Configure Tailwind
@@ -333,14 +333,15 @@ interface SchedulerLabels {
 - **Time labels** (7am, 9am, 11am…) appear below each date with 2-hour intervals.
 - **Visible hours** restrict the time range shown for each day.
 
-## What's New in 0.2.0
+## What's New in 0.4.0
 
-- **Day view**: 31-day horizontal timeline with infinite scroll, hour labels per day, and date sync with the navigator
-- **Week view**: Time labels under each date (7am, 9am, 11am…) and wider columns
-- **Badge variant**: New options—Drag & drop, Resizable, or Both—instead of Dot/Background/Both
-- **Visible hours**: Day view now only shows the selected time range (e.g., 10am–5pm)
-- **Add (+) button**: Fixed at the bottom of each cell, always visible
-- **Settings**: Gear icon moved from footer to header next to actions
+- **Row mode**: Category vs individual — one row per employee under collapsible category headers
+- **Right-click context menu**: Edit, Copy, Cut, Delete on shift blocks (Cut + Ctrl+V to paste)
+- **Hover popover**: Employee, time range, duration, break info, conflict warning on block hover
+- **2D free drag**: Block follows cursor; vertical edge-scroll; 4px drag threshold
+- **Break support**: `breakStartH` / `breakEndH` on blocks with modal editing
+- **Sidebar**: Resizable handle, sortable columns, capacity bar per category
+- **Webhook callbacks**: `onBlockCreate`, `onBlockDelete`, `onBlockMove`, `onBlockResize`, `onBlockPublish`, `onAuditEvent`
 
 See [CHANGELOG.md](./CHANGELOG.md) for full details.
 

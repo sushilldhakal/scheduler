@@ -5,6 +5,27 @@ All notable changes to shadcn-scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-03-19
+
+### Added
+
+- **Row mode**: Category vs individual — one row per employee under collapsible category headers. Toggle in Settings.
+- **Right-click context menu**: Edit, Copy, Cut, Delete on shift blocks. Cut copies to buffer; Ctrl+V pastes.
+- **Hover popover**: Employee name, category, time range, duration, break info, conflict warning on block hover.
+- **2D free drag**: Block follows cursor across the grid. Vertical edge-scroll. 4px desktop drag threshold.
+- **Break support**: `breakStartH` and `breakEndH` on blocks; add/edit in shift modals.
+- **Sidebar**: Resizable handle, sortable columns, capacity bar per category.
+- **Webhook callbacks**: `onBlockCreate`, `onBlockDelete`, `onBlockMove`, `onBlockResize`, `onBlockPublish`, `onAuditEvent`.
+
+### Changed
+
+- Drag performance: grab offset and grid rect captured once; RAF-based edge scroll.
+- New peer dependencies: `@radix-ui/react-context-menu`, `react-resizable-panels`.
+
+See [packages/shadcn-scheduler/CHANGELOG.md](./packages/shadcn-scheduler/CHANGELOG.md) for full details.
+
+---
+
 ## [0.3.3] - 2025-03-19
 
 ### Changed
