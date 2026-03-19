@@ -3,7 +3,7 @@
   "name": "scheduler-healthcare",
   "type": "registry:block",
   "title": "Scheduler \u2014 Healthcare Rota",
-  "description": "Ward and staff rota management with 24hr coverage and overnight shift support (endH > 24).",
+  "description": "Ward and staff rota with 24hr coverage and overnight shift support.",
   "registryDependencies": [],
   "dependencies": [
     "@tanstack/react-virtual",
@@ -165,6 +165,11 @@
       "type": "registry:ui"
     },
     {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
+      "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
+      "type": "registry:component"
+    },
+    {
       "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/ListView.tsx",
       "target": "components/scheduler/core/components/views/ListView.tsx",
       "type": "registry:component"
@@ -177,6 +182,11 @@
     {
       "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/YearView.tsx",
       "target": "components/scheduler/core/components/views/YearView.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/TimelineView.tsx",
+      "target": "components/scheduler/core/components/views/TimelineView.tsx",
       "type": "registry:component"
     },
     {
@@ -217,11 +227,6 @@
     {
       "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/RosterActions.tsx",
       "target": "components/scheduler/core/components/RosterActions.tsx",
-      "type": "registry:component"
-    },
-    {
-      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
-      "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
       "type": "registry:component"
     },
     {

@@ -3,7 +3,7 @@
   "name": "scheduler-festival",
   "type": "registry:block",
   "title": "Scheduler \u2014 Music Festival Lineup",
-  "description": "Stage-by-stage festival scheduling. Stages as rows, sets as blocks on a timeline. Perfect for multi-day lineups.",
+  "description": "Stage-by-stage festival scheduling on a horizontal timeline.",
   "registryDependencies": [],
   "dependencies": [
     "@tanstack/react-virtual",
@@ -162,6 +162,11 @@
       "type": "registry:ui"
     },
     {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
+      "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
+      "type": "registry:component"
+    },
+    {
       "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/ListView.tsx",
       "target": "components/scheduler/core/components/views/ListView.tsx",
       "type": "registry:component"
@@ -180,6 +185,21 @@
       "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/TimelineView.tsx",
       "target": "components/scheduler/core/components/views/TimelineView.tsx",
       "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/layout/dragEngine.ts",
+      "target": "components/scheduler/core/layout/dragEngine.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/layout/geometry.ts",
+      "target": "components/scheduler/core/layout/geometry.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/hooks/useDragEngine.ts",
+      "target": "components/scheduler/core/hooks/useDragEngine.ts",
+      "type": "registry:lib"
     },
     {
       "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/festival/index.tsx",

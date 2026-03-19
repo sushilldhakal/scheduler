@@ -47,14 +47,14 @@ npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-tv.json
 Copies ~32 files into `components/scheduler/`. You import from your own folder:
 
 ```tsx
-import { SchedulerTV, createTvConfig } from '@/components/scheduler'
+import { Scheduler, createSchedulerConfig } from '@/components/scheduler'
 
-const config = createTvConfig({ snapMinutes: 15 })
+const config = createSchedulerConfig({ preset: 'tv', snapMinutes: 15 })
 
 export default function EPGPage() {
   return (
     <div className="h-[600px]">
-      <SchedulerTV
+      <Scheduler
         categories={channels}
         employees={channelEmployees}
         shifts={programmes}
@@ -74,9 +74,9 @@ npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-roster.jso
 ```
 
 ```tsx
-import { Scheduler, createRosterConfig } from '@/components/scheduler'
+import { Scheduler, createSchedulerConfig } from '@/components/scheduler'
 
-const config = createRosterConfig({ initialScrollToNow: true, snapMinutes: 30 })
+const config = createSchedulerConfig({ preset: 'roster', initialScrollToNow: true, snapMinutes: 30 })
 ```
 
 **Why this matters:** You can edit `GridView.tsx`, add fields to `types.ts`, change the drag behaviour — anything you want. No fork, no patch file, no fighting a third-party package. And you only copy what you actually use.
@@ -92,9 +92,12 @@ npm install @sushill/shadcn-scheduler
 ```
 
 ```tsx
-import { Scheduler, createRosterConfig } from '@sushill/shadcn-scheduler'
-// or a specific preset:
-import { SchedulerTV, createTvConfig } from '@sushill/shadcn-scheduler'
+import { Scheduler, createSchedulerConfig } from '@sushill/shadcn-scheduler'
+
+// TV preset:
+const tvConfig = createSchedulerConfig({ preset: 'tv' })
+// Roster preset:
+const rosterConfig = createSchedulerConfig({ preset: 'roster', initialScrollToNow: true })
 ```
 
 ---

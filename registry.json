@@ -7,7 +7,7 @@
       "name": "scheduler",
       "type": "registry:block",
       "title": "Scheduler \u2014 full bundle",
-      "description": "All 7 domain presets, grid engine (day/week/month/year/list) and timeline engine. Copies all source files into components/scheduler/ \u2014 you own every line.",
+      "description": "All 7 domain presets, grid and timeline engines. Copies all source files into components/scheduler/.",
       "registryDependencies": [],
       "dependencies": [
         "@tanstack/react-virtual",
@@ -169,6 +169,11 @@
           "type": "registry:ui"
         },
         {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
+          "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/ListView.tsx",
           "target": "components/scheduler/core/components/views/ListView.tsx",
           "type": "registry:component"
@@ -181,6 +186,11 @@
         {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/YearView.tsx",
           "target": "components/scheduler/core/components/views/YearView.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/TimelineView.tsx",
+          "target": "components/scheduler/core/components/views/TimelineView.tsx",
           "type": "registry:component"
         },
         {
@@ -221,11 +231,6 @@
         {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/RosterActions.tsx",
           "target": "components/scheduler/core/components/RosterActions.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
-          "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
           "type": "registry:component"
         },
         {
@@ -274,11 +279,6 @@
           "type": "registry:component"
         },
         {
-          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/TimelineView.tsx",
-          "target": "components/scheduler/core/components/views/TimelineView.tsx",
-          "type": "registry:component"
-        },
-        {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/default/index.tsx",
           "target": "components/scheduler/domains/default/index.tsx",
           "type": "registry:component"
@@ -323,7 +323,7 @@
       "name": "scheduler-roster",
       "type": "registry:block",
       "title": "Scheduler \u2014 Workforce Roster",
-      "description": "Shift scheduling with drag-and-drop, publish workflow, conflict detection, and staff management. Day/week/month/year/list views.",
+      "description": "Shift scheduling with drag-and-drop, publish workflow, conflict detection. Day/week/month/year/list views.",
       "registryDependencies": [],
       "dependencies": [
         "@tanstack/react-virtual",
@@ -485,6 +485,11 @@
           "type": "registry:ui"
         },
         {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
+          "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/ListView.tsx",
           "target": "components/scheduler/core/components/views/ListView.tsx",
           "type": "registry:component"
@@ -497,6 +502,11 @@
         {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/YearView.tsx",
           "target": "components/scheduler/core/components/views/YearView.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/TimelineView.tsx",
+          "target": "components/scheduler/core/components/views/TimelineView.tsx",
           "type": "registry:component"
         },
         {
@@ -537,11 +547,6 @@
         {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/RosterActions.tsx",
           "target": "components/scheduler/core/components/RosterActions.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
-          "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
           "type": "registry:component"
         },
         {
@@ -604,7 +609,7 @@
       "name": "scheduler-tv",
       "type": "registry:block",
       "title": "Scheduler \u2014 TV / EPG Guide",
-      "description": "Electronic programme guide. Channels as rows, programmes as blocks on a horizontal time axis. Timeline view with live indicator.",
+      "description": "TV programme guide. Channels as rows, programmes as blocks on a horizontal timeline.",
       "registryDependencies": [],
       "dependencies": [
         "@tanstack/react-virtual",
@@ -763,6 +768,11 @@
           "type": "registry:ui"
         },
         {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
+          "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/ListView.tsx",
           "target": "components/scheduler/core/components/views/ListView.tsx",
           "type": "registry:component"
@@ -783,6 +793,21 @@
           "type": "registry:component"
         },
         {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/layout/dragEngine.ts",
+          "target": "components/scheduler/core/layout/dragEngine.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/layout/geometry.ts",
+          "target": "components/scheduler/core/layout/geometry.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/hooks/useDragEngine.ts",
+          "target": "components/scheduler/core/hooks/useDragEngine.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/tv/index.tsx",
           "target": "components/scheduler/domains/tv/index.tsx",
           "type": "registry:component"
@@ -797,7 +822,7 @@
       "name": "scheduler-conference",
       "type": "registry:block",
       "title": "Scheduler \u2014 Conference & Events",
-      "description": "Multi-track conference scheduling. Rooms as rows, sessions as blocks. Day/week views with speaker management.",
+      "description": "Multi-track conference scheduling. Rooms as rows, sessions as blocks.",
       "registryDependencies": [],
       "dependencies": [
         "@tanstack/react-virtual",
@@ -959,6 +984,11 @@
           "type": "registry:ui"
         },
         {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
+          "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/ListView.tsx",
           "target": "components/scheduler/core/components/views/ListView.tsx",
           "type": "registry:component"
@@ -971,6 +1001,11 @@
         {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/YearView.tsx",
           "target": "components/scheduler/core/components/views/YearView.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/TimelineView.tsx",
+          "target": "components/scheduler/core/components/views/TimelineView.tsx",
           "type": "registry:component"
         },
         {
@@ -1011,11 +1046,6 @@
         {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/RosterActions.tsx",
           "target": "components/scheduler/core/components/RosterActions.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
-          "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
           "type": "registry:component"
         },
         {
@@ -1078,7 +1108,7 @@
       "name": "scheduler-festival",
       "type": "registry:block",
       "title": "Scheduler \u2014 Music Festival Lineup",
-      "description": "Stage-by-stage festival scheduling. Stages as rows, sets as blocks on a timeline. Perfect for multi-day lineups.",
+      "description": "Stage-by-stage festival scheduling on a horizontal timeline.",
       "registryDependencies": [],
       "dependencies": [
         "@tanstack/react-virtual",
@@ -1237,6 +1267,11 @@
           "type": "registry:ui"
         },
         {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
+          "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/ListView.tsx",
           "target": "components/scheduler/core/components/views/ListView.tsx",
           "type": "registry:component"
@@ -1257,6 +1292,21 @@
           "type": "registry:component"
         },
         {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/layout/dragEngine.ts",
+          "target": "components/scheduler/core/layout/dragEngine.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/layout/geometry.ts",
+          "target": "components/scheduler/core/layout/geometry.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/hooks/useDragEngine.ts",
+          "target": "components/scheduler/core/hooks/useDragEngine.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/festival/index.tsx",
           "target": "components/scheduler/domains/festival/index.tsx",
           "type": "registry:component"
@@ -1271,7 +1321,7 @@
       "name": "scheduler-healthcare",
       "type": "registry:block",
       "title": "Scheduler \u2014 Healthcare Rota",
-      "description": "Ward and staff rota management with 24hr coverage and overnight shift support (endH > 24).",
+      "description": "Ward and staff rota with 24hr coverage and overnight shift support.",
       "registryDependencies": [],
       "dependencies": [
         "@tanstack/react-virtual",
@@ -1433,6 +1483,11 @@
           "type": "registry:ui"
         },
         {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
+          "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/ListView.tsx",
           "target": "components/scheduler/core/components/views/ListView.tsx",
           "type": "registry:component"
@@ -1445,6 +1500,11 @@
         {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/YearView.tsx",
           "target": "components/scheduler/core/components/views/YearView.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/TimelineView.tsx",
+          "target": "components/scheduler/core/components/views/TimelineView.tsx",
           "type": "registry:component"
         },
         {
@@ -1485,11 +1545,6 @@
         {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/RosterActions.tsx",
           "target": "components/scheduler/core/components/RosterActions.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
-          "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
           "type": "registry:component"
         },
         {
@@ -1552,7 +1607,7 @@
       "name": "scheduler-gantt",
       "type": "registry:block",
       "title": "Scheduler \u2014 Project Gantt",
-      "description": "Project and sprint planning. Teams as rows, tasks as day-level blocks. Week view optimised for sprint boards.",
+      "description": "Project and sprint planning. Teams as rows, tasks as day-level blocks.",
       "registryDependencies": [],
       "dependencies": [
         "@tanstack/react-virtual",
@@ -1714,6 +1769,11 @@
           "type": "registry:ui"
         },
         {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
+          "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/ListView.tsx",
           "target": "components/scheduler/core/components/views/ListView.tsx",
           "type": "registry:component"
@@ -1726,6 +1786,11 @@
         {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/YearView.tsx",
           "target": "components/scheduler/core/components/views/YearView.tsx",
+          "type": "registry:component"
+        },
+        {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/TimelineView.tsx",
+          "target": "components/scheduler/core/components/views/TimelineView.tsx",
           "type": "registry:component"
         },
         {
@@ -1766,11 +1831,6 @@
         {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/RosterActions.tsx",
           "target": "components/scheduler/core/components/RosterActions.tsx",
-          "type": "registry:component"
-        },
-        {
-          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
-          "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
           "type": "registry:component"
         },
         {
@@ -1833,7 +1893,7 @@
       "name": "scheduler-venue",
       "type": "registry:block",
       "title": "Scheduler \u2014 Venue Bookings",
-      "description": "Room and space booking. Venues as rows, bookings as blocks on a horizontal timeline. Day view with full availability.",
+      "description": "Room and space booking on a horizontal timeline.",
       "registryDependencies": [],
       "dependencies": [
         "@tanstack/react-virtual",
@@ -1992,6 +2052,11 @@
           "type": "registry:ui"
         },
         {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
+          "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
+          "type": "registry:component"
+        },
+        {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/ListView.tsx",
           "target": "components/scheduler/core/components/views/ListView.tsx",
           "type": "registry:component"
@@ -2010,6 +2075,21 @@
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/TimelineView.tsx",
           "target": "components/scheduler/core/components/views/TimelineView.tsx",
           "type": "registry:component"
+        },
+        {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/layout/dragEngine.ts",
+          "target": "components/scheduler/core/layout/dragEngine.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/layout/geometry.ts",
+          "target": "components/scheduler/core/layout/geometry.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/hooks/useDragEngine.ts",
+          "target": "components/scheduler/core/hooks/useDragEngine.ts",
+          "type": "registry:lib"
         },
         {
           "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/venue/index.tsx",
