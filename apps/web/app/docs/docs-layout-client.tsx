@@ -27,10 +27,18 @@ export const DocsLayoutClient = memo(function DocsLayoutClient({
     () => ({
       collapsible: false,
       defaultOpenLevel: 0,
-      style: { '--fd-sidebar-width': '288px' } as React.CSSProperties,
+      style: { '--fd-sidebar-width': '268px' } as React.CSSProperties,
       className: 'top-14 bg-background border-e-0',
       banner: <SidebarBorder />,
     }),
+    []
+  )
+
+  const layoutStyle = useMemo(
+    () => ({
+      '--fd-sidebar-width': '268px',
+      '--fd-toc-width': '252px',
+    } as React.CSSProperties),
     []
   )
 
@@ -38,7 +46,8 @@ export const DocsLayoutClient = memo(function DocsLayoutClient({
 
   return (
     <div
-      className={cn('w-full', !fullWidth && 'mx-auto max-w-7xl')}
+      className={cn('w-full', !fullWidth && 'mx-auto max-w-7xl', fullWidth && 'docs-full-width')}
+      style={layoutStyle}
       suppressHydrationWarning
     >
       <DocsLayout
