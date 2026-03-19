@@ -195,9 +195,9 @@ export function getWeeksForBuffer(date: Date, bufferWeeks: number): Date[] {
 export function hourBg(h: number, settings: Settings, dow: number): string {
   const wh = settings.workingHours[dow]
   const inV = h >= settings.visibleFrom && h < settings.visibleTo
-  if (!inV) return "var(--muted))"
-  if (wh === null) return "var(--muted))"
-  if (h < wh.from || h >= wh.to) return "var(--muted))"
+  if (!inV) return "var(--muted)"
+  if (wh === null) return "var(--muted)"
+  if (h < wh.from || h >= wh.to) return "var(--muted)"
   return "var(--background)"
 }
 

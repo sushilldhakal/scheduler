@@ -149,6 +149,7 @@ interface AddPromptState {
   date: Date
   categoryId: string
   hour: number
+  employeeId?: string
 }
 
 function GridViewInner({
@@ -209,7 +210,6 @@ function GridViewInner({
   const sidebarRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
-  const cursorGhostRef = useRef<HTMLDivElement | null>(null)
   const initRef = useRef<boolean>(false)
   const lastReportedDayIdxRef = useRef<number>(-1)
   const scrollTriggeredUpdateRef = useRef(false)
@@ -824,6 +824,8 @@ function GridViewInner({
 
   const ds = useRef<DragState | null>(null)
   const ghostRef = useRef<HTMLDivElement | null>(null)
+  /** Floating label that appears near the resize handle showing live time */
+  const resizeLabelRef = useRef<HTMLDivElement | null>(null)
   /** Edge-scroll RAF: direction (-1 left, 0 none, 1 right) + speed multiplier */
   const edgeScrollRef = useRef<{ dirX: number; speedX: number; dirY: number; speedY: number } | null>(null)
   const edgeRafRef = useRef<number | null>(null)
@@ -947,7 +949,7 @@ function GridViewInner({
     setDragEmpId(null)
     setDropHover(null)
     if (ghostRef.current) ghostRef.current.style.display = "none"
-  }, [])
+          if (resizeLabelRef.current) resizeLabelRef.current.style.display = "none"  }, [])
 
   const commitStaffDropAtClientXY = useCallback(
     (clientX: number, clientY: number) => {
@@ -1507,6 +1509,21 @@ function GridViewInner({
         label.style.fontWeight = "700"
       }
 
+      // ── Floating resize label near cursor — shows live time next to handle ──
+      const resizeLabelEl = resizeLabelRef.current
+      if (resizeLabelEl && (d.type === "resize-right" || d.type === "resize-left")) {
+        const sr = d.gridRect
+        if (sr) {
+          // Position near cursor, offset slightly so it doesn't cover the handle
+          const labelX = (scrollRef.current?.scrollLeft ?? 0) + (e.clientX - sr.left) + (d.type === "resize-right" ? 12 : -72)
+          const labelY = (scrollRef.current?.scrollTop ?? 0) + (e.clientY - sr.top) - 24
+          resizeLabelEl.style.display = "flex"
+          resizeLabelEl.style.transform = `translate(${labelX}px, ${labelY}px)`
+          resizeLabelEl.textContent = d.type === "resize-right" ? `→ ${fmt12(ne)}` : `${fmt12(ns)} ←`
+          resizeLabelEl.style.background = c.bg
+        }
+      }
+
       // ── Real block follows cursor — lifted card feel ─────────────────────────
       if (d.type === "move") {
         const sr = d.gridRect
@@ -1536,7 +1553,7 @@ function GridViewInner({
       clearBlockLongPress()
       stopEdgeScroll()
       if (ghostRef.current) ghostRef.current.style.display = "none"
-    },
+          if (resizeLabelRef.current) resizeLabelRef.current.style.display = "none"    },
     [clearBlockLongPress, stopEdgeScroll]
 
   )
@@ -1557,6 +1574,7 @@ function GridViewInner({
           setHoveredCategoryId(null)
           stopEdgeScroll()
           if (ghostRef.current) ghostRef.current.style.display = "none"
+          if (resizeLabelRef.current) resizeLabelRef.current.style.display = "none"
           return
         }
         const di0 = isWeekView || isDayViewMultiDay ? getDateIdx(d.sx) : 0
@@ -1599,6 +1617,7 @@ function GridViewInner({
           setHoveredCategoryId(null)
           stopEdgeScroll()
           if (ghostRef.current) ghostRef.current.style.display = "none"
+          if (resizeLabelRef.current) resizeLabelRef.current.style.display = "none"
           return
         }
       }
@@ -1610,6 +1629,7 @@ function GridViewInner({
       setHoveredCategoryId(null)
       stopEdgeScroll()
       if (ghostRef.current) ghostRef.current.style.display = "none"
+          if (resizeLabelRef.current) resizeLabelRef.current.style.display = "none"
       setShifts((prev) => {
         const next = prev.map((s) => {
           if (s.id !== d.id) return s
@@ -2450,6 +2470,27 @@ function GridViewInner({
               />
             </div>
 
+            {/* Resize label: floats near cursor during resize showing live time */}
+            <div
+              ref={resizeLabelRef}
+              style={{
+                display: "none",
+                position: "absolute",
+                left: 0,
+                top: 0,
+                zIndex: 200,
+                pointerEvents: "none",
+                fontSize: 10,
+                fontWeight: 700,
+                color: "rgba(255,255,255,0.95)",
+                borderRadius: 5,
+                padding: "2px 7px",
+                whiteSpace: "nowrap",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.18)",
+                willChange: "transform",
+              }}
+            />
+
             {/* Row hover highlight during drag */}
             {dragId && hoveredCategoryId && (() => {
               const top = categoryTops[hoveredCategoryId] ?? 0
@@ -2709,7 +2750,7 @@ function GridViewInner({
                   <div key={`add-${row.key}-${di}`} style={{ position: "absolute", left: di * colW + colW / 2 - 10, top: addBtnTop, display: "flex", gap: 4, zIndex: 25 }}>
                     <button
                       onClick={() =>
-                        setAddPrompt({ date, categoryId: cat.id, hour: settings.visibleFrom })
+                        setAddPrompt({ date, categoryId: cat.id, hour: settings.visibleFrom, employeeId: emp?.id })
                       }
                       style={{
                         width: 20,
@@ -2756,7 +2797,7 @@ function GridViewInner({
                 <div key={`add-${row.key}-${h}`} style={{ position: "absolute", left: (h - settings.visibleFrom) * HOUR_W + SLOT_W / 2 - 9, top: addBtnTop, display: "flex", gap: 4, zIndex: 25 }}>
                   <button
                     onClick={() =>
-                      setAddPrompt({ date: dates[1] ?? dates[0]!, categoryId: cat.id, hour: h })
+                      setAddPrompt({ date: dates[1] ?? dates[0]!, categoryId: cat.id, hour: h, employeeId: emp?.id })
                     }
                     style={{ width: 18, height: 18, borderRadius: "50%", border: "1.5px dashed var(--muted-foreground)", background: "var(--background)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)", padding: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
                     title="Add Shift"
@@ -3623,7 +3664,7 @@ function GridViewInner({
         <AddShiftModal
           date={addPrompt.date}
           categoryId={addPrompt.categoryId}
-          employeeId={undefined}
+          employeeId={addPrompt.employeeId}
           prefillStartH={addPrompt.hour}
           onAdd={(shift) => setShifts((prev) => [...prev, shift])}
           onClose={() => setAddPrompt(null)}

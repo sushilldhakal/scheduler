@@ -33,15 +33,12 @@ export default function DemoPage() {
   }, []);
 
   const handleBlockMove = useCallback((block: Block) => {
-    console.log('[Demo] Block moved:', block.id, block.employee, block.date, `${block.startH}–${block.endH}`);
   }, []);
 
   const handleBlockCreate = useCallback((block: Block) => {
-    console.log('[Demo] Block created:', block.id, block.employee);
   }, []);
 
   const handleBlockDelete = useCallback((block: Block) => {
-    console.log('[Demo] Block deleted:', block.id, block.employee);
   }, []);
 
   if (!mounted || !initialDate) {
@@ -109,11 +106,6 @@ export default function DemoPage() {
           onBlockMove={handleBlockMove}
           onBlockDelete={handleBlockDelete}
           onAuditEvent={handleAuditEvent}
-          onVisibleRangeChange={(start, end) => {
-            const fmt = (d: Date) =>
-              `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            console.log('[Demo] visible range:', fmt(start), '–', fmt(end));
-          }}
           footerSlot={({ onSettingsChange }) => (
             <SchedulerSettings onSettingsChange={onSettingsChange} />
           )}
