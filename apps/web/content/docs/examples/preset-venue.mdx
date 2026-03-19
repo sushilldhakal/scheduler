@@ -1,8 +1,32 @@
 ---
-title: Venue preset demo
-description: "createSchedulerConfig({ preset: 'venue' })."
+title: Venue preset
+description: Room and facility booking for hotels, venues, and coworking spaces.
 ---
 
-# Venue preset demo
+# Venue preset
 
-Uses `createSchedulerConfig({ preset: 'venue' })` for room and venue bookings.
+Manage room reservations, facility bookings, and space utilisation with the venue preset.
+
+[→ Try it live](/demo)
+
+```tsx
+import { Scheduler, createVenueConfig } from '@sushill/shadcn-scheduler'
+
+const spaces = [
+  { id: 'r1', name: 'Meeting Room 1', kind: 'category' as const, colorIdx: 0 },
+  { id: 'r2', name: 'Board Room',     kind: 'category' as const, colorIdx: 1 },
+  { id: 'r3', name: 'Event Space',    kind: 'category' as const, colorIdx: 3 },
+]
+
+const config = createVenueConfig()
+// Labels: Room, Guest, Booking, Tentative, Confirmed
+
+<Scheduler
+  categories={spaces}
+  employees={guests}
+  shifts={bookings}
+  onShiftsChange={setBookings}
+  config={config}
+  initialView="day"
+/>
+```

@@ -1,8 +1,36 @@
 ---
-title: Conference preset demo
-description: "createSchedulerConfig({ preset: 'conference' })."
+title: Conference preset
+description: Session and speaker scheduling for conferences and events.
 ---
 
-# Conference preset demo
+# Conference preset
 
-Uses `createSchedulerConfig({ preset: 'conference' })` for a multi-track conference.
+Schedule conference sessions across multiple rooms, with speakers as resources and sessions as time-slot blocks.
+
+[→ Try it live](/demo)
+
+```tsx
+import { Scheduler, createConferenceConfig } from '@sushill/shadcn-scheduler'
+
+const rooms = [
+  { id: 'main',     name: 'Main Stage',  kind: 'category' as const, colorIdx: 0 },
+  { id: 'workshop', name: 'Workshop A',  kind: 'category' as const, colorIdx: 1 },
+  { id: 'breakout', name: 'Breakout B',  kind: 'category' as const, colorIdx: 2 },
+]
+
+const speakers = [
+  { id: 's1', name: 'Keynote Speaker', kind: 'employee' as const, categoryId: 'main',     colorIdx: 0 },
+  { id: 's2', name: 'Workshop Lead',   kind: 'employee' as const, categoryId: 'workshop', colorIdx: 1 },
+]
+
+const config = createConferenceConfig()
+
+<Scheduler
+  categories={rooms}
+  employees={speakers}
+  shifts={sessions}
+  onShiftsChange={setSessions}
+  config={config}
+  initialView="day"
+/>
+```

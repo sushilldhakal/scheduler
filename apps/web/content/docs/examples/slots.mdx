@@ -1,11 +1,71 @@
 ---
-title: Render slots demo
-description: Custom block renderer, resource header, and footer.
+title: Custom render slots
+description: Override block content, sidebar rows, and toolbar areas with your own components.
 ---
 
-# Render slots demo
+# Custom render slots
 
-Demonstrates custom render slots for blocks, resource headers, and footers.
+The scheduler exposes render slots so you can inject custom UI into any part of the component.
 
-> Looking for a live playground?  
-> Open the interactive demo at [`/demo`](/demo) while you explore this example.
+[→ Try it live](/demo)
+
+## Custom block content
+
+Override what's displayed inside each shift block:
+
+```tsx
+<Scheduler
+  blockSlot={(block) => (
+    <div className="flex flex-col px-2 py-1">
+      <span className="text-[10px] font-bold">{block.employee}</span>
+      <span className="text-[9px] opacity-70">
+        {block.startH}:00 – {block.endH}:00
+      </span>
+      {block.meta?.role && (
+        <span className="text-[9px] text-primary-foreground/60">
+          {block.meta.role as string}
+        </span>
+      )}
+    </div>
+  )}
+/>
+```
+
+## Custom sidebar rows
+
+Override the sidebar content for each category or employee:
+
+```tsx
+<Scheduler
+  sidebarSlot={(resource) => (
+    <div className="flex items-center gap-2 px-3">
+      {resource.avatar && (
+        <img src={resource.avatar} className="h-6 w-6 rounded-full" alt="" />
+      )}
+      <div>
+        <p className="text-xs font-medium">{resource.name}</p>
+        {resource.role && (
+          <p className="text-[10px] text-muted-foreground">{resource.role}</p>
+        )}
+      </div>
+    </div>
+  )}
+/>
+```
+
+## Custom footer (settings area)
+
+Inject content into the toolbar footer:
+
+```tsx
+import { SchedulerSettings } from '@sushill/shadcn-scheduler'
+
+<Scheduler
+  footerSlot={({ onSettingsChange }) => (
+    <div className="flex items-center gap-3">
+      <SchedulerSettings onSettingsChange={onSettingsChange} />
+      <button onClick={handleExport}>Export CSV</button>
+    </div>
+  )}
+/>
+```

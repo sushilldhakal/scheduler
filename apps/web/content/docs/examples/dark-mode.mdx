@@ -1,8 +1,55 @@
 ---
-title: Dark mode demo
-description: Full dark theme using shadcn CSS variables.
+title: Dark mode
+description: Theme switching works automatically via shadcn CSS variables.
 ---
 
-# Dark mode demo
+# Dark mode
 
-Demonstrates a full dark theme using `shadcn-scheduler`'s CSS variables and Tailwind integration.
+The scheduler reads shadcn/ui CSS variables, so dark mode is automatic — no extra CSS or props needed. When your app switches between `light` and `dark`, the scheduler follows instantly.
+
+[→ Try it live](/demo)
+
+## With next-themes
+
+If you use `next-themes`:
+
+```tsx
+import { useTheme } from 'next-themes'
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme()
+  return (
+    <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+      Toggle theme
+    </button>
+  )
+}
+```
+
+The scheduler will update immediately — no additional configuration.
+
+## With Tailwind dark class
+
+If you use Tailwind's `darkMode: 'class'`:
+
+```ts
+// tailwind.config.ts
+export default {
+  darkMode: 'class',
+}
+```
+
+Add the `dark` class to your `<html>` element to switch themes. The scheduler responds to CSS variable changes automatically.
+
+## Custom colour tokens
+
+You can override the scheduler's colours per-theme by redefining CSS variables:
+
+```css
+:root {
+  --primary: 220 90% 56%;        /* Custom blue */
+}
+.dark {
+  --primary: 217 91% 70%;        /* Lighter blue for dark mode */
+}
+```

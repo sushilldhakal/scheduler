@@ -1,8 +1,25 @@
 ---
-title: List view demo
-description: Sortable blocks by day, week, month, and year.
+title: List view
+description: Tabular list of all shifts sorted by date and time.
 ---
 
-# List view demo
+# List view
 
-List view of shifts, sortable and filterable by day, week, month, or year.
+The list view shows all shifts as a sortable table — useful for reviewing, exporting, or printing schedules.
+
+[→ Try it live](/demo)
+
+```tsx
+<Scheduler
+  initialView="list"
+  // ... other props
+/>
+```
+
+## Day and week modes
+
+The list view supports two sub-modes:
+- **Day list** — shows shifts for a single day
+- **Week list** — shows shifts grouped by day for the whole week
+
+These are accessible from the view switcher in the toolbar.

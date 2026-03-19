@@ -1,8 +1,23 @@
 ---
-title: Festival preset demo
-description: "createSchedulerConfig({ preset: 'festival' })."
+title: Festival preset
+description: Multi-stage music festival scheduling across multiple days.
 ---
 
-# Festival preset demo
+# Festival preset
 
-Uses `createSchedulerConfig({ preset: 'festival' })` for a music festival with stages.
+Schedule acts across multiple stages for a multi-day festival. Stages are categories, artists are employees, sets are blocks.
+
+[→ Try it live](/demo)
+
+```tsx
+import { Scheduler, createFestivalConfig } from '@sushill/shadcn-scheduler'
+
+const stages = [
+  { id: 'main',    name: 'Main Stage',   kind: 'category' as const, colorIdx: 5 },
+  { id: 'second',  name: 'Second Stage', kind: 'category' as const, colorIdx: 3 },
+  { id: 'acoustic',name: 'Acoustic Tent',kind: 'category' as const, colorIdx: 2 },
+]
+
+const config = createFestivalConfig()
+// Sensible defaults: visibleFrom=12 (noon), visibleTo=2 (2am), snapMinutes=15
+```

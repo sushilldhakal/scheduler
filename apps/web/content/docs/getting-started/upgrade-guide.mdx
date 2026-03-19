@@ -1,47 +1,66 @@
 ---
 title: Upgrade guide
-description: Breaking changes from 0.x to 1.0 and how to migrate.
+description: Breaking changes and migration steps between versions.
 ---
 
 # Upgrade guide
 
-This page highlights the main breaking changes when upgrading from `0.x` to
-`1.0` of `shadcn-scheduler` and how to migrate safely.
+## v0.4.0 (current)
 
-## Type renames
+### Breaking changes
 
-- `Shift` → `Block<TMeta>`
-- `Staff` / `Employee` models → `Resource<TMeta>` with `kind: 'employee'`
-- Category models → `Resource<TMeta>` with `kind: 'category'`
+**`Block.breakStartH` / `Block.breakEndH`** — new optional fields on the `Block` type. Existing blocks without these fields are unaffected. If you have custom TypeScript types that extend `Block`, you may need to add these as optional fields.
 
-Search your codebase for old names and replace them with the new `Block` and
-`Resource` types.
+### New features
 
-## Dates as ISO strings
+- **2D free drag** — blocks now lift out of their row and follow the cursor freely in 2D. The old cursor ghost div has been removed; the real block element moves via DOM mutation for zero layout reflows.
+- **Right-click context menu** — powered by `@radix-ui/react-context-menu`. Add it to your peer dependencies if installing from source.
+- **Hover popover** — fixed-position portal that escapes `contain:paint` clipping. Shows employee, category, time range, duration, break, conflict warning.
+- **Row modes** — `"category"` (default, stacks shifts) and `"individual"` (one row per employee). Switch in Settings panel.
+- **Resizable sidebar** — powered by `react-resizable-panels`. Add to peer dependencies if installing from source.
+- **Vertical edge-scroll** — dragging near top/bottom now scrolls vertically.
+- **4px desktop drag threshold** — prevents accidental block moves on click.
+- **`scrollbarGutter: stable`** — header and grid are now pixel-perfect in sync regardless of vertical scrollbar presence.
 
-Older versions sometimes used `Date` objects. In `1.0`, all block dates are
-**ISO date strings** (e.g. `"2026-03-16"`). Use the helpers:
+### New peer dependencies
 
-- `toDateISO(date: Date)` – convert a `Date` to an ISO string
-- `parseBlockDate(block)` – get a `Date` back when needed
-
-Update any code that passes `Date` directly into blocks to use ISO strings.
-
-## Centralised config
-
-`1.0` introduces `createSchedulerConfig`, which replaces scattered boolean props
-for things like presets, labels, views, and settings. Instead of:
-
-```tsx
-<Scheduler showYearView defaultView="week" rosterPreset />
+```bash
+npm install react-resizable-panels @radix-ui/react-context-menu
 ```
 
-prefer:
+### Migration
+
+No migration steps required for existing code. All new features are additive. The `Block` type has two new optional fields — existing data is backward compatible.
+
+---
+
+## v0.3.x → v0.3.3
+
+Patch releases only. No breaking changes. Bug fixes to:
+- `hourBg()` CSS variable (extra closing paren causing transparent non-working hours)
+- ListView day mode "No Shifts" display
+- Sidebar literal `\n` text node rendering
+
+---
+
+## v0.2.x → v0.3.0
+
+### Renamed props
+
+| Old | New |
+|-----|-----|
+| `onShiftMove` | `onBlockMoved` |
+| `onShiftCreate` | `onBlockCreate` |
+| `onShiftDelete` | `onBlockDelete` |
+
+### Breaking change: `visibleFrom` / `visibleTo`
+
+These moved from top-level `Scheduler` props into `SchedulerConfig`. Update:
 
 ```tsx
-const config = createSchedulerConfig({ preset: 'roster' });
+// Before (v0.2.x)
+<Scheduler visibleFrom={7} visibleTo={22} />
 
-<Scheduler config={config} />
+// After (v0.3.0+)
+<Scheduler config={createSchedulerConfig({ visibleFrom: 7, visibleTo: 22 })} />
 ```
-
-This makes it easier to share config between pages and keep behaviour consistent.

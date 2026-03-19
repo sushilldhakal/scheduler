@@ -1,8 +1,34 @@
 ---
-title: Healthcare preset demo
-description: "createSchedulerConfig({ preset: 'healthcare' })."
+title: Healthcare preset
+description: Ward rota management for hospitals and medical facilities.
 ---
 
-# Healthcare preset demo
+# Healthcare preset
 
-Uses `createSchedulerConfig({ preset: 'healthcare' })` for hospital/clinic rotas.
+Manage ward rotas, on-call schedules, and shift handovers with the healthcare preset.
+
+[→ Try it live](/demo)
+
+```tsx
+import { Scheduler, createHealthcareConfig } from '@sushill/shadcn-scheduler'
+
+const wards = [
+  { id: 'a&e',  name: 'A&E',         kind: 'category' as const, colorIdx: 0 },
+  { id: 'icu',  name: 'ICU',         kind: 'category' as const, colorIdx: 1 },
+  { id: 'ward', name: 'General Ward',kind: 'category' as const, colorIdx: 2 },
+]
+
+const config = createHealthcareConfig()
+// Labels: Ward, Staff member, Rota slot, Pending approval, Confirmed
+// 24-hour visible range for overnight shifts
+// 30-minute snap
+
+<Scheduler
+  categories={wards}
+  employees={staff}
+  shifts={rotas}
+  onShiftsChange={setRotas}
+  config={config}
+  initialView="week"
+/>
+```

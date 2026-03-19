@@ -1,8 +1,18 @@
 ---
-title: Timeline / EPG view demo
-description: Horizontal time axis with resources as rows.
+title: Timeline view
+description: Horizontal resource timeline — ideal for TV/EPG and venue bookings.
 ---
 
-# Timeline / EPG view demo
+# Timeline view
 
-Horizontal time axis with resources as rows, ideal for TV guides and channel-based schedules.
+The timeline view renders resources as rows and time as columns, with blocks spanning horizontal time ranges. Best suited for TV guides, venue bookings, and project Gantt charts.
+
+[→ Try it live](/demo)
+
+```tsx
+<Scheduler
+  initialView="timeline"
+  config={createTvConfig()}
+  // ... other props
+/>
+```

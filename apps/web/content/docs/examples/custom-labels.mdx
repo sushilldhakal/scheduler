@@ -1,8 +1,61 @@
 ---
-title: Custom labels demo
-description: Rename every vocabulary term via config.
+title: Custom labels
+description: Override terminology to match your domain — rooms, channels, sessions, wards.
 ---
 
-# Custom labels demo
+# Custom labels
 
-Shows how to rename all scheduler vocabulary (categories, employees, shifts, etc.) via config.
+Replace scheduler's default vocabulary with your domain's terminology.
+
+[→ Try it live](/demo)
+
+## Using createSchedulerConfig
+
+```tsx
+import { createSchedulerConfig } from '@sushill/shadcn-scheduler'
+
+// Healthcare rota vocabulary
+const config = createSchedulerConfig({
+  labels: {
+    category: 'Ward',
+    employee: 'Staff member',
+    shift: 'Rota slot',
+    draft: 'Pending approval',
+    published: 'Confirmed',
+  },
+})
+
+// Conference vocabulary
+const conferenceConfig = createSchedulerConfig({
+  labels: {
+    category: 'Room',
+    employee: 'Speaker',
+    shift: 'Session',
+    draft: 'Tentative',
+    published: 'Confirmed',
+  },
+})
+
+// TV guide vocabulary
+const tvConfig = createSchedulerConfig({
+  labels: {
+    category: 'Channel',
+    employee: 'Programme',
+    shift: 'Broadcast slot',
+  },
+})
+```
+
+## Using a domain preset
+
+Domain presets set the right labels automatically:
+
+```tsx
+import { createHealthcareConfig } from '@sushill/shadcn-scheduler'
+const config = createHealthcareConfig()
+// Labels: Ward, Staff member, Rota slot, etc.
+
+import { createTvConfig } from '@sushill/shadcn-scheduler'
+const tvConfig = createTvConfig()
+// Labels: Channel, Programme, Broadcast slot, etc.
+```
