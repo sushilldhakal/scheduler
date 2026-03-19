@@ -40,7 +40,8 @@ import type { FlatRow } from "../types"
 import { StaffPanel } from "./StaffPanel"
 import { RoleWarningModal } from "./modals/RoleWarningModal"
 import { AddShiftModal } from "./modals/AddShiftModal"
-import { Plus, Copy, ClipboardPaste, Trash2, AlertTriangle } from "lucide-react"
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuLabel, ContextMenuTrigger } from "./ui/context-menu"
+import { Plus, Copy, ClipboardPaste, Trash2, AlertTriangle, Pencil, Scissors } from "lucide-react"
 import { cn } from "../lib/utils"
 
 interface DragState {
@@ -2887,8 +2888,9 @@ function GridViewInner({
                     if (isDrag) blockStyle.transform = "scale(1.04)"
                     else if (isActivating) blockStyle.transform = "scale(1.06)"
                     return (
+                      <ContextMenu key={shift.id}>
+                        <ContextMenuTrigger asChild>
                       <div
-                        key={shift.id}
                         ref={(el) => { blockRefsRef.current[shift.id] = el }}
                         role="button" tabIndex={0}
                         aria-label={`${shift.employee}, ${getTimeLabel(shift.date, shift.startH)} to ${getTimeLabel(shift.date, shift.endH)}, ${cat.name}`}
@@ -2932,45 +2934,18 @@ function GridViewInner({
                             />
                           )
                         })()}
-                        <div className="flex min-w-0 flex-col justify-center px-2 flex-1 overflow-hidden">
-                          <div className="flex items-center gap-1 min-w-0">
-                            {hasConflict && <AlertTriangle size={10} className="shrink-0 text-destructive" />}
-                            <span className="truncate text-[10px] font-semibold leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.95)" }}>
-                              {shift.employee} <span style={{ opacity: 0.75, fontWeight: 500 }}>{(shift.endH - shift.startH) % 1 === 0 ? `${shift.endH - shift.startH}hr` : `${(shift.endH - shift.startH).toFixed(1)}hr`}</span>
-                            </span>
-                          </div>
-                          {width >= 80 && (
-                            <span className="truncate text-[9px] leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.7)", marginTop: 1 }}>
+                        <div className="flex min-w-0 flex-1 items-center gap-1 px-2">
+                          {hasConflict && <AlertTriangle size={10} className="shrink-0 text-destructive" />}
+                          <span className="truncate text-[10px] font-semibold leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.95)" }}>
+                            {shift.employee}
+                          </span>
+                          {width >= 72 && (
+                            <span className="truncate text-[9px] leading-none shrink-0" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.7)" }}>
                               {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}
                             </span>
                           )}
                         </div>
-                        {/* Copy + Delete actions — always visible on desktop */}
-                        {!isTouchDevice && (
-                          <div
-                            className="absolute right-2 top-0 flex h-full items-center gap-0.5 pr-1 transition-opacity"
-                            style={{ zIndex: 20, pointerEvents: "auto" }}
-                          >
-                            <button
-                              onPointerDown={(e) => e.stopPropagation()}
-                              onClick={(e) => { e.stopPropagation(); setCopiedShift?.(shift) }}
-                              title="Copy shift"
-                              style={{ width: 16, height: 16, borderRadius: 3, border: "none", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.9)", padding: 0, flexShrink: 0 }}
-                            >
-                              <Copy size={9} className={`${isDraft ? "text-primary" : "text-primary-foreground"}`} />
-                            </button>
-                            {onDeleteShift && (
-                              <button
-                                onPointerDown={(e) => e.stopPropagation()}
-                                onClick={(e) => { e.stopPropagation(); setShiftToDeleteConfirm(shift) }}
-                                title="Delete shift"
-                                style={{ width: 16, height: 16, borderRadius: 3, border: "none", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.9)", padding: 0, flexShrink: 0 }}
-                              >
-                                <Trash2 size={9} className={`${isDraft ? "text-primary" : "text-primary-foreground"}`} />
-                              </button>
-                            )}
-                          </div>
-                        )}
+
                         {showResize && (
                           <div data-resize="left" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)} className="absolute left-0 top-0 h-full cursor-w-resize flex items-center justify-center" style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: "var(--primary)", borderRadius: "6px 0 0 6px" }}>
                             <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /></div>
@@ -2982,6 +2957,47 @@ function GridViewInner({
                           </div>
                         )}
                       </div>
+                        </ContextMenuTrigger>
+
+                      <ContextMenuContent>
+                        <ContextMenuLabel style={{ color: c.bg }}>{shift.employee}</ContextMenuLabel>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem
+                          onClick={() => onShiftClick(shift, cat)}
+                          className="gap-2"
+                        >
+                          <Pencil size={14} className="text-muted-foreground" />
+                          Edit shift
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          onClick={() => setCopiedShift?.(shift)}
+                          className="gap-2"
+                        >
+                          <Copy size={14} className="text-muted-foreground" />
+                          Copy shift
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          onClick={() => {
+                            setCopiedShift?.(shift)
+                            if (onDeleteShift) setShiftToDeleteConfirm(shift)
+                          }}
+                          className="gap-2"
+                        >
+                          <Scissors size={14} className="text-muted-foreground" />
+                          Cut shift
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        {onDeleteShift && (
+                          <ContextMenuItem
+                            onClick={() => setShiftToDeleteConfirm(shift)}
+                            className="gap-2 text-destructive focus:text-destructive"
+                          >
+                            <Trash2 size={14} />
+                            Delete shift
+                          </ContextMenuItem>
+                        )}
+                      </ContextMenuContent>
+                      </ContextMenu>
                     )
                   })
                 })
@@ -3095,8 +3111,9 @@ function GridViewInner({
                     hasConflict, widthPx: width, onDoubleClick: () => onShiftClick(shift, cat),
                   }
                   return (
+                    <ContextMenu key={shift.id}>
+                      <ContextMenuTrigger asChild>
                     <div
-                      key={shift.id}
                       ref={(el) => { blockRefsRef.current[shift.id] = el }}
                       role="button"
                       tabIndex={0}
@@ -3132,15 +3149,13 @@ function GridViewInner({
                               <div className="text-muted-foreground">{getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}</div>
                             </div>
                           )}
-                          <div className="flex min-w-0 flex-col justify-center px-2 flex-1 overflow-hidden">
-                            <div className="flex items-center gap-1 min-w-0">
-                              {hasConflict && <AlertTriangle size={10} className="shrink-0 text-destructive" />}
-                              <span className="truncate text-[10px] font-semibold leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.95)" }}>
-                                {shift.employee} <span style={{ opacity: 0.75, fontWeight: 500 }}>{(shift.endH - shift.startH) % 1 === 0 ? `${shift.endH - shift.startH}hr` : `${(shift.endH - shift.startH).toFixed(1)}hr`}</span>
-                              </span>
-                            </div>
-                            {width >= 80 && (
-                              <span className="truncate text-[9px] leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.7)", marginTop: 1 }}>
+                          <div className="flex min-w-0 flex-1 items-center gap-1 px-2">
+                            {hasConflict && <AlertTriangle size={10} className="shrink-0 text-destructive" />}
+                            <span className="truncate text-[10px] font-semibold leading-tight" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.95)" }}>
+                              {shift.employee}
+                            </span>
+                            {width >= 72 && (
+                              <span className="truncate text-[9px] leading-none shrink-0" style={{ color: isDraft ? c.bg : "rgba(255,255,255,0.7)" }}>
                                 {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}
                               </span>
                             )}
@@ -3167,32 +3182,7 @@ function GridViewInner({
                               />
                             )
                           })()}
-                          {/* Copy + Delete actions — always visible on desktop */}
-                          {!isTouchDevice && (
-                          <div
-                            className="absolute right-2 top-0 flex h-full items-center gap-0.5 pr-1 transition-opacity"
-                            style={{ zIndex: 20, pointerEvents: "auto" }}
-                          >
-                            <button
-                              onPointerDown={(e) => e.stopPropagation()}
-                              onClick={(e) => { e.stopPropagation(); setCopiedShift?.(shift) }}
-                              title="Copy shift"
-                              style={{ width: 16, height: 16, borderRadius: 3, border: "none", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.9)", padding: 0, flexShrink: 0 }}
-                            >
-                              <Copy size={9} className={`${isDraft ? "text-primary" : "text-primary-foreground"}`}/>
-                            </button>
-                              {onDeleteShift && (
-                              <button
-                                onPointerDown={(e) => e.stopPropagation()}
-                                onClick={(e) => { e.stopPropagation(); setShiftToDeleteConfirm(shift) }}
-                                title="Delete shift"
-                                style={{ width: 16, height: 16, borderRadius: 3, border: "none", background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.9)", padding: 0, flexShrink: 0 }}
-                              >
-                                <Trash2 size={9} className={`${isDraft ? "text-primary" : "text-primary-foreground"}`} />
-                              </button>
-                              )}
-                          </div>
-                          )}
+
                           {showResize && (
                             <div
                               data-resize="left"
@@ -3236,6 +3226,47 @@ function GridViewInner({
                         </>
                       )}
                     </div>
+                      </ContextMenuTrigger>
+
+                    <ContextMenuContent>
+                      <ContextMenuLabel style={{ color: c.bg }}>{shift.employee}</ContextMenuLabel>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem
+                          onClick={() => onShiftClick(shift, cat)}
+                          className="gap-2"
+                        >
+                      <Pencil size={14} className="text-muted-foreground" />
+                          Edit shift
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                          onClick={() => setCopiedShift?.(shift)}
+                          className="gap-2"
+                        >
+                      <Copy size={14} className="text-muted-foreground" />
+                          Copy shift
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                          onClick={() => {
+                            setCopiedShift?.(shift)
+                            if (onDeleteShift) setShiftToDeleteConfirm(shift)
+                          }}
+                          className="gap-2"
+                        >
+                      <Scissors size={14} className="text-muted-foreground" />
+                          Cut shift
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                        {onDeleteShift && (
+                      <ContextMenuItem
+                            onClick={() => setShiftToDeleteConfirm(shift)}
+                            className="gap-2 text-destructive focus:text-destructive"
+                          >
+                        <Trash2 size={14} />
+                            Delete shift
+                      </ContextMenuItem>
+                        )}
+                    </ContextMenuContent>
+                    </ContextMenu>
                   )
                 })
               })
