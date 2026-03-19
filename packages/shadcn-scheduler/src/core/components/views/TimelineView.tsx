@@ -165,16 +165,15 @@ function TimelineViewInner({
   const vrTopsRef = useRef<Record<string, number>>({})
 
   const categoryTops = useMemo((): Record<string, number> => {
-    // If vrTopsRef is fully populated (all rows have been rendered at least once),
-    // use it directly — it has the most up-to-date vr.start values.
+    // Keys must use "emp:id" prefix — dragEngine.getCategoryAtY expects this format
     if (Object.keys(vrTopsRef.current).length >= filteredEmployees.length) {
       return { ...vrTopsRef.current }
     }
-    // Fallback: accumulate heights for rows not yet seen by virtualizer
     const map: Record<string, number> = {}
     let acc = 0
     filteredEmployees.forEach((emp) => {
-      map[emp.id] = vrTopsRef.current[emp.id] ?? acc
+      const key = `emp:${emp.id}`
+      map[key] = vrTopsRef.current[key] ?? acc
       acc += rowHeights[emp.id] ?? (ROLE_HDR + SHIFT_H)
     })
     return map
@@ -182,7 +181,8 @@ function TimelineViewInner({
 
   const categoryHeights = useMemo(() => {
     const map: Record<string, number> = {}
-    filteredEmployees.forEach((emp) => { map[emp.id] = rowHeights[emp.id] ?? (ROLE_HDR + SHIFT_H) })
+    // Keys must use "emp:id" prefix to match dragEngine expectations
+    filteredEmployees.forEach((emp) => { map[`emp:${emp.id}`] = rowHeights[emp.id] ?? (ROLE_HDR + SHIFT_H) })
     return map
   }, [filteredEmployees, rowHeights])
 
@@ -362,10 +362,8 @@ function TimelineViewInner({
               const emp = filteredEmployees[vr.index]
               if (!emp) return null
 
-              // FIX #2 + #5: Update vrTopsRef with actual vr.start on every render.
-              // This is read by the categoryTops memo so the drag engine always has
-              // accurate Y coords — even for rows that were off-screen on first render.
-              vrTopsRef.current[emp.id] = vr.start
+              // FIX: Update vrTopsRef with emp: prefix to match dragEngine key format
+              vrTopsRef.current[`emp:${emp.id}`] = vr.start
 
               const empShifts = shiftsByEmployee[emp.id] ?? []
               const lanes     = packShifts(empShifts)
