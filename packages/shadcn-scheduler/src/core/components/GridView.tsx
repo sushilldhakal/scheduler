@@ -2217,16 +2217,16 @@ function GridViewInner({
         </div>
       </div>
 
-      <ResizablePanelGroup orientation="horizontal" style={{ flex: 1, overflow: "hidden" }}>
+      <ResizablePanelGroup orientation="horizontal" className="flex-1 overflow-hidden">
         <ResizablePanel
           panelRef={sidebarPanelRef}
-          defaultSize={18}
-          minSize={8}
-          maxSize={35}
+          defaultSize="20%"
+          minSize="8%"
+          maxSize="35%"
           collapsible
-          collapsedSize={0}
-          onResize={(size) => setSidebarWidth(size.inPixels)}
-          style={{ overflow: "hidden" }}
+          collapsedSize="0%"
+          onResize={(size) => { if (size.inPixels !== undefined) setSidebarWidth(size.inPixels) }}
+          className="overflow-hidden"
         >
         <div
           ref={sidebarRef}
@@ -2400,19 +2400,19 @@ function GridViewInner({
         </div>
         </ResizablePanel>
 
-        {/* Shadcn ResizableHandle with collapse toggle button */}
-        <ResizableHandle style={{ position: "relative", width: 8, background: "var(--border)", flexShrink: 0 }}>
+        {/* ResizableHandle — shadcn pattern with withHandle grip + collapse circle button */}
+        <ResizableHandle withHandle className="w-2">
           <button
             onClick={toggleSidebar}
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             style={{
               position: "absolute",
-              top: "50%",
+              bottom: 12,
               left: "50%",
-              transform: "translate(-50%, -50%)",
+              transform: "translateX(-50%)",
               zIndex: 30,
-              width: 20,
-              height: 20,
+              width: 22,
+              height: 22,
               borderRadius: "50%",
               background: "var(--background)",
               border: "1.5px solid var(--border)",
@@ -2420,7 +2420,7 @@ function GridViewInner({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.12)",
+              boxShadow: "0 1px 6px rgba(0,0,0,0.14)",
               color: "var(--muted-foreground)",
               padding: 0,
             }}
@@ -2431,7 +2431,7 @@ function GridViewInner({
           </button>
         </ResizableHandle>
 
-        <ResizablePanel defaultSize={82} style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <ResizablePanel defaultSize="80%" className="overflow-hidden flex flex-col">
         <div
           ref={scrollRef}
           onScroll={isWeekView ? onWeekScroll : onDayScroll}
