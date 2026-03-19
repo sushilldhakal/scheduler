@@ -1,4 +1,5 @@
 {
+  "rootDirectory": "apps/web",
   "buildCommand": "cd ../.. && npm run build -w @sushill/shadcn-scheduler && cd apps/web && next build",
   "installCommand": "cd ../.. && npm install",
   "outputDirectory": ".next",
