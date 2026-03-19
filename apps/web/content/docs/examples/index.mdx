@@ -1,62 +1,443 @@
 ---
 title: Examples
-description: Real-world scenarios with full code samples and live demos.
+description: Real-world code examples for every scenario — interactions, views, presets, and customisation.
 ---
-
-# Examples
-
-Each example below includes full working code and a link to a live demo you can interact with.
-
-## Getting started
-
-| Example | Description |
-|---------|-------------|
-| [Minimal setup](/docs/examples/minimal) | Smallest possible configuration |
-| [Quick start roster](/docs/examples/roster) | Full workforce roster with drag & drop |
-| [Day view](/docs/examples/day-view) | Single-day timeline with hour scrolling |
-| [Week view](/docs/examples/week-view) | Standard 7-day week view |
-
-## Views
-
-| Example | Description |
-|---------|-------------|
-| [Month view](/docs/examples/month-view) | Monthly calendar overview |
-| [Year view](/docs/examples/year-view) | Annual heat-map view |
-| [List view](/docs/examples/list-view) | Tabular shift list |
-| [Multi-day view](/docs/examples/multi-day) | Scrolling multi-day layout |
-| [Timeline view](/docs/examples/timeline) | Horizontal resource timeline |
 
 ## Interactions
 
-| Example | Description |
-|---------|-------------|
-| [Drag & drop](/docs/examples/drag-drop) | Move and resize blocks across resources |
-| [Copy & paste](/docs/examples/copy-paste) | Copy shifts with keyboard shortcuts |
-| [Conflict detection](/docs/examples/conflict-detection) | Red border warnings on overlapping shifts |
-| [Scroll to now](/docs/examples/scroll-to-now) | Jump to current time with live indicator |
-| [Zoom levels](/docs/examples/zoom) | Programmatic zoom control |
-| [Read-only mode](/docs/examples/readonly) | View-only with no editing |
+### Drag & drop
+
+The scheduler supports **2D free drag** — blocks lift out of their row and follow your cursor freely. Drop on any row, any time, any day.
+
+[→ Try it live](/demo)
+
+Drag and drop is enabled by default. No extra config needed:
+
+```tsx
+<Scheduler
+  categories={categories}
+  employees={employees}
+  shifts={shifts}
+  onShiftsChange={setShifts}
+/>
+```
+
+Track moves with `onBlockMoved`:
+
+```tsx
+<Scheduler
+  onBlockMoved={(block, newDate, newStartH, newEndH) => {
+    updateShift(block.id, { date: newDate, startH: newStartH, endH: newEndH })
+  }}
+/>
+```
+
+Disable drag on a specific block: `{ draggable: false }`. Disable resize: `{ resizable: false }`. Disable all interactions: `<Scheduler readOnly />`.
+
+---
+
+### Conflict detection
+
+The scheduler automatically shows a red ring on any two blocks that overlap for the same employee.
+
+Two shifts conflict when: same `employeeId`, same `date`, and time ranges overlap (`startH < otherEndH && endH > otherStartH`). No configuration needed — it's always on.
+
+```tsx
+const shifts = [
+  { id: 's1', employeeId: 'e1', date: '2026-03-19', startH: 9,  endH: 17, status: 'published' },
+  { id: 's2', employeeId: 'e1', date: '2026-03-19', startH: 14, endH: 22, status: 'draft' },
+  // ↑ Both get a red ring. s2 cannot be published until resolved.
+]
+```
+
+Hovering a conflicting block shows a red **"Shift conflict — cannot publish"** banner in the popover.
+
+---
+
+### Copy, cut & paste
+
+Right-click any block to access **Edit**, **Copy**, **Cut**, and **Delete**.
+
+| Action | Behaviour |
+|--------|-----------|
+| Copy shift | Copies to clipboard — original stays on grid |
+| Cut shift | Copies to clipboard AND removes from grid immediately |
+| Paste | Click any `+` cell to paste — gets a new `id` |
+
+Keyboard: `Delete`/`Backspace` removes focused block. Arrow keys nudge by the snap interval.
+
+Control the clipboard externally:
+
+```tsx
+const [copiedShift, setCopiedShift] = useState<Block | null>(null)
+
+<Scheduler copiedShift={copiedShift} setCopiedShift={setCopiedShift} />
+```
+
+---
+
+### Scroll to now
+
+Scroll to the current time on load with a live pulsing indicator:
+
+```tsx
+const config = createSchedulerConfig({ initialScrollToNow: true })
+<Scheduler config={config} ... />
+```
+
+Trigger it programmatically from a button:
+
+```tsx
+const scrollToNowRef = useRef<(() => void) | null>(null)
+
+<button onClick={() => scrollToNowRef.current?.()}>Jump to now</button>
+<Scheduler scrollToNowRef={scrollToNowRef} ... />
+```
+
+---
+
+### Zoom levels
+
+Zoom controls the width of each hour column. `1.0` is default. Range is `0.5`–`2.0`.
+
+```tsx
+const [zoom, setZoom] = useState(1)
+
+<Scheduler zoom={zoom} setZoom={setZoom} ... />
+```
+
+| Value | Effect |
+|-------|--------|
+| `0.5` | Very compact — see more time |
+| `1.0` | Default |
+| `1.5` | Detailed — 30min slots clearly visible |
+| `2.0` | Maximum detail |
+
+---
+
+### Read-only mode
+
+Disables all editing: drag, resize, right-click, keyboard shortcuts, add buttons.
+
+```tsx
+<Scheduler readOnly ... />
+```
+
+View switching, navigation, hover popover, and zoom still work.
+
+---
+
+## Views
+
+### Day view
+
+Single-day timeline. Swipe left/right on touch or use `←`/`→` keys to navigate.
+
+```tsx
+<Scheduler initialView="day" config={createSchedulerConfig({ initialScrollToNow: true })} ... />
+```
+
+Dragging a block past the **right edge** moves it to the next day. Past the **left edge** moves to the previous day.
+
+---
+
+### Week view
+
+Default view. 7 columns, one per day. Scroll buffer of ±15 days loads automatically at the edges with no loading spinner.
+
+```tsx
+<Scheduler initialView="week" ... />
+```
+
+---
+
+### Month view
+
+Monthly calendar overview. Coloured dots show shift density per day. Click any day to drill into day view.
+
+```tsx
+<Scheduler initialView="month" ... />
+```
+
+---
+
+### Year view
+
+Bird's-eye annual heat-map. Shows which days have shifts across the whole year.
+
+```tsx
+<Scheduler initialView="year" ... />
+```
+
+---
+
+### List view
+
+Tabular shift list, sortable by date and time. Two sub-modes: **day list** and **week list** via the view switcher.
+
+```tsx
+<Scheduler initialView="list" ... />
+```
+
+---
+
+### Timeline view
+
+Horizontal resource timeline — resources as rows, time as columns. Best for TV guides, venue bookings, and Gantt charts.
+
+```tsx
+<Scheduler initialView="timeline" config={createSchedulerConfig({ preset: 'tv' })} ... />
+```
+
+---
+
+### Multi-day view
+
+Multiple days side-by-side as scrollable columns. On screens wider than 2000px the buffer auto-expands so edge-load zones never overlap.
+
+```tsx
+<Scheduler initialView="week" bufferDays={7} ... />
+```
+
+---
 
 ## Domain presets
 
-| Example | Description |
-|---------|-------------|
-| [Roster preset](/docs/examples/preset-roster) | Workforce shift scheduling |
-| [TV / EPG preset](/docs/examples/preset-tv) | Channel programme guide |
-| [Conference preset](/docs/examples/preset-conference) | Session and speaker scheduling |
-| [Festival preset](/docs/examples/preset-festival) | Multi-stage event scheduling |
-| [Healthcare preset](/docs/examples/preset-healthcare) | Ward rota management |
-| [Gantt preset](/docs/examples/preset-gantt) | Project task timeline |
-| [Venue preset](/docs/examples/preset-venue) | Room and facility booking |
+### Workforce roster
+
+```tsx
+import { Scheduler, createSchedulerConfig } from '@sushill/shadcn-scheduler'
+
+const config = createSchedulerConfig({
+  preset: 'roster',
+  initialScrollToNow: true,
+  snapMinutes: 30,
+  workingHours: {
+    0: null,                    // Sunday closed
+    1: { from: 7, to: 23 },
+    2: { from: 7, to: 23 },
+    3: { from: 7, to: 23 },
+    4: { from: 7, to: 23 },
+    5: { from: 7, to: 23 },
+    6: { from: 8, to: 20 },
+  },
+})
+
+<Scheduler categories={departments} employees={staff} shifts={shifts}
+  onShiftsChange={setShifts} config={config} initialView="week" />
+```
+
+[→ Live roster demo](/demos/roster)
+
+---
+
+### TV / EPG guide
+
+Channels as rows, programmes as blocks. `visibleFrom: 6`, `visibleTo: 24` for a full broadcast day.
+
+```tsx
+const config = createSchedulerConfig({
+  preset: 'tv',
+  defaultSettings: { visibleFrom: 6, visibleTo: 24 },
+  snapMinutes: 15,
+})
+
+<Scheduler categories={channels} employees={channelEmployees}
+  shifts={programmes} config={config} initialView="day" />
+```
+
+[→ Live TV demo](/demos/tv)
+
+---
+
+### Conference schedule
+
+Rooms as categories, speakers as employees, sessions as blocks.
+
+```tsx
+const config = createSchedulerConfig({
+  preset: 'conference',
+  defaultSettings: { visibleFrom: 8, visibleTo: 20 },
+  snapMinutes: 15,
+})
+```
+
+[→ Live conference demo](/demos/conference)
+
+---
+
+### Music festival
+
+Stages as categories, artists as employees, sets as blocks. Evening-focused hours.
+
+```tsx
+const config = createSchedulerConfig({
+  preset: 'festival',
+  defaultSettings: { visibleFrom: 12, visibleTo: 24 },
+  snapMinutes: 15,
+})
+```
+
+[→ Live festival demo](/demos/festival)
+
+---
+
+### Healthcare rota
+
+Wards as categories, staff as employees. 24hr range for overnight shifts.
+
+```tsx
+const config = createSchedulerConfig({
+  preset: 'healthcare',
+  defaultSettings: { visibleFrom: 0, visibleTo: 24 },
+  snapMinutes: 30,
+})
+```
+
+[→ Live healthcare demo](/demos/healthcare)
+
+---
+
+### Gantt / project timeline
+
+Teams as categories, members as employees, tasks as full-day blocks.
+
+```tsx
+const config = createSchedulerConfig({
+  preset: 'gantt',
+  defaultSettings: { visibleFrom: 7, visibleTo: 18 },
+  snapMinutes: 60,
+})
+```
+
+[→ Live Gantt demo](/demos/gantt)
+
+---
+
+### Venue bookings
+
+Rooms/spaces as categories, clients as employees, bookings as blocks.
+
+```tsx
+const config = createSchedulerConfig({
+  preset: 'venue',
+  defaultSettings: { visibleFrom: 8, visibleTo: 24 },
+  snapMinutes: 30,
+})
+```
+
+[→ Live venue demo](/demos/venue)
+
+---
 
 ## Scale & customisation
 
-| Example | Description |
-|---------|-------------|
-| [Large roster (200 staff)](/docs/examples/large-roster) | Virtual rendering at scale |
-| [Custom labels](/docs/examples/custom-labels) | Domain-specific terminology |
-| [Dark mode](/docs/examples/dark-mode) | Theme switching |
-| [Custom slots](/docs/examples/slots) | Override block and sidebar content |
-| [Data prefetching](/docs/examples/prefetch) | Load shifts as user scrolls |
+### Large roster (200+ staff)
 
-[→ Open full demo](/demo)
+The scheduler uses TanStack Virtual — only visible rows render. 200 employees with no DOM bloat.
+
+For large teams use **individual mode** (one row per employee, categories collapse to headers):
+
+```tsx
+// Switch in the Settings gear panel, or set via rowMode prop on config
+const config = createSchedulerConfig({
+  preset: 'roster',
+  initialScrollToNow: true,
+})
+
+<Scheduler categories={bigCats} employees={bigStaff} shifts={shifts}
+  onShiftsChange={setShifts} config={config} />
+```
+
+Performance tips:
+- Use `onVisibleRangeChange` to fetch only the visible date window from your API
+- Individual mode (`rowMode: "individual"`) is cleaner at scale than category stacking
+
+---
+
+### Custom labels
+
+Override terminology to match your domain:
+
+```tsx
+const config = createSchedulerConfig({
+  labels: {
+    category: 'Ward',
+    employee: 'Staff member',
+    shift: 'Rota slot',
+    draft: 'Pending approval',
+    published: 'Confirmed',
+  },
+})
+```
+
+Or use a domain preset which sets the right labels automatically:
+`createSchedulerConfig({ preset: 'healthcare' })` → Ward, Staff member, Rota slot.
+
+---
+
+### Dark mode
+
+The scheduler reads shadcn/ui CSS variables. Dark mode is automatic — no extra props. When your app switches theme via `next-themes` or Tailwind's `dark` class, the scheduler follows instantly.
+
+---
+
+### Custom render slots
+
+Override any part of the UI:
+
+```tsx
+// Custom block content
+<Scheduler
+  blockSlot={(block) => (
+    <div className="px-2 py-1">
+      <p className="text-[10px] font-bold">{block.employee}</p>
+      <p className="text-[9px] opacity-70">{block.startH}:00–{block.endH}:00</p>
+    </div>
+  )}
+/>
+
+// Custom sidebar rows
+<Scheduler
+  sidebarSlot={(resource) => (
+    <div className="flex items-center gap-2 px-3">
+      {resource.avatar && <img src={resource.avatar} className="h-6 w-6 rounded-full" />}
+      <span className="text-xs font-medium">{resource.name}</span>
+    </div>
+  )}
+/>
+
+// Custom footer (settings area)
+<Scheduler
+  footerSlot={({ onSettingsChange }) => (
+    <SchedulerSettings onSettingsChange={onSettingsChange} />
+  )}
+/>
+```
+
+---
+
+### Data prefetching
+
+Load shifts on demand as the user scrolls to new date ranges:
+
+```tsx
+const [shifts, setShifts] = useState<Block[]>([])
+
+const handleVisibleRangeChange = async (start: Date, end: Date) => {
+  const newShifts = await fetchShifts({ from: start, to: end })
+  setShifts(prev => {
+    const existingIds = new Set(newShifts.map(s => s.id))
+    return [...prev.filter(s => !existingIds.has(s.id)), ...newShifts]
+  })
+}
+
+<Scheduler
+  shifts={shifts}
+  onShiftsChange={setShifts}
+  onVisibleRangeChange={handleVisibleRangeChange}
+  prefetchThreshold={0.7}
+/>
+```
+
+`prefetchThreshold` (0–1): how far the user scrolls before the callback fires. `0.7` = fire at 70% of scroll range, loading ahead of the edge.
