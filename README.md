@@ -1,8 +1,8 @@
 # shadcn-scheduler
 
-[![npm version](https://img.shields.io/npm/v/@sushill/shadcn-scheduler.svg)](https://www.npmjs.com/package/@sushill/shadcn-scheduler)
+[![npm version](https://img.shields.io/npm/v/@sushill/shadcn-scheduler.svg)](https://www.npmjs.com/package/@sushill/shadcn-scheduler) [![npm](https://img.shields.io/npm/dm/@sushill/shadcn-scheduler)](https://www.npmjs.com/package/@sushill/shadcn-scheduler)
 
-A flexible shift scheduling component for React, designed to work seamlessly with **shadcn UI**, **Tailwind CSS**, and **lucide-react** icons.
+A flexible shift scheduling component for React, designed to work seamlessly with **shadcn UI**, **Tailwind CSS**, and **lucide-react** icons. Published on [npm](https://www.npmjs.com/package/@sushill/shadcn-scheduler).
 
 ## Monorepo structure
 
@@ -33,15 +33,15 @@ scheduler/
 
 ## Installation
 
-### 1. Install the package
+### 1. Install the package (npm)
 
-Available from **npm** and **GitHub Packages**:
+From the public npm registry (recommended):
 
 ```bash
 npm install @sushill/shadcn-scheduler
 ```
 
-For GitHub Packages, add to `~/.npmrc`: `@sushill:registry=https://npm.pkg.github.com` and authenticate with a GitHub token.
+The package is also available from **GitHub Packages**. To use it from there, add to `~/.npmrc`: `@sushill:registry=https://npm.pkg.github.com` and authenticate with a GitHub token, then run the same install command.
 
 ### 2. Install peer dependencies
 
@@ -358,47 +358,64 @@ npm run demo        # Build package + dev server (apps/demo)
 npm run demo:build  # Build package + demo for GitHub Pages (outputs to docs/)
 ```
 
-## Publishing
+## Publishing to npm
 
-The package is published to both **public npm** and **GitHub Packages**.
+The package is published to the **public npm registry** and optionally to **GitHub Packages**.
 
-### Prerequisites
+### Prerequisites for npm
 
-- **npm (public)**: `npm login` and ensure you have publish access
-- **GitHub Packages**: Add to `~/.npmrc`:
-  ```
-  @sushill:registry=https://npm.pkg.github.com
-  //npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
-  ```
-  Create a token at GitHub → Settings → Developer settings → Personal access tokens (read:packages, write:packages)
+1. **npm account**: Create one at [npmjs.com/signup](https://www.npmjs.com/signup) if needed.
+2. **Login**: From the repo root or `packages/shadcn-scheduler`, run:
+   ```bash
+   npm login
+   ```
+   Use your npm username, password, and email (or use a token from npm → Access Tokens).
+3. **Scoped package**: `@sushill/shadcn-scheduler` is a scoped package. The first time you publish, use `--access public` (the `publish:npm` script already includes this).
 
-### Publish to both registries
+### Publish to npm (recommended)
 
 From the repo root:
+
 ```bash
+# 1. Bump version (in packages/shadcn-scheduler)
 cd packages/shadcn-scheduler && npm version patch   # or minor, major
-cd ../.. && npm run publish:all
+cd ../..
+
+# 2. Build and publish to npm
+npm run publish:npm
+
+# 3. Push version tag
 git push && git push --tags
 ```
 
-Or from root (version bump is manual):
+Or bump version manually in `packages/shadcn-scheduler/package.json`, then run `npm run publish:npm`.
+
+### Publish to both npm and GitHub Packages
+
 ```bash
-# Bump version in packages/shadcn-scheduler/package.json first
 npm run publish:all
 git push && git push --tags
 ```
 
-### Publish to one registry only
+For GitHub Packages you need `~/.npmrc`:
 
-```bash
-npm run publish:npm     # public npm (registry.npmjs.org)
-npm run publish:github  # GitHub Packages
+```
+@sushill:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
 ```
 
-### Install from either source
+Create a token at GitHub → Settings → Developer settings → Personal access tokens (read:packages, write:packages).
 
-- **From npm**: `npm install @sushill/shadcn-scheduler`
-- **From GitHub Packages**: Configure `.npmrc` as above, then `npm install @sushill/shadcn-scheduler`
+### Publish to GitHub Packages only
+
+```bash
+npm run publish:github
+```
+
+### Install for users
+
+- **From npm**: `npm install @sushill/shadcn-scheduler` (no extra config)
+- **From GitHub Packages**: Set `@sushill:registry=https://npm.pkg.github.com` and auth in `~/.npmrc`, then `npm install @sushill/shadcn-scheduler`
 
 ## License
 

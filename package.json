@@ -10,7 +10,8 @@
     "build:web": "npm run build -w @sushill/shadcn-scheduler && npm run build -w web",
     "dev:web": "npm run dev -w web",
     "publish:npm": "npm run build --workspace=@sushill/shadcn-scheduler && npm publish --workspace=@sushill/shadcn-scheduler --access public --registry https://registry.npmjs.org",
-    "publish:github": "npm run build --workspace=@sushill/shadcn-scheduler && npm publish --workspace=@sushill/shadcn-scheduler --registry https://npm.pkg.github.com"
+    "publish:github": "npm run build --workspace=@sushill/shadcn-scheduler && npm publish --workspace=@sushill/shadcn-scheduler --registry https://npm.pkg.github.com",
+    "publish:all": "npm run publish:npm && npm run publish:github"
   },
   "repository": {
     "type": "git",
