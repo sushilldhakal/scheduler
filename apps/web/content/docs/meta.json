@@ -1,4 +1,10 @@
 {
   "title": "Documentation",
-  "pages": ["index", "getting-started", "components", "examples"]
+  "pages": [
+    "index",
+    "getting-started",
+    "components",
+    "examples",
+    "demos"
+  ]
 }
