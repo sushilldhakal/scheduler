@@ -58,7 +58,7 @@ export {
 export type { SchedulerPresetName } from "./core/config"
 export { DEFAULT_SETTINGS, DEFAULT_CATEGORY_COLORS, getCategoryColor, toDateISO, parseBlockDate, sameDay, snapToInterval } from "./core/constants"
 export { findConflicts } from "./core/utils/packing"
-export { exportToCSV, exportToImage, exportToPDF } from "./core/utils/export"
+export { exportToCSV, exportToImage, exportToPDF, exportToICS } from "./core/utils/export"
 export { formatInTimezone, formatTimeInTimezone } from "./core/utils/timezone"
 export { nextUid } from "./core/context"
 export { useLongPress } from "./core/hooks/useLongPress"

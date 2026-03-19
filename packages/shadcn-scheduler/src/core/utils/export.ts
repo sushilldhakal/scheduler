@@ -106,3 +106,40 @@ function download(content: string, filename: string, mime: string): void {
   a.click()
   URL.revokeObjectURL(url)
 }
+
+/**
+ * Export blocks to an iCalendar (.ics) file. Pure string — no external dependency.
+ * startH / endH are decimal hours (e.g. 9.5 = 09:30). Triggers browser download.
+ */
+export function exportToICS(blocks: Block[], filename = "scheduler-export.ics"): void {
+  function toHHMMSS(h: number): string {
+    const hh = String(Math.floor(h)).padStart(2, "0")
+    const mm = String(Math.floor((h % 1) * 60)).padStart(2, "0")
+    return `${hh}${mm}00`
+  }
+
+  const lines: string[] = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//shadcn-scheduler//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+  ]
+
+  for (const block of blocks) {
+    // date is YYYY-MM-DD — strip dashes for iCal format
+    const dateCompact = block.date.replace(/-/g, "")
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:${block.id}@shadcn-scheduler`,
+      `DTSTART:${dateCompact}T${toHHMMSS(block.startH)}`,
+      `DTEND:${dateCompact}T${toHHMMSS(block.endH)}`,
+      `SUMMARY:${block.employee ?? ""}`,
+      `DESCRIPTION:${block.categoryId} — ${block.status}`,
+      "END:VEVENT",
+    )
+  }
+
+  lines.push("END:VCALENDAR")
+  download(lines.join("\r\n"), filename, "text/calendar;charset=utf-8")
+}

@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useCallback, useState, useEffect } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import type { Block, Resource } from "../../types"
+import type { Block, Resource , SchedulerMarker } from "../../types"
 import type { DragCommit } from "../../layout/dragEngine"
 import { useSchedulerContext } from "../../context"
 import {
@@ -28,6 +28,8 @@ interface TimelineViewProps {
   onShiftClick: (block: Block, resource: Resource) => void
   onAddShift: (date: Date, categoryId?: string, empId?: string) => void
   zoom?: number
+  markers?: SchedulerMarker[]
+  onMarkersChange?: (markers: SchedulerMarker[]) => void
 }
 
 const HOUR_W = 88
@@ -41,6 +43,8 @@ function TimelineViewInner({
   onShiftClick,
   onAddShift,
   zoom = 1,
+  markers = [],
+  onMarkersChange,
 }: TimelineViewProps): React.ReactElement {
   const { categories, employees, getColor, settings, slots, labels, snapMinutes } = useSchedulerContext()
 

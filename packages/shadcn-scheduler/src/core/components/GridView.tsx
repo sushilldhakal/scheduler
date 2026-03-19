@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { createPortal } from "react-dom"
-import type { Block, Resource } from "../types"
+import type { Block, Resource , SchedulerMarker } from "../types"
 import { useSchedulerContext } from "../context"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import {
@@ -121,6 +121,9 @@ interface GridViewProps {
   onBlockMove?: (block: Block) => void
   onBlockResize?: (block: Block) => void
   onBlockPublish?: (block: Block) => void
+  /** Marker lines rendered over the grid at specific date+hour positions. */
+  markers?: SchedulerMarker[]
+  onMarkersChange?: (markers: SchedulerMarker[]) => void
 }
 
 interface StaffPanelState {

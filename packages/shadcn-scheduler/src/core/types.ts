@@ -197,3 +197,16 @@ export interface SchedulerSlots {
   emptyCell?: (props: EmptyCellSlotProps) => ReactNode
   emptyState?: (props: EmptyStateSlotProps) => ReactNode
 }
+/** A vertical marker line rendered over the grid at a specific date+hour. */
+export interface SchedulerMarker {
+  id: string
+  /** ISO date string YYYY-MM-DD */
+  date: string
+  /** Decimal hour (e.g. 9.5 = 09:30). If absent, renders at the day boundary (left edge of the day column). */
+  hour?: number
+  label?: string
+  /** CSS color. Defaults to var(--destructive). */
+  color?: string
+  draggable?: boolean
+}
+

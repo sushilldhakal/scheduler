@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useContext, useRef } from "react"
-import type { Block, Resource, Settings, SchedulerSlots } from "./types"
+import type { Block, Resource, Settings, SchedulerSlots , SchedulerMarker } from "./types"
 import { Button } from "./components/ui/button"
 import { Plus, ZoomIn, ZoomOut } from "lucide-react"
 import { SchedulerProvider, nextUid, SchedulerContext } from "./context"
@@ -80,6 +80,9 @@ export interface SchedulerProps {
   onBlockPublish?: (block: Block) => void
   /** P14-13: Audit trail — called on every block mutation with before/after state. */
   onAuditEvent?: (entry: AuditEntry) => void
+  /** Optional marker lines rendered over the grid at specific date+hour positions. */
+  markers?: SchedulerMarker[]
+  onMarkersChange?: (markers: SchedulerMarker[]) => void
 }
 
 export interface SchedulerHeaderActions {
@@ -112,6 +115,8 @@ export function Scheduler({
   onBlockResize,
   onBlockPublish,
   onAuditEvent,
+  markers = [],
+  onMarkersChange,
 }: SchedulerProps): React.ReactElement {
   const parentCtx = useContext(SchedulerContext)
   const slots = slotsProp ?? {}
@@ -180,7 +185,7 @@ export function Scheduler({
   const scrollToNowRef = useRef<(() => void) | null>(null)
   const schedulerContainerRef = useRef<HTMLDivElement>(null)
   const isMobile = useIsMobile()
-  const historyRef = useRef<Block[][]>([])
+  const historyRef = useRef<{ past: Block[][], future: Block[][] }>({ past: [], future: [] })
   const HISTORY_MAX = 20
 
   // ── Audit trail ────────────────────────────────────────────
@@ -204,16 +209,26 @@ export function Scheduler({
   const setShifts = useCallback(
     (updater: React.SetStateAction<Block[]>) => {
       const next = typeof updater === "function" ? updater(shifts) : updater
-      historyRef.current = [shifts, ...historyRef.current].slice(0, HISTORY_MAX)
+      historyRef.current.past = [shifts, ...historyRef.current.past].slice(0, HISTORY_MAX)
+      historyRef.current.future = []
       debouncedOnShiftsChange(next)
     },
     [shifts, debouncedOnShiftsChange]
   )
 
   const handleUndo = useCallback(() => {
-    const prev = historyRef.current.pop()
-    if (prev) debouncedOnShiftsChange(prev)
-  }, [debouncedOnShiftsChange])
+    const prev = historyRef.current.past.shift()
+    if (!prev) return
+    historyRef.current.future = [shifts, ...historyRef.current.future].slice(0, HISTORY_MAX)
+    debouncedOnShiftsChange(prev)
+  }, [shifts, debouncedOnShiftsChange])
+
+  const handleRedo = useCallback(() => {
+    const next = historyRef.current.future.shift()
+    if (!next) return
+    historyRef.current.past = [shifts, ...historyRef.current.past].slice(0, HISTORY_MAX)
+    debouncedOnShiftsChange(next)
+  }, [shifts, debouncedOnShiftsChange])
 
   const handleZoomIn = () => setZoom((z) => Math.min(z + 0.25, 2))
   const handleZoomOut = () => setZoom((z) => Math.max(z - 0.25, 0.5))
@@ -382,6 +397,11 @@ export function Scheduler({
         handleUndo()
         return
       }
+      if (e.ctrlKey && (e.key === "y" || (e.shiftKey && e.key === "z"))) {
+        e.preventDefault()
+        handleRedo()
+        return
+      }
       if (e.ctrlKey && e.key === "c") {
         if (focusedBlockId) {
           const block = shifts.find((s) => s.id === focusedBlockId)
@@ -412,7 +432,7 @@ export function Scheduler({
     }
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
-  }, [focusedBlockId, copiedShift, shifts, handleUndo, setShifts, onBlockCreate])
+  }, [focusedBlockId, copiedShift, shifts, handleUndo, handleRedo, setShifts, onBlockCreate])
 
   const debouncedVisibleRangeChangeRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const debouncedOnVisibleRangeChange = useCallback(
@@ -428,6 +448,8 @@ export function Scheduler({
 
   const sharedGridProps = {
     shifts,
+    markers,
+    onMarkersChange,
     setShifts,
     selEmps,
     onShiftClick,
@@ -735,6 +757,8 @@ export function Scheduler({
                 onShiftClick={onShiftClick}
                 onAddShift={onAddShift}
                 zoom={zoom}
+                markers={markers}
+                onMarkersChange={onMarkersChange}
               />
             )
           })()}
