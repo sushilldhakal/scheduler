@@ -45,7 +45,16 @@ export type {
   EmptyCellSlotProps,
   EmptyStateSlotProps,
 } from "./core/types"
-export { createSchedulerConfig } from "./core/config"
+export {
+  createSchedulerConfig,
+  createRosterConfig,
+  createTvConfig,
+  createConferenceConfig,
+  createFestivalConfig,
+  createHealthcareConfig,
+  createGanttConfig,
+  createVenueConfig,
+} from "./core/config"
 export type { SchedulerPresetName } from "./core/config"
 export { DEFAULT_SETTINGS, DEFAULT_CATEGORY_COLORS, getCategoryColor, toDateISO, parseBlockDate, sameDay, snapToInterval } from "./core/constants"
 export { findConflicts } from "./core/utils/packing"

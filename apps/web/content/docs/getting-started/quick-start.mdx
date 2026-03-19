@@ -124,25 +124,29 @@ Change `initialView` to start in a different view:
 
 ## 5. Use a domain preset
 
-The scheduler ships with 7 preset configurations. Using a preset sets sensible defaults for labels, colours, and view options:
+The scheduler ships with 7 named preset helpers. Each one sets sensible defaults for labels, colours, and view options for that domain:
 
 ```tsx
 import { createRosterConfig } from '@sushill/shadcn-scheduler'
 
-const config = createSchedulerConfig({ preset: 'roster', {
+const config = createRosterConfig({
   initialScrollToNow: true,
-  workingHours: {
-    0: null,  // Sunday closed
-    1: { from: 8, to: 18 },
-    2: { from: 8, to: 18 },
-    // ... etc
+  defaultSettings: {
+    workingHours: {
+      0: null,  // Sunday closed
+      1: { from: 8, to: 18 },
+      2: { from: 8, to: 18 },
+      // ... etc
+    },
   },
-} })
+})
 
 <Scheduler config={config} ... />
 ```
 
-Available presets: `createRosterConfig`, `createTvConfig`, `createConferenceConfig`, `createFestivalConfig`, `createHealthcareConfig`, `createGanttConfig`, `createVenueConfig`.
+Available helpers: `createRosterConfig`, `createTvConfig`, `createConferenceConfig`, `createFestivalConfig`, `createHealthcareConfig`, `createGanttConfig`, `createVenueConfig`.
+
+Each accepts the same optional overrides. You can also use the lower-level `createSchedulerConfig({ preset: 'tv', ... })` if you prefer.
 
 ## Next steps
 

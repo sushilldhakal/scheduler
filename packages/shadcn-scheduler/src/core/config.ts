@@ -191,3 +191,40 @@ function mergeSettings(
     { ...DEFAULT_SETTINGS }
   )
 }
+
+// ─── Named preset helpers ─────────────────────────────────────────────────────
+// Convenience wrappers so users can import a named function per domain
+// instead of always writing createSchedulerConfig({ preset: 'tv', ... }).
+//
+// Every function accepts the same overrides as createSchedulerConfig
+// (minus the preset key — it is already set) and returns a full SchedulerConfig.
+
+type PresetOverrides = Omit<Partial<SchedulerConfig> & { preset?: SchedulerPresetName }, "preset">
+
+/** Roster / workforce scheduling. Default preset. */
+export const createRosterConfig = (overrides?: PresetOverrides): SchedulerConfig =>
+  createSchedulerConfig({ preset: "roster", ...overrides })
+
+/** TV / EPG — channels, programs, 24h range, live indicator. */
+export const createTvConfig = (overrides?: PresetOverrides): SchedulerConfig =>
+  createSchedulerConfig({ preset: "tv", ...overrides })
+
+/** Conference — tracks, sessions, agenda view. */
+export const createConferenceConfig = (overrides?: PresetOverrides): SchedulerConfig =>
+  createSchedulerConfig({ preset: "conference", ...overrides })
+
+/** Music festival — stages, sets, evening hours. */
+export const createFestivalConfig = (overrides?: PresetOverrides): SchedulerConfig =>
+  createSchedulerConfig({ preset: "festival", ...overrides })
+
+/** Healthcare — wards, staff rota, 24h coverage. */
+export const createHealthcareConfig = (overrides?: PresetOverrides): SchedulerConfig =>
+  createSchedulerConfig({ preset: "healthcare", ...overrides })
+
+/** Project / Gantt — teams, tasks, day-level blocks. */
+export const createGanttConfig = (overrides?: PresetOverrides): SchedulerConfig =>
+  createSchedulerConfig({ preset: "gantt", ...overrides })
+
+/** Venue / room booking — spaces, bookings, availability. */
+export const createVenueConfig = (overrides?: PresetOverrides): SchedulerConfig =>
+  createSchedulerConfig({ preset: "venue", ...overrides })

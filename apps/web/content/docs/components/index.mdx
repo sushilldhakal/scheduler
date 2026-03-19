@@ -161,7 +161,7 @@ const config = createSchedulerConfig({
 
 ## Domain preset functions
 
-Each preset calls `createSchedulerConfig` with sensible defaults for that domain:
+Each preset helper calls `createSchedulerConfig` internally with sensible defaults for that domain. Import and call directly — no need to pass `preset` manually:
 
 ```ts
 import {
@@ -175,13 +175,25 @@ import {
 } from '@sushill/shadcn-scheduler'
 
 // Workforce roster
-const config = createSchedulerConfig({ preset: 'roster', { initialScrollToNow: true } })
+const config = createRosterConfig({ initialScrollToNow: true })
 
 // TV / EPG guide
-const config = createSchedulerConfig({ preset: 'tv' })
+const tvConfig = createTvConfig()
 
 // Conference / event
-const config = createSchedulerConfig({ preset: 'conference' })
+const conferenceConfig = createConferenceConfig({ snapMinutes: 15 })
+
+// Music festival
+const festivalConfig = createFestivalConfig()
+
+// Healthcare rota
+const healthcareConfig = createHealthcareConfig()
+
+// Project / gantt
+const ganttConfig = createGanttConfig({ snapMinutes: 60 })
+
+// Venue / room booking
+const venueConfig = createVenueConfig()
 ```
 
 ---

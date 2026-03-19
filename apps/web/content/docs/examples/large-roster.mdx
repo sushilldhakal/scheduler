@@ -14,11 +14,11 @@ The scheduler uses TanStack Virtual to render only the rows visible in the viewp
 ```tsx
 import { createRosterConfig } from '@sushill/shadcn-scheduler'
 
-const config = createSchedulerConfig({ preset: 'roster', {
+const config = createRosterConfig({
   initialScrollToNow: true,
   // Individual mode: one row per employee — clearest view at scale
   // Switch in the Settings panel, or set as default via rowMode prop
-} })
+})
 
 <Scheduler
   categories={bigCategories}    // 20 departments

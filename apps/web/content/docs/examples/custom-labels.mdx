@@ -51,11 +51,11 @@ const tvConfig = createSchedulerConfig({
 Domain presets set the right labels automatically:
 
 ```tsx
-import { createHealthcareConfig } from '@sushill/shadcn-scheduler'
-const config = createSchedulerConfig({ preset: 'healthcare' })
+import { createHealthcareConfig, createTvConfig } from '@sushill/shadcn-scheduler'
+
+const config = createHealthcareConfig()
 // Labels: Ward, Staff member, Rota slot, etc.
 
-import { createTvConfig } from '@sushill/shadcn-scheduler'
-const tvConfig = createSchedulerConfig({ preset: 'tv' })
+const tvConfig = createTvConfig()
 // Labels: Channel, Programme, Broadcast slot, etc.
 ```
