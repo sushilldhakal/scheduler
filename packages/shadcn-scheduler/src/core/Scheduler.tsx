@@ -519,7 +519,7 @@ export function Scheduler({
   const content = (
       <div
         ref={schedulerContainerRef}
-        className="flex h-screen flex-col overflow-hidden bg-background text-foreground"
+        className="flex h-full flex-col overflow-hidden bg-background text-foreground"
         style={{
           fontFamily: "'Inter',-apple-system,BlinkMacSystemFont,sans-serif",
           paddingTop: "env(safe-area-inset-top)",
