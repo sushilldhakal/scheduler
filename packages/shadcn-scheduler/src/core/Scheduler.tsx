@@ -716,17 +716,28 @@ export function Scheduler({
               onMonthClick={handleMonthClick}
             />
           )}
-          {!isListView && baseView === "timeline" && (
-            <TimelineView
-              date={currentDate}
-              shifts={shifts}
-              setShifts={setShifts}
-              selEmps={selEmps}
-              onShiftClick={onShiftClick}
-              onAddShift={onAddShift}
-              zoom={zoom}
-            />
-          )}
+          {!isListView && baseView === "timeline" && (() => {
+            // Build a buffered date window centred on currentDate — same pattern as DayView.
+            // bufferDays on each side lets the user scroll without hitting an empty edge.
+            const effectiveBuf = Math.min(bufferDays, 30)
+            const timelineDates = Array.from({ length: 1 + 2 * effectiveBuf }, (_, i) => {
+              const d = new Date(currentDate)
+              d.setDate(d.getDate() + i - effectiveBuf)
+              return d
+            })
+            return (
+              <TimelineView
+                date={currentDate}
+                dates={timelineDates}
+                shifts={shifts}
+                setShifts={setShifts}
+                selEmps={selEmps}
+                onShiftClick={onShiftClick}
+                onAddShift={onAddShift}
+                zoom={zoom}
+              />
+            )
+          })()}
           {isListView && (
             <ListView
               shifts={shifts}
