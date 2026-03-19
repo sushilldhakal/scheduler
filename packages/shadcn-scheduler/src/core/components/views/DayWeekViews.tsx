@@ -65,15 +65,31 @@ export function DayView({
     setCenterDate(date)
   }
 
-  const totalDays = 1 + 2 * bufferDays
+  // Cap bufferDays so the total buffer never fits entirely in the viewport at once.
+  // On wide screens (3000px+), a fixed bufferDays=15 means all 31 days render within
+  // the viewport simultaneously — scrollLeft is near 0 AND near max, triggering both
+  // edge-load conditions and causing a flicker loop.
+  // Safe cap: viewport fits ~N days, so buffer at least N+3 each side but clamp to
+  // the passed bufferDays prop so we never exceed what the caller requested.
+  const effectiveBufferDays = useMemo(() => {
+    if (typeof window === "undefined") return bufferDays
+    // Estimate DAY_WIDTH: default visibleHours=10, HOUR_W=88px
+    const estimatedDayWidth = 10 * 88
+    const daysInViewport = Math.ceil(window.innerWidth / estimatedDayWidth)
+    // Need at least daysInViewport + 3 on each side to keep edge-load from firing immediately
+    const minBuffer = daysInViewport + 3
+    return Math.max(minBuffer, Math.min(bufferDays, 30))
+  }, [bufferDays])
+
+  const totalDays = 1 + 2 * effectiveBufferDays
   const dates = useMemo((): Date[] => {
     if (!setDate) return [currentCenter]
     return Array.from({ length: totalDays }, (_, i) => {
       const d = new Date(currentCenter)
-      d.setDate(d.getDate() + i - bufferDays)
+      d.setDate(d.getDate() + i - effectiveBufferDays)
       return d
     })
-  }, [currentCenter, setDate, bufferDays, totalDays])
+  }, [currentCenter, setDate, effectiveBufferDays, totalDays])
 
   const visibleShifts = useMemo(() => {
     const dateSet = new Set(dates.map((d) => toDateISO(d)))
