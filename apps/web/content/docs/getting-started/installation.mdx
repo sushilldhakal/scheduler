@@ -9,71 +9,93 @@ shadcn-scheduler gives you **two installation paths**. The key difference is own
 
 ## Option 1 — shadcn registry (recommended — you own the code)
 
+### Install only what you need
+
+Pick the preset that matches your use case. Each one copies only the files that domain actually needs — no bloat from views or engines you'll never use.
+
+| Preset | Use case | Views included | Install command |
+|--------|----------|----------------|-----------------|
+| **Full bundle** | Everything | All views | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/registry.json` |
+| **Roster** | Workforce shift scheduling | Day, Week, Month, Year, List | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-roster.json` |
+| **TV / EPG** | TV guide, programme scheduling | Timeline | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-tv.json` |
+| **Conference** | Event & session scheduling | Day, Week, Month, List | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-conference.json` |
+| **Festival** | Music festival lineups | Timeline | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-festival.json` |
+| **Healthcare** | Ward & staff rotas | Day, Week, Month, List | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-healthcare.json` |
+| **Gantt** | Project & sprint planning | Week, Day, List | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-gantt.json` |
+| **Venue** | Room & space bookings | Timeline | `npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-venue.json` |
+
+### What gets copied
+
+**Grid-based presets** (Roster, Conference, Healthcare, Gantt) copy:
+- Core primitives — `types.ts`, `constants.ts`, `context.tsx`, `config.ts`
+- Grid engine — `GridView.tsx`, drag engine, geometry, day/week/month/year views
+- Domain config — the preset labels and defaults for your use case
+
+**Timeline-based presets** (TV, Festival, Venue) copy:
+- Core primitives — same as above
+- Timeline engine — `TimelineView.tsx` (horizontal scroll, resources as rows)
+- Domain config — the preset labels and defaults for your use case
+
+The full bundle copies all of the above plus every domain config.
+
+### Example — TV / EPG only
+
 ```bash
-npx shadcn@latest add https://shadcn-scheduler.vercel.app/registry.json
+npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-tv.json
 ```
 
-This copies **all 56 source files** directly into `components/scheduler/` in your project:
-
-```
-components/scheduler/
-  index.ts                          ← import from here
-  core/
-    Scheduler.tsx                   ← the main component
-    GridView.tsx                    ← the grid engine (~3500 lines)
-    context.tsx
-    types.ts
-    constants.ts
-    config.ts
-    hooks/
-      useAuditTrail.ts
-      useFlatRows.ts
-      useMediaQuery.ts
-      useScrollToNow.ts
-    components/
-      modals/ShiftModal.tsx
-      modals/AddShiftModal.tsx
-      views/DayWeekViews.tsx
-      views/MonthView.tsx
-      views/YearView.tsx
-      views/ListView.tsx
-      views/TimelineView.tsx
-      ui/context-menu.tsx
-      ui/resizable.tsx
-      settings/SchedulerSettings.tsx
-      ...
-  domains/
-    default/index.tsx               ← roster preset
-    tv/index.tsx
-    healthcare/index.tsx
-    ...
-```
-
-You import from your own components folder:
+Copies ~32 files into `components/scheduler/`. You import from your own folder:
 
 ```tsx
-import { Scheduler } from '@/components/scheduler'
+import { SchedulerTV, createTvConfig } from '@/components/scheduler'
+
+const config = createTvConfig({ snapMinutes: 15 })
+
+export default function EPGPage() {
+  return (
+    <div className="h-[600px]">
+      <SchedulerTV
+        categories={channels}
+        employees={channelEmployees}
+        shifts={programmes}
+        onShiftsChange={setProgs}
+        initialView="timeline"
+        config={config}
+      />
+    </div>
+  )
+}
 ```
 
-**Why this matters:** You can edit `GridView.tsx`, add fields to `types.ts`, change the drag behaviour, add a new view — anything you want. No fork, no patch file, no fighting a third-party package.
+### Example — Workforce Roster only
+
+```bash
+npx shadcn@latest add https://shadcn-scheduler.vercel.app/r/scheduler-roster.json
+```
+
+```tsx
+import { Scheduler, createRosterConfig } from '@/components/scheduler'
+
+const config = createRosterConfig({ initialScrollToNow: true, snapMinutes: 30 })
+```
+
+**Why this matters:** You can edit `GridView.tsx`, add fields to `types.ts`, change the drag behaviour — anything you want. No fork, no patch file, no fighting a third-party package. And you only copy what you actually use.
+
+---
 
 ## Option 2 — npm package
 
-If you prefer not to own the source, use the npm package:
+If you prefer not to own the source, use the npm package (gets all presets):
 
 ```bash
 npm install @sushill/shadcn-scheduler
-# pnpm
-pnpm add @sushill/shadcn-scheduler
-# yarn
-yarn add @sushill/shadcn-scheduler
 ```
 
 ```tsx
-import { Scheduler } from '@sushill/shadcn-scheduler'
+import { Scheduler, createRosterConfig } from '@sushill/shadcn-scheduler'
+// or a specific preset:
+import { SchedulerTV, createTvConfig } from '@sushill/shadcn-scheduler'
 ```
-
-This is simpler to keep updated (`npm update`) but you can't modify the internals.
 
 ---
 
@@ -85,22 +107,17 @@ This is simpler to keep updated (`npm update`) but you can't modify the internal
 
 ## Peer dependencies
 
-Both install paths need these packages:
+**Grid-based presets** (Roster, Conference, Healthcare, Gantt) need:
 
 ```bash
-npm install @tanstack/react-virtual react-resizable-panels @radix-ui/react-context-menu @radix-ui/react-popover lucide-react react-day-picker
+npm install @tanstack/react-virtual react-resizable-panels @radix-ui/react-context-menu @radix-ui/react-popover @radix-ui/react-tabs @radix-ui/react-toggle-group @radix-ui/react-checkbox @radix-ui/react-slot lucide-react react-day-picker class-variance-authority clsx tailwind-merge
 ```
 
-| Package | Version | Why |
-|---------|---------|-----|
-| `@tanstack/react-virtual` | ≥3 | Row virtualisation (200+ staff) |
-| `react-resizable-panels` | ≥2 | Resizable sidebar |
-| `@radix-ui/react-context-menu` | ≥1 | Right-click menu |
-| `@radix-ui/react-popover` | ≥1 | Hover popover |
-| `react-day-picker` | ≥8 | Date picker in modals |
-| `lucide-react` | ≥0.260 | Icons |
-| `class-variance-authority` | ≥0.7 | Variant classes |
-| `clsx` + `tailwind-merge` | ≥2 | Class utilities |
+**Timeline-based presets** (TV, Festival, Venue) need a smaller set:
+
+```bash
+npm install @tanstack/react-virtual @radix-ui/react-popover @radix-ui/react-tabs @radix-ui/react-checkbox @radix-ui/react-slot lucide-react react-day-picker class-variance-authority clsx tailwind-merge
+```
 
 ## Tailwind configuration
 
@@ -160,11 +177,8 @@ If you're not on shadcn/ui, add these to your global CSS:
 ## Verify the install
 
 ```tsx
-// If using registry install:
-import { Scheduler } from '@/components/scheduler'
-
-// If using npm:
-import { Scheduler } from '@sushill/shadcn-scheduler'
+import { Scheduler } from '@/components/scheduler'  // registry
+// import { Scheduler } from '@sushill/shadcn-scheduler'  // npm
 
 export default function Test() {
   return (

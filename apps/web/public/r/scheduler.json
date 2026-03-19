@@ -2,15 +2,316 @@
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "scheduler",
   "type": "registry:block",
-  "title": "Scheduler",
-  "description": "A flexible shift scheduling component with day, week, month, year, and list views. Supports drag-and-drop, categories, staff filtering, prefetching, and scroll-to-now.",
-  "registryDependencies": ["button", "calendar", "tabs", "popover", "checkbox"],
-  "dependencies": ["@sushill/shadcn-scheduler", "lucide-react"],
+  "title": "Scheduler \u2014 full bundle",
+  "description": "All 7 domain presets, grid engine (day/week/month/year/list) and timeline engine. Copies all source files into components/scheduler/ \u2014 you own every line.",
+  "registryDependencies": [],
+  "dependencies": [
+    "@tanstack/react-virtual",
+    "lucide-react",
+    "react-day-picker",
+    "class-variance-authority",
+    "clsx",
+    "tailwind-merge",
+    "@radix-ui/react-popover",
+    "@radix-ui/react-tabs",
+    "@radix-ui/react-toggle-group",
+    "@radix-ui/react-checkbox",
+    "@radix-ui/react-slot",
+    "@radix-ui/react-context-menu",
+    "react-resizable-panels"
+  ],
+  "devDependencies": [],
+  "tailwind": {
+    "config": {
+      "content": [
+        "./components/scheduler/**/*.{ts,tsx}"
+      ]
+    }
+  },
   "files": [
     {
-      "path": "registry/default/scheduler/scheduler-block.tsx",
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/index.ts",
+      "target": "components/scheduler/index.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/scheduler-tokens.css",
+      "target": "components/scheduler/scheduler-tokens.css",
+      "type": "registry:style"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/types.ts",
+      "target": "components/scheduler/core/types.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/constants.ts",
+      "target": "components/scheduler/core/constants.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/context.tsx",
+      "target": "components/scheduler/core/context.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/config.ts",
+      "target": "components/scheduler/core/config.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/lib/utils.ts",
+      "target": "components/scheduler/core/lib/utils.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/scheduler.css",
+      "target": "components/scheduler/core/scheduler.css",
+      "type": "registry:style"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/utils/packing.ts",
+      "target": "components/scheduler/core/utils/packing.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/utils/timezone.ts",
+      "target": "components/scheduler/core/utils/timezone.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/utils/export.ts",
+      "target": "components/scheduler/core/utils/export.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/hooks/useAuditTrail.ts",
+      "target": "components/scheduler/core/hooks/useAuditTrail.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/hooks/useMediaQuery.ts",
+      "target": "components/scheduler/core/hooks/useMediaQuery.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/hooks/useLongPress.ts",
+      "target": "components/scheduler/core/hooks/useLongPress.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/hooks/useScrollToNow.ts",
+      "target": "components/scheduler/core/hooks/useScrollToNow.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/Scheduler.tsx",
+      "target": "components/scheduler/core/Scheduler.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/ViewTabs.tsx",
+      "target": "components/scheduler/core/components/ViewTabs.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/DateNavigator.tsx",
+      "target": "components/scheduler/core/components/DateNavigator.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/modals/ShiftModal.tsx",
+      "target": "components/scheduler/core/components/modals/ShiftModal.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/modals/AddShiftModal.tsx",
+      "target": "components/scheduler/core/components/modals/AddShiftModal.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/modals/RoleWarningModal.tsx",
+      "target": "components/scheduler/core/components/modals/RoleWarningModal.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/modals/DayShiftsDialog.tsx",
+      "target": "components/scheduler/core/components/modals/DayShiftsDialog.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/ui/button.tsx",
+      "target": "components/scheduler/core/components/ui/button.tsx",
+      "type": "registry:ui"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/ui/calendar.tsx",
+      "target": "components/scheduler/core/components/ui/calendar.tsx",
+      "type": "registry:ui"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/ui/popover.tsx",
+      "target": "components/scheduler/core/components/ui/popover.tsx",
+      "type": "registry:ui"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/ui/tabs.tsx",
+      "target": "components/scheduler/core/components/ui/tabs.tsx",
+      "type": "registry:ui"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/ui/BottomSheet.tsx",
+      "target": "components/scheduler/core/components/ui/BottomSheet.tsx",
+      "type": "registry:ui"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/ListView.tsx",
+      "target": "components/scheduler/core/components/views/ListView.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/MonthView.tsx",
+      "target": "components/scheduler/core/components/views/MonthView.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/YearView.tsx",
+      "target": "components/scheduler/core/components/views/YearView.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/layout/dragEngine.ts",
+      "target": "components/scheduler/core/layout/dragEngine.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/layout/geometry.ts",
+      "target": "components/scheduler/core/layout/geometry.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/hooks/useDragEngine.ts",
+      "target": "components/scheduler/core/hooks/useDragEngine.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/hooks/useFlatRows.ts",
+      "target": "components/scheduler/core/hooks/useFlatRows.ts",
+      "type": "registry:lib"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/GridView.tsx",
+      "target": "components/scheduler/core/components/GridView.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/StaffPanel.tsx",
+      "target": "components/scheduler/core/components/StaffPanel.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/UserSelect.tsx",
+      "target": "components/scheduler/core/components/UserSelect.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/RosterActions.tsx",
+      "target": "components/scheduler/core/components/RosterActions.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/DayWeekViews.tsx",
+      "target": "components/scheduler/core/components/views/DayWeekViews.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/ui/context-menu.tsx",
+      "target": "components/scheduler/core/components/ui/context-menu.tsx",
+      "type": "registry:ui"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/ui/multi-select.tsx",
+      "target": "components/scheduler/core/components/ui/multi-select.tsx",
+      "type": "registry:ui"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/ui/toggle-group.tsx",
+      "target": "components/scheduler/core/components/ui/toggle-group.tsx",
+      "type": "registry:ui"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/ui/resizable.tsx",
+      "target": "components/scheduler/core/components/ui/resizable.tsx",
+      "type": "registry:ui"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/settings/SchedulerSettings.tsx",
+      "target": "components/scheduler/core/components/settings/SchedulerSettings.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/settings/ChangeBadgeVariantInput.tsx",
+      "target": "components/scheduler/core/components/settings/ChangeBadgeVariantInput.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/settings/ChangeRowModeInput.tsx",
+      "target": "components/scheduler/core/components/settings/ChangeRowModeInput.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/settings/ChangeVisibleHoursInput.tsx",
+      "target": "components/scheduler/core/components/settings/ChangeVisibleHoursInput.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/settings/ChangeWorkingHoursInput.tsx",
+      "target": "components/scheduler/core/components/settings/ChangeWorkingHoursInput.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/core/components/views/TimelineView.tsx",
+      "target": "components/scheduler/core/components/views/TimelineView.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/default/index.tsx",
+      "target": "components/scheduler/domains/default/index.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/tv/index.tsx",
+      "target": "components/scheduler/domains/tv/index.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/conference/index.tsx",
+      "target": "components/scheduler/domains/conference/index.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/festival/index.tsx",
+      "target": "components/scheduler/domains/festival/index.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/healthcare/index.tsx",
+      "target": "components/scheduler/domains/healthcare/index.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/gantt/index.tsx",
+      "target": "components/scheduler/domains/gantt/index.tsx",
+      "type": "registry:component"
+    },
+    {
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/venue/index.tsx",
+      "target": "components/scheduler/domains/venue/index.tsx",
       "type": "registry:component"
     }
-  ]
+  ],
+  "meta": {
+    "importSpecifier": "@/components/scheduler",
+    "moduleSpecifier": "@/components/scheduler"
+  }
 }
-

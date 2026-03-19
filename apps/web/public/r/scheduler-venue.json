@@ -1,9 +1,9 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
-  "name": "scheduler-tv",
+  "name": "scheduler-venue",
   "type": "registry:block",
-  "title": "Scheduler \u2014 TV / EPG Guide",
-  "description": "Electronic programme guide. Channels as rows, programmes as blocks on a horizontal time axis. Timeline view with live indicator.",
+  "title": "Scheduler \u2014 Venue Bookings",
+  "description": "Room and space booking. Venues as rows, bookings as blocks on a horizontal timeline. Day view with full availability.",
   "registryDependencies": [],
   "dependencies": [
     "@tanstack/react-virtual",
@@ -182,8 +182,8 @@
       "type": "registry:component"
     },
     {
-      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/tv/index.tsx",
-      "target": "components/scheduler/domains/tv/index.tsx",
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/venue/index.tsx",
+      "target": "components/scheduler/domains/venue/index.tsx",
       "type": "registry:component"
     }
   ],

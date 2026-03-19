@@ -1,9 +1,9 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
-  "name": "scheduler-tv",
+  "name": "scheduler-festival",
   "type": "registry:block",
-  "title": "Scheduler \u2014 TV / EPG Guide",
-  "description": "Electronic programme guide. Channels as rows, programmes as blocks on a horizontal time axis. Timeline view with live indicator.",
+  "title": "Scheduler \u2014 Music Festival Lineup",
+  "description": "Stage-by-stage festival scheduling. Stages as rows, sets as blocks on a timeline. Perfect for multi-day lineups.",
   "registryDependencies": [],
   "dependencies": [
     "@tanstack/react-virtual",
@@ -182,8 +182,8 @@
       "type": "registry:component"
     },
     {
-      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/tv/index.tsx",
-      "target": "components/scheduler/domains/tv/index.tsx",
+      "path": "https://raw.githubusercontent.com/sushilldhakal/scheduler/main/registry/default/scheduler/domains/festival/index.tsx",
+      "target": "components/scheduler/domains/festival/index.tsx",
       "type": "registry:component"
     }
   ],
