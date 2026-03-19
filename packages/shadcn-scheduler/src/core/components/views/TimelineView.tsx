@@ -1,4 +1,4 @@
-import React, { useMemo } from "react"
+import React, { useMemo, useRef, useCallback } from "react"
 import type { Block, Resource } from "../../types"
 import { useSchedulerContext } from "../../context"
 import {
@@ -36,6 +36,26 @@ function TimelineViewInner({
   zoom = 1,
 }: TimelineViewProps): React.ReactElement {
   const { categories, employees, getColor, settings, slots } = useSchedulerContext()
+
+  // Refs for syncing horizontal scroll between header and grid
+  const headerScrollRef = useRef<HTMLDivElement>(null)
+  const gridScrollRef = useRef<HTMLDivElement>(null)
+  const sidebarScrollRef = useRef<HTMLDivElement>(null)
+  const syncingRef = useRef(false)
+
+  const onGridScroll = useCallback(() => {
+    if (syncingRef.current) return
+    syncingRef.current = true
+    const grid = gridScrollRef.current
+    if (headerScrollRef.current && grid) {
+      headerScrollRef.current.scrollLeft = grid.scrollLeft
+    }
+    if (sidebarScrollRef.current && grid) {
+      sidebarScrollRef.current.scrollTop = grid.scrollTop
+    }
+    syncingRef.current = false
+  }, [])
+
   const categoryMap = useMemo(
     () => Object.fromEntries(categories.map((c) => [c.id, c])),
     [categories]
@@ -47,8 +67,6 @@ function TimelineViewInner({
   )
 
   const dayShiftsByEmployee = useMemo(() => {
-    const dayStart = new Date(date)
-    dayStart.setHours(0, 0, 0, 0)
     const map: Record<string, Block[]> = {}
     filteredEmployees.forEach((emp) => {
       const empShifts = shifts.filter(
@@ -77,12 +95,6 @@ function TimelineViewInner({
     return map
   }, [filteredEmployees, dayShiftsByEmployee])
 
-  const totalContentH = useMemo(
-    () =>
-      filteredEmployees.reduce((sum, emp) => sum + (rowHeights[emp.id] ?? 0), 0),
-    [filteredEmployees, rowHeights]
-  )
-
   const hourWidth = HOUR_W * zoom
   const visibleHours = settings.visibleTo - settings.visibleFrom
   const gridWidth = visibleHours * hourWidth
@@ -98,73 +110,92 @@ function TimelineViewInner({
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
+      {/* ── Header row: fixed sidebar stub + scrollable hour labels ── */}
       <div
         className="flex shrink-0 border-b-2 border-border bg-muted"
         style={{ height: HOUR_HDR_H }}
       >
+        {/* Sidebar stub — always visible */}
         <div
           className="flex shrink-0 items-end border-r border-border px-3 pb-1.5"
           style={{ width: SIDEBAR_W }}
         >
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Staff
+            Channel
           </span>
         </div>
-        <div className="flex min-w-0 flex-1 overflow-hidden">
-          {hourLabels.map((h) => (
-            <div
-              key={h}
-              className="flex shrink-0 items-end justify-center pb-1 text-[10px] font-medium text-muted-foreground"
-              style={{ width: hourWidth }}
-            >
-              {fmt12(h)}
-            </div>
-          ))}
+
+        {/* Hour labels — scrolls in sync with grid */}
+        <div
+          ref={headerScrollRef}
+          className="min-w-0 flex-1 overflow-hidden"
+          style={{ scrollbarWidth: "none" } as React.CSSProperties}
+        >
+          <div className="flex" style={{ width: gridWidth }}>
+            {hourLabels.map((h) => (
+              <div
+                key={h}
+                className="flex shrink-0 items-end justify-center pb-1 text-[10px] font-medium text-muted-foreground"
+                style={{ width: hourWidth }}
+              >
+                {fmt12(h)}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 overflow-auto">
+      {/* ── Body: fixed sidebar + scrollable grid ── */}
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {/* ── Fixed sidebar — never scrolls horizontally ── */}
         <div
-          className="flex flex-col"
-          style={{ minWidth: SIDEBAR_W + gridWidth }}
+          ref={sidebarScrollRef}
+          className="flex shrink-0 flex-col overflow-y-auto border-r border-border"
+          style={{ width: SIDEBAR_W, scrollbarWidth: "none" } as React.CSSProperties}
         >
           {filteredEmployees.map((emp) => {
             const rowH = rowHeights[emp.id] ?? ROLE_HDR + SHIFT_H
             const empShifts = dayShiftsByEmployee[emp.id] ?? []
-            const lanes = packShifts(empShifts)
-
             return (
               <div
                 key={emp.id}
-                className="flex shrink-0 border-b border-border"
+                className="flex shrink-0 items-center border-b border-border bg-muted/50 px-2"
                 style={{ height: rowH }}
               >
+                {slots.resourceHeader
+                  ? slots.resourceHeader({
+                      resource: emp,
+                      scheduledCount: empShifts.length,
+                      isCollapsed: false,
+                      onToggleCollapse: () => {},
+                    })
+                  : (
+                    <span className="truncate text-xs font-medium text-foreground">
+                      {emp.name}
+                    </span>
+                  )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* ── Scrollable grid area ── */}
+        <div
+          ref={gridScrollRef}
+          className="min-w-0 flex-1 overflow-auto"
+          onScroll={onGridScroll}
+        >
+          <div className="flex flex-col" style={{ width: gridWidth }}>
+            {filteredEmployees.map((emp) => {
+              const rowH = rowHeights[emp.id] ?? ROLE_HDR + SHIFT_H
+              const empShifts = dayShiftsByEmployee[emp.id] ?? []
+              const lanes = packShifts(empShifts)
+
+              return (
                 <div
-                  className="flex shrink-0 items-center border-r border-border bg-muted/50 px-2"
-                  style={{
-                    width: SIDEBAR_W,
-                    height: rowH,
-                  }}
-                >
-                  {slots.resourceHeader
-                    ? slots.resourceHeader({
-                        resource: emp,
-                        scheduledCount: empShifts.length,
-                        isCollapsed: false,
-                        onToggleCollapse: () => {},
-                      })
-                    : (
-                      <span className="truncate text-xs font-medium text-foreground">
-                        {emp.name}
-                      </span>
-                    )}
-                </div>
-                <div
-                  className="relative flex-1"
-                  style={{
-                    width: gridWidth,
-                    height: rowH,
-                  }}
+                  key={emp.id}
+                  className="relative shrink-0 border-b border-border"
+                  style={{ height: rowH, width: gridWidth }}
                 >
                   {/* Hour grid backgrounds */}
                   {hourLabels.map((h) => (
@@ -187,10 +218,8 @@ function TimelineViewInner({
                     if (!cat) return null
                     const c = getColor(cat.colorIdx)
                     const lane = lanes[i] ?? 0
-                    const left =
-                      (shift.startH - settings.visibleFrom) * hourWidth
-                    const w =
-                      (shift.endH - shift.startH) * hourWidth
+                    const left = (shift.startH - settings.visibleFrom) * hourWidth
+                    const w = (shift.endH - shift.startH) * hourWidth
                     const top = ROLE_HDR + lane * SHIFT_H + 2
                     const height = SHIFT_H - 4
                     const isDraft = shift.status === "draft"
@@ -220,14 +249,14 @@ function TimelineViewInner({
                       <button
                         key={shift.id}
                         type="button"
-                        className="absolute rounded-md border text-left text-xs font-medium transition-shadow hover:shadow-md"
+                        className="absolute rounded-md border text-left text-xs font-medium transition-shadow hover:shadow-md overflow-hidden"
                         style={{
                           left,
                           top,
                           width: widthPx,
                           height,
                           background: isDraft ? c.light : c.bg,
-                          color: isDraft ? c.text : "var(--background)",
+                          color: isDraft ? c.text : "rgba(255,255,255,0.95)",
                           borderColor: isDraft ? c.border : "transparent",
                           borderStyle: isDraft ? "dashed" : "solid",
                         }}
@@ -236,21 +265,24 @@ function TimelineViewInner({
                           onShiftClick(shift, cat)
                         }}
                       >
-                        <span className="block truncate px-1.5 py-0.5">
-                          {cat.name}
+                        {/* Programme / show name */}
+                        <span className="block truncate px-1.5 pt-0.5 font-semibold leading-tight">
+                          {shift.employee}
                         </span>
-                        <span className="block truncate px-1.5 text-[10px] opacity-90">
-                          {fmt12(shift.startH)} – {fmt12(shift.endH)}
+                        {/* Time range */}
+                        <span
+                          className="block truncate px-1.5 text-[10px] leading-tight"
+                          style={{ opacity: 0.8 }}
+                        >
+                          {fmt12(shift.startH)}–{fmt12(shift.endH)}
                         </span>
                       </button>
                     )
                   })}
-
-                  {/* Add shift target: click on empty space could open add modal — optional */}
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
