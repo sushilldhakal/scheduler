@@ -46,6 +46,7 @@ export default function DemoPage() {
   const [mounted, setMounted] = useState(false);
   const [shifts, setShifts] = useState<Block[]>(testShifts);
   const [markers, setMarkers] = useState<SchedulerMarker[]>(demoMarkers);
+  const [dependencies, setDependencies] = useState(demoDependencies);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [initialDate, setInitialDate] = useState<Date | null>(null);
   const [active, setActive] = useState<Set<FeatureKey>>(new Set(['histogram', 'markers']));
@@ -168,7 +169,8 @@ export default function DemoPage() {
           /* New features — toggled by the pill buttons */
           markers={active.has('markers') ? markers : []}
           onMarkersChange={active.has('markers') ? setMarkers : undefined}
-          dependencies={active.has('dependencies') ? demoDependencies : []}
+          dependencies={active.has('dependencies') ? dependencies : []}
+          onDependenciesChange={active.has('dependencies') ? setDependencies : undefined}
           availability={active.has('availability') ? demoAvailability : []}
           showHistogram={active.has('histogram')}
           histogramHeight={130}
