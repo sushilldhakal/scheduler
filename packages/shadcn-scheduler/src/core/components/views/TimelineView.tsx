@@ -255,52 +255,120 @@ function TimelineViewInner({
     <div className="flex h-full flex-col overflow-hidden">
 
       {/* ── Header ── */}
-      <div className="flex shrink-0 border-b-2 border-border bg-muted" style={{ height: HOUR_HDR_H }}>
-        <div className="flex shrink-0 items-end border-r border-border px-3 pb-1.5" style={{ width: SIDEBAR_W }}>
-          {/* FIX #1: labels.category from context — no hardcoded string */}
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            {labels.category ?? "Resource"}
-          </span>
-        </div>
-        <div
-          ref={headerScrollRef}
-          className="min-w-0 flex-1 overflow-hidden"
-          style={{ scrollbarWidth: "none" } as React.CSSProperties}
-        >
-          <div style={{ width: gridWidth, display: "flex" }}>
-            {dates.map((d, di) => (
-              <div key={di} style={{ width: dayWidth, flexShrink: 0 }}>
-                {isMultiDay && (
-                  <div
-                    className="border-b border-border px-2 text-[10px] font-semibold"
-                    style={{
-                      height: 18, lineHeight: "18px",
-                      borderLeft: di > 0 ? "1px solid var(--border)" : undefined,
-                      color: isToday(d) ? "var(--primary)" : "var(--muted-foreground)",
-                    }}
-                  >
-                    {d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}
+      {(() => {
+        // Row height allocation within HOUR_HDR_H (44px):
+        // zoom >= 1.5 → 3 rows: month(12) + day(14) + hour(18) = 44
+        // zoom >= 1   → 2 rows: day(18) + hour(26) = 44
+        // zoom <  1   → 1 row:  hour(44)
+        const showMonth = zoom >= 1.5
+        const showDay   = zoom >= 1 && isMultiDay
+        const monthH    = showMonth ? 12 : 0
+        const dayH      = showDay   ? (showMonth ? 14 : 18) : 0
+        const hourH     = HOUR_HDR_H - monthH - dayH
+
+        return (
+          <div className="flex shrink-0 border-b-2 border-border bg-muted" style={{ height: HOUR_HDR_H }}>
+            {/* Sidebar stub */}
+            <div className="flex shrink-0 flex-col justify-end border-r border-border px-3 pb-1.5" style={{ width: SIDEBAR_W }}>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                {labels.category ?? "Resource"}
+              </span>
+            </div>
+
+            {/* Scrollable header columns */}
+            <div
+              ref={headerScrollRef}
+              className="min-w-0 flex-1 overflow-hidden"
+              style={{ scrollbarWidth: "none" } as React.CSSProperties}
+            >
+              <div style={{ width: gridWidth, display: "flex", flexDirection: "column" }}>
+
+                {/* Row 1: Month labels (zoom >= 1.5) */}
+                {showMonth && (
+                  <div style={{ display: "flex", height: monthH, width: gridWidth }}>
+                    {/* Group consecutive dates by month and render one label per group */}
+                    {(() => {
+                      const groups: { label: string; count: number; startDi: number }[] = []
+                      dates.forEach((d, di) => {
+                        const label = d.toLocaleDateString(undefined, { month: "short", year: "numeric" })
+                        const last = groups[groups.length - 1]
+                        if (last && last.label === label) { last.count++ }
+                        else groups.push({ label, count: 1, startDi: di })
+                      })
+                      return groups.map((g, gi) => (
+                        <div
+                          key={gi}
+                          style={{
+                            width: g.count * dayWidth,
+                            flexShrink: 0,
+                            borderLeft: gi > 0 ? "1px solid var(--border)" : undefined,
+                            borderBottom: "1px solid var(--border)",
+                            display: "flex",
+                            alignItems: "center",
+                            paddingLeft: 6,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <span style={{ fontSize: 9, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5, whiteSpace: "nowrap" }}>
+                            {g.label}
+                          </span>
+                        </div>
+                      ))
+                    })()}
                   </div>
                 )}
-                <div className="flex" style={{ height: isMultiDay ? HOUR_HDR_H - 18 : HOUR_HDR_H }}>
-                  {hourLabels.map((h) => (
-                    <div
-                      key={h}
-                      className="flex shrink-0 items-end justify-center pb-1 text-[10px] font-medium"
-                      style={{
-                        width: hourWidth,
-                        color: isToday(d) && h === Math.floor(nowH) ? "var(--primary)" : "var(--muted-foreground)",
-                      }}
-                    >
-                      {fmt12(h)}
+
+                {/* Row 2 + 3 combined: Day + Hour per day column */}
+                <div style={{ display: "flex", flex: 1, width: gridWidth }}>
+                  {dates.map((d, di) => (
+                    <div key={di} style={{ width: dayWidth, flexShrink: 0, display: "flex", flexDirection: "column" }}>
+
+                      {/* Day label row */}
+                      {showDay && (
+                        <div
+                          style={{
+                            height: dayH,
+                            lineHeight: `${dayH}px`,
+                            borderLeft: di > 0 ? "1px solid var(--border)" : undefined,
+                            borderBottom: "1px solid var(--border)",
+                            paddingLeft: 6,
+                            overflow: "hidden",
+                            color: isToday(d) ? "var(--primary)" : "var(--muted-foreground)",
+                            fontSize: 10,
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {d.toLocaleDateString(undefined, { weekday: "short", day: "numeric" })}
+                        </div>
+                      )}
+
+                      {/* Hour tick row */}
+                      <div className="flex" style={{ height: hourH }}>
+                        {hourLabels.map((h) => (
+                          <div
+                            key={h}
+                            className="flex shrink-0 items-end justify-center pb-1 text-[10px] font-medium"
+                            style={{
+                              width: hourWidth,
+                              color: isToday(d) && h === Math.floor(nowH) ? "var(--primary)" : "var(--muted-foreground)",
+                            }}
+                          >
+                            {/* At low zoom show every 2h, at normal every hour, at high zoom every 30min tick mark */}
+                            {zoom < 0.75
+                              ? (h - settings.visibleFrom) % 2 === 0 ? fmt12(h) : null
+                              : fmt12(h)}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      </div>
+        )
+      })()}
 
       {/* ── Body ── */}
       <div className="flex min-h-0 flex-1 overflow-hidden">

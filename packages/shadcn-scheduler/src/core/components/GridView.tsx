@@ -2093,7 +2093,9 @@ function GridViewInner({
                             letterSpacing: 0.5,
                           }}
                         >
-                          {MONTHS_SHORT[d.getMonth()]} {DOW_MON_FIRST[(d.getDay() + 6) % 7]}
+                          {zoom < 1
+                            ? DOW_MON_FIRST[(d.getDay() + 6) % 7]
+                            : `${MONTHS_SHORT[d.getMonth()]} ${DOW_MON_FIRST[(d.getDay() + 6) % 7]}`}
                         </div>
                         <div
                           style={{
@@ -2112,7 +2114,43 @@ function GridViewInner({
                         >
                           {d.getDate()}
                         </div>
-                        {!closed && (
+                        {!closed && zoom >= 1.25 ? (
+                          /* zoom >= 1.25: second sub-row with hour tick marks every 2h */
+                          <div
+                            style={{
+                              display: "flex",
+                              width: "100%",
+                              marginTop: 3,
+                              borderTop: "1px solid var(--border)",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {Array.from(
+                              { length: Math.floor((settings.visibleTo - settings.visibleFrom) / 2) + 1 },
+                              (_, k) => {
+                                const h = Math.min(settings.visibleFrom + k * 2, settings.visibleTo - 0.01)
+                                return (
+                                  <div
+                                    key={h}
+                                    style={{
+                                      flex: 1,
+                                      textAlign: "center",
+                                      fontSize: 7,
+                                      fontWeight: 600,
+                                      color: today && Math.floor(nowH) === Math.floor(h) ? "var(--primary)" : "var(--muted-foreground)",
+                                      paddingTop: 2,
+                                      minWidth: 0,
+                                      overflow: "hidden",
+                                    }}
+                                  >
+                                    {fmt12(h)}
+                                  </div>
+                                )
+                              }
+                            )}
+                          </div>
+                        ) : !closed ? (
+                          /* default: compact time labels */
                           <div
                             style={{
                               display: "flex",
@@ -2154,7 +2192,7 @@ function GridViewInner({
                               }
                             )}
                           </div>
-                        )}
+                        ) : null}
                         {closed && (
                           <div style={{ fontSize: 8, color: "var(--muted-foreground)", fontWeight: 600, marginTop: 1 }}>
                             CLOSED
