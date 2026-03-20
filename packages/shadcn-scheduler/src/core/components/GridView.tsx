@@ -2751,16 +2751,19 @@ function GridViewInner({
                   return (
                     <div
                       key={`avail-${emp.id}-${di}-${h}`}
+                      title="Unavailable"
                       style={{
                         position: "absolute",
                         left,
                         top: vr.start,
                         width,
                         height: vr.size,
-                        background: "repeating-linear-gradient(135deg, transparent, transparent 4px, color-mix(in oklch, var(--muted-foreground) 15%, transparent) 4px, color-mix(in oklch, var(--muted-foreground) 15%, transparent) 8px)",
-                        borderRight: "1px solid color-mix(in oklch, var(--border) 40%, transparent)",
+                        // Solid amber base + dense diagonal stripes = clearly visible
+                        background: "color-mix(in oklch, var(--color-amber-500, #f59e0b) 18%, transparent)",
+                        backgroundImage: "repeating-linear-gradient(135deg, color-mix(in oklch, var(--color-amber-500, #f59e0b) 40%, transparent) 0px, color-mix(in oklch, var(--color-amber-500, #f59e0b) 40%, transparent) 2px, transparent 2px, transparent 8px)",
+                        borderRight: "1px solid color-mix(in oklch, var(--color-amber-500, #f59e0b) 25%, transparent)",
                         pointerEvents: "none",
-                        zIndex: 3,
+                        zIndex: 4,
                       }}
                     />
                   )
@@ -3059,73 +3062,6 @@ function GridViewInner({
               )
             })}
 
-            {/* SVG dependency arrows — rendered above markers, below blocks */}
-            {dependencies.length > 0 && (() => {
-              // Build a lookup: blockId → { left, top } in grid coords
-              const blockPos: Record<string, { startX: number; endX: number; centerY: number }> = {}
-              for (const s of shifts) {
-                const di = isWeekView
-                  ? dates.findIndex((d) => sameDay(d, s.date))
-                  : isDayViewMultiDay
-                    ? dates.findIndex((d) => sameDay(d, s.date))
-                    : 0
-                if (di < 0) continue
-                const rowKey = rowMode === "individual"
-                  ? `emp:${s.employeeId}`
-                  : `cat:${s.categoryId}`
-                const rowTop = categoryTops[rowKey] ?? 0
-                const rowH   = categoryHeights[rowKey] ?? ROLE_HDR
-                const startX = isWeekView
-                  ? di * COL_W_WEEK + (s.startH - settings.visibleFrom) * PX_WEEK
-                  : isDayViewMultiDay
-                    ? di * DAY_WIDTH + (s.startH - settings.visibleFrom) * HOUR_W
-                    : (s.startH - settings.visibleFrom) * HOUR_W
-                const endX = isWeekView
-                  ? di * COL_W_WEEK + (s.endH - settings.visibleFrom) * PX_WEEK
-                  : isDayViewMultiDay
-                    ? di * DAY_WIDTH + (s.endH - settings.visibleFrom) * HOUR_W
-                    : (s.endH - settings.visibleFrom) * HOUR_W
-                blockPos[s.id] = { startX, endX, centerY: rowTop + rowH / 2 }
-              }
-              return (
-                <svg
-                  style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, pointerEvents: "none", zIndex: 17, overflow: "visible" }}
-                  aria-hidden
-                >
-                  <defs>
-                    {["var(--primary)", "var(--destructive)", "var(--muted-foreground)"].map((col, ci) => (
-                      <marker key={ci} id={`arr-${ci}`} markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-                        <polygon points="0 0, 7 3.5, 0 7" fill={col} />
-                      </marker>
-                    ))}
-                  </defs>
-                  {dependencies.map((dep) => {
-                    const from = blockPos[dep.fromId]
-                    const to   = blockPos[dep.toId]
-                    if (!from || !to) return null
-                    const type  = dep.type ?? "finish-to-start"
-                    const color = dep.color ?? "var(--primary)"
-                    const markerIdx = color === "var(--destructive)" ? 1 : color === "var(--muted-foreground)" ? 2 : 0
-                    let x1 = from.endX, y1 = from.centerY
-                    let x2 = to.startX, y2 = to.centerY
-                    if (type === "start-to-start")   { x1 = from.startX; x2 = to.startX }
-                    if (type === "finish-to-finish")  { x1 = from.endX;  x2 = to.endX   }
-                    // Curved cubic bezier
-                    const dx = Math.abs(x2 - x1)
-                    const cp = Math.max(dx * 0.5, 40)
-                    const d  = `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`
-                    return (
-                      <g key={dep.id}>
-                        <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray={dep.type === "start-to-start" || dep.type === "finish-to-finish" ? "4 3" : undefined} markerEnd={`url(#arr-${markerIdx})`} opacity={0.75} />
-                        {dep.label && (
-                          <text x={(x1 + x2) / 2} y={Math.min(y1, y2) - 4} fontSize={9} fill={color} textAnchor="middle" fontWeight={600}>{dep.label}</text>
-                        )}
-                      </g>
-                    )
-                  })}
-                </svg>
-              )
-            })()}
 
             {/* SVG dependency arrows */}
             {dependencies.length > 0 && (() => {
@@ -3149,27 +3085,42 @@ function GridViewInner({
               return (
                 <svg style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, pointerEvents: "none", zIndex: 17, overflow: "visible" }} aria-hidden>
                   <defs>
-                    <marker id="dep-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-                      <polygon points="0 0, 7 3.5, 0 7" fill="var(--primary)" />
-                    </marker>
+                    {/* One arrowhead marker per unique color so custom colors work */}
+                    {Array.from(new Set(dependencies.map(d => d.color ?? "var(--primary)"))).map((col, ci) => (
+                      <marker key={ci} id={`dep-arr-${ci}`} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                        <polygon points="0 0, 8 4, 0 8" fill={col} />
+                      </marker>
+                    ))}
                   </defs>
-                  {dependencies.map((dep) => {
-                    const from = blockPos[dep.fromId]
-                    const to   = blockPos[dep.toId]
-                    if (!from || !to) return null
-                    const type  = dep.type ?? "finish-to-start"
-                    const color = dep.color ?? "var(--primary)"
-                    const x1 = type === "start-to-start" ? from.startX : from.endX
-                    const x2 = type === "finish-to-finish" ? to.endX   : to.startX
-                    const cp = Math.max(Math.abs(x2 - x1) * 0.5, 40)
-                    const d  = `M ${x1} ${from.centerY} C ${x1 + cp} ${from.centerY}, ${x2 - cp} ${to.centerY}, ${x2} ${to.centerY}`
-                    return (
-                      <g key={dep.id}>
-                        <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray={type !== "finish-to-start" ? "4 3" : undefined} markerEnd="url(#dep-arrow)" opacity={0.7} />
-                        {dep.label && <text x={(x1 + x2) / 2} y={Math.min(from.centerY, to.centerY) - 4} fontSize={9} fill={color} textAnchor="middle" fontWeight={600}>{dep.label}</text>}
-                      </g>
-                    )
-                  })}
+                  {(() => {
+                    const colors = Array.from(new Set(dependencies.map(d => d.color ?? "var(--primary)")))
+                    return dependencies.map((dep) => {
+                      const from = blockPos[dep.fromId]
+                      const to   = blockPos[dep.toId]
+                      if (!from || !to) return null
+                      const type  = dep.type ?? "finish-to-start"
+                      const color = dep.color ?? "var(--primary)"
+                      const ci    = colors.indexOf(color)
+                      const x1 = type === "start-to-start" ? from.startX : from.endX
+                      const x2 = type === "finish-to-finish" ? to.endX   : to.startX
+                      const y1 = from.centerY
+                      const y2 = to.centerY
+                      // Wider stroke and higher opacity so it's clearly visible
+                      const cp = Math.max(Math.abs(x2 - x1) * 0.5, 60)
+                      const d  = `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`
+                      return (
+                        <g key={dep.id}>
+                          <path d={d} fill="none" stroke={color} strokeWidth={2.5} strokeDasharray={type !== "finish-to-start" ? "5 3" : undefined} markerEnd={`url(#dep-arr-${ci})`} opacity={0.9} />
+                          {dep.label && (
+                            <text x={(x1 + x2) / 2} y={Math.min(y1, y2) - 6} fontSize={10} fill={color} textAnchor="middle" fontWeight={700}
+                              style={{ filter: "drop-shadow(0 0 3px var(--background))" }}>
+                              {dep.label}
+                            </text>
+                          )}
+                        </g>
+                      )
+                    })
+                  })()}
                 </svg>
               )
             })()}

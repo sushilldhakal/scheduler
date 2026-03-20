@@ -126,12 +126,21 @@ export const recurringShifts: Block[] = [
 ]
 
 // ── Shift dependencies ────────────────────────────────────────────────────────
-// Use the deterministic conflict scenario shifts as dependency demo targets
+// Handover chain — morning → midday → evening across three categories
+// These are sequential and on different rows so arrows are clearly visible
 export const demoDependencies: ShiftDependency[] = [
   {
     id: "dep-1",
-    fromId: "conflict-paul-bar",
-    toId: "conflict-paul-kitchen",
+    fromId: "dep-morning",
+    toId: "dep-midday",
+    type: "finish-to-start",
+    label: "handover",
+    color: "var(--primary)",
+  },
+  {
+    id: "dep-2",
+    fromId: "dep-midday",
+    toId: "dep-evening",
     type: "finish-to-start",
     label: "handover",
     color: "var(--primary)",
@@ -183,15 +192,26 @@ export const demoMarkers: SchedulerMarker[] = [
   },
 ]
 
+// Two sequential shifts for the same employee — used as dependency demo targets
+// Morning: Front Desk 8–12, then Kitchen 13–17 — arrow connects the end of one to start of next
 const conflictScenarioShifts: Block[] = [
-  { id: "conflict-paul-bar",    categoryId: "c1", employeeId: "e4", date: toDateISO(today), startH: 8,  endH: 16, employee: "David D.", status: "published" },
-  { id: "conflict-paul-kitchen",categoryId: "c2", employeeId: "e4", date: toDateISO(today), startH: 8,  endH: 16, employee: "David D.", status: "published" },
+  { id: "dep-shift-morning", categoryId: "c1", employeeId: "e4", date: toDateISO(today), startH: 8,  endH: 12, employee: "David D.", status: "published" },
+  { id: "dep-shift-afternoon",categoryId: "c2", employeeId: "e4", date: toDateISO(today), startH: 13, endH: 17, employee: "David D.", status: "published" },
+]
+
+// Dedicated handover chain — clearly visible on today with sequential times
+// across different categories so the arrows cross rows and are obvious
+export const handoverShifts: Block[] = [
+  { id: "dep-morning",  categoryId: "c1", employeeId: "e1",  date: toDateISO(today), startH: 7,  endH: 12, employee: "Alice A.",  status: "published" },
+  { id: "dep-midday",   categoryId: "c2", employeeId: "e6",  date: toDateISO(today), startH: 12, endH: 17, employee: "Frank F.",  status: "published" },
+  { id: "dep-evening",  categoryId: "c3", employeeId: "e11", date: toDateISO(today), startH: 17, endH: 22, employee: "Kate K.",   status: "published" },
 ]
 
 export const testShifts: Block[] = [
   ...generateShifts({ daysBack: 0, daysAhead: 6, shiftsPerDay: 8 }),
   ...recurringShifts,
   ...conflictScenarioShifts,
+  ...handoverShifts,
 ]
 
 export const smallCategories: Resource[] = [
