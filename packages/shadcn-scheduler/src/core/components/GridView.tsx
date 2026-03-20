@@ -2270,7 +2270,38 @@ function GridViewInner({
             })}
           </div>
         </div>
-        <div ref={headerRef} style={{ flex: 1, overflowX: "hidden" }}>
+        <div
+          ref={headerRef}
+          style={{ flex: 1, overflowX: "hidden" }}
+          onContextMenu={onMarkersChange ? (e) => {
+            e.preventDefault()
+            const el = headerRef.current
+            const scrollEl = scrollRef.current
+            if (!el || !scrollEl) return
+            const rect = el.getBoundingClientRect()
+            const x = scrollEl.scrollLeft + e.clientX - rect.left
+            const di = isWeekView
+              ? Math.floor(x / COL_W_WEEK)
+              : isDayViewMultiDay ? Math.floor(x / DAY_WIDTH) : 0
+            const clampedDi = Math.max(0, Math.min(dates.length - 1, di))
+            const offsetX = isWeekView
+              ? x - clampedDi * COL_W_WEEK
+              : isDayViewMultiDay ? x - clampedDi * DAY_WIDTH : x
+            const hour = Math.max(settings.visibleFrom, Math.min(settings.visibleTo,
+              settings.visibleFrom + offsetX / (isWeekView ? PX_WEEK : HOUR_W)
+            ))
+            const markerDate = dates[clampedDi]
+            if (!markerDate) return
+            onMarkersChange([...markers, {
+              id: `marker-${Date.now()}`,
+              date: toDateISO(markerDate),
+              hour: Math.round(hour * 4) / 4,
+              label: "",
+              color: "var(--primary)",
+              draggable: true,
+            }])
+          } : undefined}
+        >
           <div
             style={{
               display: "flex",
@@ -3293,15 +3324,21 @@ function GridViewInner({
                   data-scheduler-marker={marker.id}
                   style={{
                     position: "absolute",
-                    left,
+                    left: left - 6,  // widen hit area: 2px visual + 6px padding each side
                     top: 0,
-                    width: 2,
+                    width: 14,
                     height: totalHVirtual,
-                    background: color,
                     zIndex: 16,
-                    pointerEvents: marker.draggable ? "auto" : "none",
-                    cursor: marker.draggable ? "ew-resize" : "default",
+                    pointerEvents: "auto",
+                    cursor: marker.draggable ? "ew-resize" : (onMarkersChange ? "pointer" : "default"),
+                    display: "flex",
+                    justifyContent: "center",
                   }}
+                  onContextMenu={onMarkersChange ? (e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onMarkersChange(markers.filter((m) => m.id !== marker.id))
+                  } : undefined}
                   onPointerDown={marker.draggable ? (e) => {
                     e.stopPropagation()
                     e.currentTarget.setPointerCapture(e.pointerId)
@@ -3331,11 +3368,13 @@ function GridViewInner({
                     document.addEventListener("pointerup", onUp)
                   } : undefined}
                 >
+                  {/* Visible 2px line centred in the hit area */}
+                  <div style={{ width: 2, height: "100%", background: color, pointerEvents: "none" }} />
                   {marker.label && (
                     <span style={{
                       position: "absolute",
                       top: 4,
-                      left: 4,
+                      left: 10,
                       fontSize: 10,
                       whiteSpace: "nowrap",
                       color,
@@ -3346,6 +3385,19 @@ function GridViewInner({
                       borderRadius: 2,
                     }}>
                       {marker.label}
+                    </span>
+                  )}
+                  {onMarkersChange && (
+                    <span style={{
+                      position: "absolute",
+                      bottom: 4,
+                      left: 10,
+                      fontSize: 9,
+                      color: "var(--muted-foreground)",
+                      pointerEvents: "none",
+                      whiteSpace: "nowrap",
+                    }}>
+                      right-click to remove
                     </span>
                   )}
                 </div>
@@ -3373,57 +3425,85 @@ function GridViewInner({
                 blockPos[s.id] = { startX, endX, centerY: rowTop + rowH / 2 }
               }
               return (
-                <svg
-                  ref={depSvgRef}
-                  style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, pointerEvents: "none", zIndex: 17, overflow: "visible" }}
-                  aria-hidden
-                >
-                  <defs>
-                    {/* Preview arrowhead for dep-draw */}
-                    <marker id="dep-preview-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-                      <polygon points="0 0, 8 4, 0 8" fill="var(--primary)" opacity="0.8" />
-                    </marker>
-                    {Array.from(new Set(dependencies.map(d => d.color ?? "var(--primary)"))).map((col, ci) => (
-                      <marker key={ci} id={`dep-arr-${ci}`} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-                        <polygon points="0 0, 8 4, 0 8" fill={col} />
+                <>
+                  {/* Visual layer — pointerEvents none so it doesn't block block interactions */}
+                  <svg
+                    ref={depSvgRef}
+                    style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, pointerEvents: "none", zIndex: 17, overflow: "visible" }}
+                    aria-hidden
+                  >
+                    <defs>
+                      {/* Preview arrowhead for dep-draw */}
+                      <marker id="dep-preview-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                        <polygon points="0 0, 8 4, 0 8" fill="var(--primary)" opacity="0.8" />
                       </marker>
-                    ))}
-                  </defs>
-                  {(() => {
-                    const colors = Array.from(new Set(dependencies.map(d => d.color ?? "var(--primary)")))
-                    return dependencies.map((dep) => {
-                      const from = blockPos[dep.fromId]
-                      const to   = blockPos[dep.toId]
-                      if (!from || !to) return null
-                      const type  = dep.type ?? "finish-to-start"
-                      const color = dep.color ?? "var(--primary)"
-                      const ci    = colors.indexOf(color)
-                      const x1 = type === "start-to-start" ? from.startX : from.endX
-                      const x2 = type === "finish-to-finish" ? to.endX   : to.startX
-                      const y1 = from.centerY
-                      const y2 = to.centerY
-                      const cp = Math.max(Math.abs(x2 - x1) * 0.5, 60)
-                      const d  = `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`
-                      return (
-                        <g key={dep.id}>
-                          {/* Wide invisible hit area — easy to click to delete */}
+                      {Array.from(new Set(dependencies.map(d => d.color ?? "var(--primary)"))).map((col, ci) => (
+                        <marker key={ci} id={`dep-arr-${ci}`} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                          <polygon points="0 0, 8 4, 0 8" fill={col} />
+                        </marker>
+                      ))}
+                    </defs>
+                    {(() => {
+                      const colors = Array.from(new Set(dependencies.map(d => d.color ?? "var(--primary)")))
+                      return dependencies.map((dep) => {
+                        const from = blockPos[dep.fromId]
+                        const to   = blockPos[dep.toId]
+                        if (!from || !to) return null
+                        const type  = dep.type ?? "finish-to-start"
+                        const color = dep.color ?? "var(--primary)"
+                        const ci    = colors.indexOf(color)
+                        const x1 = type === "start-to-start" ? from.startX : from.endX
+                        const x2 = type === "finish-to-finish" ? to.endX   : to.startX
+                        const y1 = from.centerY
+                        const y2 = to.centerY
+                        const cp = Math.max(Math.abs(x2 - x1) * 0.5, 60)
+                        const d  = `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`
+                        return (
+                          <g key={dep.id}>
+                            <path d={d} fill="none" stroke={color} strokeWidth={2.5} strokeDasharray={type !== "finish-to-start" ? "5 3" : undefined} markerEnd={`url(#dep-arr-${ci})`} opacity={0.9} />
+                            {dep.label && (
+                              <text x={(x1 + x2) / 2} y={Math.min(y1, y2) - 6} fontSize={10} fill={color} textAnchor="middle" fontWeight={700}
+                                style={{ filter: "drop-shadow(0 0 3px var(--background))" }}>
+                                {dep.label}
+                              </text>
+                            )}
+                          </g>
+                        )
+                      })
+                    })()}
+                  </svg>
+                  {/* Hit-area layer — separate SVG with pointerEvents auto so clicks work */}
+                  {onDependenciesChange && dependencies.length > 0 && (
+                    <svg
+                      style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, pointerEvents: "none", zIndex: 18, overflow: "visible" }}
+                      aria-hidden
+                    >
+                      {dependencies.map((dep) => {
+                        const from = blockPos[dep.fromId]
+                        const to   = blockPos[dep.toId]
+                        if (!from || !to) return null
+                        const type = dep.type ?? "finish-to-start"
+                        const x1 = type === "start-to-start" ? from.startX : from.endX
+                        const x2 = type === "finish-to-finish" ? to.endX   : to.startX
+                        const y1 = from.centerY
+                        const y2 = to.centerY
+                        const cp = Math.max(Math.abs(x2 - x1) * 0.5, 60)
+                        const d  = `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`
+                        return (
                           <path
-                            d={d} fill="none" stroke="transparent" strokeWidth={14}
-                            style={{ pointerEvents: "auto", cursor: "pointer" }}
-                            onClick={() => onDependenciesChange?.(dependencies.filter(dd => dd.id !== dep.id))}
+                            key={`hit-${dep.id}`}
+                            d={d}
+                            fill="none"
+                            stroke="transparent"
+                            strokeWidth={16}
+                            style={{ pointerEvents: "stroke", cursor: "pointer" }}
+                            onClick={() => onDependenciesChange(dependencies.filter(dd => dd.id !== dep.id))}
                           />
-                          <path d={d} fill="none" stroke={color} strokeWidth={2.5} strokeDasharray={type !== "finish-to-start" ? "5 3" : undefined} markerEnd={`url(#dep-arr-${ci})`} opacity={0.9} />
-                          {dep.label && (
-                            <text x={(x1 + x2) / 2} y={Math.min(y1, y2) - 6} fontSize={10} fill={color} textAnchor="middle" fontWeight={700}
-                              style={{ filter: "drop-shadow(0 0 3px var(--background))" }}>
-                              {dep.label}
-                            </text>
-                          )}
-                        </g>
-                      )
-                    })
-                  })()}
-                </svg>
+                        )
+                      })}
+                    </svg>
+                  )}
+                </>
               )
             })()}
             {/* Rows */}

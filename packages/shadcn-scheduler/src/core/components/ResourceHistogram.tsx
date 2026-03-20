@@ -101,13 +101,22 @@ function ResourceHistogramInner({
           const pct = Math.min(row.hours / maxHours, 1)
           const capPct = row.capacity != null ? Math.min(row.capacity / maxHours, 1) : null
 
-          // Colour logic: green = under capacity, amber = 90–100%, red = over
+          // Colour logic: always use category colour as base.
+          // When capacity is configured, adjust opacity/glow to signal utilisation level.
+          // Never replace the category colour with generic red/green — keeps visual identity.
           let barColor = row.color
-          if (row.capacity != null) {
+          let barOpacity = 0.85
+          let overCapacity = false
+          if (row.capacity != null && row.capacity > 0) {
             const util = row.hours / row.capacity
-            if (util > 1)    barColor = "var(--destructive)"
-            else if (util >= 0.9) barColor = "var(--color-amber-500, #f59e0b)"
-            else              barColor = "var(--color-emerald-500, #10b981)"
+            if (util > 1) {
+              overCapacity = true
+              barOpacity = 1
+            } else if (util >= 0.9) {
+              barOpacity = 0.95
+            } else {
+              barOpacity = 0.7
+            }
           }
 
           return (
@@ -152,9 +161,23 @@ function ResourceHistogramInner({
                     background: barColor,
                     borderRadius: 4,
                     transition: "width 0.3s ease",
-                    opacity: 0.85,
+                    opacity: barOpacity,
                   }}
                 />
+                {/* Over-capacity indicator — red right border */}
+                {overCapacity && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 3,
+                      background: "var(--destructive)",
+                      borderRadius: "0 4px 4px 0",
+                    }}
+                  />
+                )}
                 {/* Capacity marker line */}
                 {capPct != null && (
                   <div
