@@ -3662,7 +3662,7 @@ function GridViewInner({
                                 ? `0 1px 4px ${c.bg}20`
                                 : `0 2px 8px ${c.bg}44`,
                       transition: isDrag ? "none" : isDeleting ? "opacity 150ms ease-out" : "box-shadow 150ms ease-out, transform 150ms ease-out",
-                      contain: "layout style paint", willChange: isDrag ? "transform" : "auto",
+                      contain: "layout style", willChange: isDrag ? "transform" : "auto",
                     }
                     if (isDrag) {
                       blockStyle.left = 0
@@ -3955,7 +3955,7 @@ function GridViewInner({
                         : isDeleting
                           ? "opacity 150ms ease-out"
                           : "box-shadow 150ms ease-out, transform 150ms ease-out",
-                    contain: "layout style paint",
+                    contain: "layout style",
                     willChange: isDrag ? "transform" : "auto",
                   }
                   if (isDrag) {
