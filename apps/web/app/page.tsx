@@ -24,12 +24,12 @@ const domains = [
 ]
 
 const features = [
-  { icon: Move, title: '2D Free Drag', desc: 'Blocks lift out of their row and follow your cursor freely across the entire grid. Drop anywhere.' },
-  { icon: Layers, title: 'Virtual Rendering', desc: '200+ staff with zero jank. TanStack virtualizer renders only what\'s in view.' },
-  { icon: Zap, title: 'Right-click Actions', desc: 'Context menu with Edit, Copy, Cut, Delete. Cut removes the block immediately — paste it anywhere.' },
-  { icon: Calendar, title: '6 View Types', desc: 'Day, Week, Month, Year, List, Timeline. Each view is fully interactive with drag support.' },
-  { icon: Users, title: 'Row Modes', desc: 'Category mode stacks shifts per team. Individual mode gives every employee their own row.' },
-  { icon: Moon, title: 'Dark Mode Native', desc: 'Built on shadcn CSS variables. Switches themes instantly with zero additional CSS.' },
+  { icon: Move, title: '2D Free Drag', desc: 'Blocks lift out of their row and follow your cursor freely. Drop anywhere — across rows, days, views.' },
+  { icon: Layers, title: 'Virtual Rendering', desc: '200+ staff with zero jank. TanStack virtualizer renders only visible rows at 60fps.' },
+  { icon: Zap, title: 'Right-click & Bulk Actions', desc: 'Context menu with Edit, Copy, Cut, Delete. Rubber-band select multiple blocks and bulk move, publish or delete.' },
+  { icon: Calendar, title: '7 View Types', desc: 'Day, Week, Month, Year, List, Timeline. Multi-level zoom headers. Each view fully interactive.' },
+  { icon: Users, title: 'Recurring Shifts', desc: 'Daily, weekly, monthly recurrence with RRULE-compatible rules. Edit single occurrence or all future.' },
+  { icon: Moon, title: 'Dependencies & Markers', desc: 'SVG arrows connect related shifts. Draggable vertical markers for deadlines and milestones.' },
 ]
 
 const installSteps = [

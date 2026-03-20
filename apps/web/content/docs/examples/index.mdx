@@ -461,3 +461,203 @@ Each domain preset has its own registry entry — install just the files your us
 TV, Festival, and Venue use the **timeline engine** (~32 files). Roster, Conference, Healthcare, and Gantt use the **grid engine** (~49 files). The full bundle installs everything.
 
 [→ Full installation guide](/docs/getting-started/installation)
+
+---
+
+## New in v0.4 — Phase 1 & 2 features
+
+### Recurring shifts
+
+Add a `recurrence` rule to any block. The scheduler automatically expands occurrences across the visible date window — no external rrule library needed.
+
+```tsx
+const shifts: Block[] = [
+  {
+    id: 'morning-standup',
+    categoryId: 'c1',
+    employeeId: 'e1',
+    date: '2026-03-20',   // master date — first occurrence
+    startH: 9, endH: 10,
+    employee: 'Alice A.',
+    status: 'published',
+    recurrence: {
+      freq: 'weekly',
+      byDay: [1, 2, 3, 4, 5],  // Mon–Fri
+      count: 52,                 // 52 occurrences
+    },
+  },
+  {
+    id: 'evening-clean',
+    categoryId: 'c2',
+    employeeId: 'e2',
+    date: '2026-03-20',
+    startH: 20, endH: 22,
+    employee: 'Bob B.',
+    status: 'draft',
+    recurrence: {
+      freq: 'daily',
+      interval: 2,               // every other day
+      until: '2026-06-30',       // stop date
+    },
+  },
+]
+```
+
+Supported: `daily`, `weekly` (with `byDay`), `monthly`. Stop by `count` or `until` date. Each occurrence gets a stable id (`${masterId}_r${YYYY-MM-DD}`) for API sync.
+
+---
+
+### Shift dependencies
+
+Draw SVG arrows between related blocks — handovers, sequential tasks, or any finish-to-start relationship.
+
+```tsx
+import type { ShiftDependency } from '@sushill/shadcn-scheduler'
+
+const dependencies: ShiftDependency[] = [
+  {
+    id: 'dep-1',
+    fromId: 'shift-a',
+    toId: 'shift-b',
+    type: 'finish-to-start',  // solid bezier arrow
+    label: 'handover',
+    color: 'var(--primary)',
+  },
+  {
+    id: 'dep-2',
+    fromId: 'task-1',
+    toId: 'task-2',
+    type: 'start-to-start',   // dashed arrow
+  },
+]
+
+<Scheduler
+  dependencies={dependencies}
+  onDependenciesChange={setDependencies}
+  {...rest}
+/>
+```
+
+Types: `finish-to-start` (solid), `start-to-start` (dashed), `finish-to-finish` (dashed). Custom `color` and `label` per arrow.
+
+---
+
+### Employee availability
+
+Shade unavailable hours per employee. Slots outside declared windows get a diagonal-stripe overlay so you can see at a glance when staff can't be scheduled.
+
+```tsx
+import type { EmployeeAvailability } from '@sushill/shadcn-scheduler'
+
+const availability: EmployeeAvailability[] = [
+  {
+    employeeId: 'e3',
+    windows: [
+      { dayOfWeek: 1, startH: 9, endH: 17 },  // Mon 9–5
+      { dayOfWeek: 2, startH: 9, endH: 17 },  // Tue 9–5
+      { dayOfWeek: 3, startH: 9, endH: 17 },
+      { dayOfWeek: 4, startH: 9, endH: 17 },
+      { dayOfWeek: 5, startH: 9, endH: 17 },
+      // No Sat/Sun windows = unavailable on weekends
+    ],
+  },
+  {
+    employeeId: 'e5',
+    windows: [
+      // Date-specific override takes precedence over dayOfWeek
+      { date: '2026-03-25', startH: 10, endH: 14 },
+    ],
+  },
+]
+
+<Scheduler availability={availability} {...rest} />
+```
+
+Works in individual row mode (one row per employee). In category mode, availability is not shown since rows are shared across employees.
+
+---
+
+### Markers & milestones
+
+Vertical lines at any date+hour position. Draggable so users can adjust deadlines in-place.
+
+```tsx
+import type { SchedulerMarker } from '@sushill/shadcn-scheduler'
+
+const [markers, setMarkers] = useState<SchedulerMarker[]>([
+  {
+    id: 'deadline',
+    date: '2026-03-25',
+    hour: 9,
+    label: 'Sprint deadline',
+    color: 'var(--color-amber-500, #f59e0b)',
+    draggable: true,
+  },
+  {
+    id: 'release',
+    date: '2026-03-28',
+    // No hour = renders at day boundary (left edge of the column)
+    label: 'Release',
+    color: 'var(--destructive)',
+  },
+])
+
+<Scheduler
+  markers={markers}
+  onMarkersChange={setMarkers}  // called when user drags a marker
+  {...rest}
+/>
+```
+
+---
+
+### Resource utilisation histogram
+
+A bar chart panel below the grid showing scheduled hours vs capacity per department (or per employee in individual mode).
+
+```tsx
+import type { HistogramConfig } from '@sushill/shadcn-scheduler'
+
+const histogramConfig: HistogramConfig = {
+  capacities: [
+    { resourceId: 'c1', hours: 40 },  // Front Desk: 40h/week cap
+    { resourceId: 'c2', hours: 35 },  // Kitchen: 35h/week cap
+  ],
+}
+
+<Scheduler
+  showHistogram
+  histogramHeight={130}
+  histogramConfig={histogramConfig}
+  {...rest}
+/>
+```
+
+Colour logic: green = under capacity, amber = 90–100%, red = over capacity. No capacity set = uses category colour. The histogram filters to the same date window as the grid.
+
+---
+
+### Undo & redo
+
+Full command history. `Ctrl+Z` undoes the last mutation, `Ctrl+Y` (or `Ctrl+Shift+Z`) redoes it. History depth: 20 steps.
+
+No configuration needed — undo/redo is always on. The history is scoped to the `<Scheduler>` instance and resets on unmount.
+
+---
+
+### iCal export
+
+Export any set of blocks to a `.ics` file for Google Calendar / Outlook import. No external dependency.
+
+```tsx
+import { exportToICS } from '@sushill/shadcn-scheduler'
+
+// Export all shifts
+exportToICS(shifts, 'my-schedule.ics')
+
+// Export only published shifts for a date range
+const published = shifts.filter(s => s.status === 'published' && s.date >= '2026-03-01')
+exportToICS(published, 'march-schedule.ics')
+```
+
+Also available: `exportToCSV(shifts)` and `exportToPDF(container)` / `exportToImage(container)` (require optional peer deps).

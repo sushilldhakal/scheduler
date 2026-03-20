@@ -1,4 +1,4 @@
-import type { Block, Resource } from "@sushill/shadcn-scheduler"
+import type { Block, Resource, RecurrenceRule, ShiftDependency, EmployeeAvailability, SchedulerMarker } from "@sushill/shadcn-scheduler"
 import { toDateISO } from "@sushill/shadcn-scheduler"
 
 const FIRST_NAMES = [
@@ -42,7 +42,7 @@ function generateEmployees(count: number): Resource[] {
 
 export const employees: Resource[] = generateEmployees(20)
 
-const SHIFT_HOURS = [
+const SHIFT_HOURS: [number, number][] = [
   [8, 16], [9, 17], [10, 18], [11, 19], [12, 20], [14, 22],
   [7, 15], [6, 14], [16, 24], [8, 12], [12, 16], [16, 20],
 ]
@@ -69,9 +69,9 @@ export function generateShifts(options?: {
     const weekendMultiplier = dow === 0 || dow === 6 ? 0.4 : 1
     const count = Math.floor(shiftsPerDay * weekendMultiplier * (0.7 + Math.random() * 0.6))
     for (let s = 0; s < count; s++) {
-      const emp = employees[Math.floor(Math.random() * employees.length)]
-      const [startH, endH] = SHIFT_HOURS[Math.floor(Math.random() * SHIFT_HOURS.length)]
-      const cat = categories.find((c) => c.id === emp.categoryId) ?? categories[0]
+      const emp = employees[Math.floor(Math.random() * employees.length)]!
+      const [startH, endH] = SHIFT_HOURS[Math.floor(Math.random() * SHIFT_HOURS.length)]!
+      const cat = categories.find((c) => c.id === emp.categoryId) ?? categories[0]!
       const status = Math.random() > 0.85 ? "draft" : "published"
       shifts.push({
         id: `s${shiftId++}`,
@@ -88,13 +88,107 @@ export function generateShifts(options?: {
   return shifts
 }
 
+// ── Recurring shifts — visible in the demo ───────────────────────────────────
+const today = new Date()
+today.setHours(0, 0, 0, 0)
+
+export const recurringShifts: Block[] = [
+  {
+    id: "rec-morning",
+    categoryId: "c1",
+    employeeId: "e1",
+    date: toDateISO(today),
+    startH: 8,
+    endH: 12,
+    employee: "Alice A.",
+    status: "published",
+    recurrence: {
+      freq: "weekly",
+      byDay: [1, 2, 3, 4, 5], // Mon–Fri
+      count: 20,
+    } satisfies RecurrenceRule,
+  },
+  {
+    id: "rec-evening",
+    categoryId: "c2",
+    employeeId: "e2",
+    date: toDateISO(today),
+    startH: 17,
+    endH: 21,
+    employee: "Bob B.",
+    status: "draft",
+    recurrence: {
+      freq: "daily",
+      interval: 2,
+      count: 10,
+    } satisfies RecurrenceRule,
+  },
+]
+
+// ── Shift dependencies ────────────────────────────────────────────────────────
+export const demoDependencies: ShiftDependency[] = [
+  {
+    id: "dep-1",
+    fromId: "s1",
+    toId: "s2",
+    type: "finish-to-start",
+    label: "handover",
+  },
+]
+
+// ── Employee availability ─────────────────────────────────────────────────────
+export const demoAvailability: EmployeeAvailability[] = [
+  {
+    employeeId: "e3",
+    windows: [
+      { dayOfWeek: 1, startH: 9,  endH: 17 },
+      { dayOfWeek: 2, startH: 9,  endH: 17 },
+      { dayOfWeek: 3, startH: 9,  endH: 17 },
+      { dayOfWeek: 4, startH: 9,  endH: 17 },
+      { dayOfWeek: 5, startH: 9,  endH: 17 },
+      // Sat+Sun: no windows = unavailable
+    ],
+  },
+  {
+    employeeId: "e5",
+    windows: [
+      { dayOfWeek: 1, startH: 12, endH: 20 },
+      { dayOfWeek: 2, startH: 12, endH: 20 },
+      { dayOfWeek: 3, startH: 12, endH: 20 },
+      { dayOfWeek: 4, startH: 12, endH: 20 },
+      { dayOfWeek: 5, startH: 12, endH: 20 },
+    ],
+  },
+]
+
+// ── Markers ───────────────────────────────────────────────────────────────────
+export const demoMarkers: SchedulerMarker[] = [
+  {
+    id: "marker-deadline",
+    date: toDateISO(addDays(today, 2)),
+    hour: 9,
+    label: "Sprint deadline",
+    color: "var(--color-amber-500, #f59e0b)",
+    draggable: true,
+  },
+  {
+    id: "marker-review",
+    date: toDateISO(addDays(today, 4)),
+    hour: 14,
+    label: "Review",
+    color: "var(--color-blue-500, #3b82f6)",
+    draggable: true,
+  },
+]
+
 const conflictScenarioShifts: Block[] = [
-  { id: "conflict-paul-bar", categoryId: "c7", employeeId: "4", date: "2026-03-16", startH: 8, endH: 16, employee: "Paul P.", status: "published" },
-  { id: "conflict-paul-kitchen", categoryId: "c2", employeeId: "4", date: "2026-03-16", startH: 8, endH: 16, employee: "Paul P.", status: "published" },
+  { id: "conflict-paul-bar",    categoryId: "c1", employeeId: "e4", date: toDateISO(today), startH: 8,  endH: 16, employee: "David D.", status: "published" },
+  { id: "conflict-paul-kitchen",categoryId: "c2", employeeId: "e4", date: toDateISO(today), startH: 8,  endH: 16, employee: "David D.", status: "published" },
 ]
 
 export const testShifts: Block[] = [
   ...generateShifts({ daysBack: 0, daysAhead: 6, shiftsPerDay: 8 }),
+  ...recurringShifts,
   ...conflictScenarioShifts,
 ]
 
@@ -104,10 +198,10 @@ export const smallCategories: Resource[] = [
 ]
 
 export const smallEmployees: Resource[] = [
-  { id: "se1", name: "Alex", categoryId: "sc1", avatar: "AX", colorIdx: 0, kind: "employee" },
-  { id: "se2", name: "Sam", categoryId: "sc1", avatar: "SM", colorIdx: 0, kind: "employee" },
+  { id: "se1", name: "Alex",   categoryId: "sc1", avatar: "AX", colorIdx: 0, kind: "employee" },
+  { id: "se2", name: "Sam",    categoryId: "sc1", avatar: "SM", colorIdx: 0, kind: "employee" },
   { id: "se3", name: "Jordan", categoryId: "sc2", avatar: "JR", colorIdx: 1, kind: "employee" },
-  { id: "se4", name: "Casey", categoryId: "sc2", avatar: "CS", colorIdx: 1, kind: "employee" },
+  { id: "se4", name: "Casey",  categoryId: "sc2", avatar: "CS", colorIdx: 1, kind: "employee" },
   { id: "se5", name: "Morgan", categoryId: "sc1", avatar: "MG", colorIdx: 0, kind: "employee" },
 ]
 
@@ -120,7 +214,7 @@ export const smallShifts: Block[] = (() => {
     date.setDate(date.getDate() + d)
     const dayShifts = d % 3 === 0 ? 4 : 2
     for (let i = 0; i < dayShifts; i++) {
-      const emp = smallEmployees[i % smallEmployees.length]
+      const emp = smallEmployees[i % smallEmployees.length]!
       out.push({
         id: `ss-${d}-${i}`,
         categoryId: emp.categoryId!,
@@ -138,15 +232,12 @@ export const smallShifts: Block[] = (() => {
 
 const PERF_CATEGORY_IDS = Array.from({ length: 200 }, (_, i) => `pc${i + 1}`)
 export const perfCategories: Resource[] = PERF_CATEGORY_IDS.map((id, i) => ({
-  id,
-  name: `Role ${i + 1}`,
-  colorIdx: i % 8,
-  kind: "category" as const,
+  id, name: `Role ${i + 1}`, colorIdx: i % 8, kind: "category" as const,
 }))
 export const perfEmployees: Resource[] = Array.from({ length: 200 }, (_, i) => ({
   id: `pe${i + 1}`,
   name: `User ${i + 1}`,
-  categoryId: PERF_CATEGORY_IDS[i % 200],
+  categoryId: PERF_CATEGORY_IDS[i % 200]!,
   avatar: `U${i + 1}`,
   colorIdx: i % 8,
   kind: "employee" as const,
@@ -161,11 +252,11 @@ export const perfShifts: Block[] = (() => {
     date.setDate(date.getDate() + d)
     const n = Math.floor(10000 / 22)
     for (let i = 0; i < n; i++) {
-      const emp = perfEmployees[i % perfEmployees.length]
-      const [startH, endH] = SHIFT_HOURS[i % SHIFT_HOURS.length]
+      const emp = perfEmployees[i % perfEmployees.length]!
+      const [startH, endH] = SHIFT_HOURS[i % SHIFT_HOURS.length]!
       out.push({
         id: `ps-${id++}`,
-        categoryId: emp.categoryId ?? PERF_CATEGORY_IDS[0],
+        categoryId: emp.categoryId ?? PERF_CATEGORY_IDS[0]!,
         employeeId: emp.id,
         date: toDateISO(date),
         startH,
@@ -177,4 +268,3 @@ export const perfShifts: Block[] = (() => {
   }
   return out
 })()
-
