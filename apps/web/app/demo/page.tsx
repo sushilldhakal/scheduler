@@ -118,7 +118,7 @@ export default function DemoPage() {
         )}
         {active.has('availability') && (
           <span className="inline-flex items-center gap-1 rounded-md bg-muted border border-border px-2 py-0.5 text-[11px] text-muted-foreground">
-            🕐 Diagonal stripes = unavailable hours for Carol C. &amp; Eva E.
+            🕐 Switched to individual mode — diagonal stripes show unavailable hours for Carol C. &amp; Eva E. (weekends + outside 9–5)
           </span>
         )}
         {active.has('dependencies') && (
@@ -159,6 +159,11 @@ export default function DemoPage() {
           config={createSchedulerConfig({
             initialScrollToNow: true,
             snapMinutes: 30,
+            // Switch to individual row mode when availability is on
+            // so each employee gets their own row with shading
+            ...(active.has('availability') && {
+              defaultSettings: { rowMode: 'individual' as const },
+            }),
           })}
           /* New features — toggled by the pill buttons */
           markers={active.has('markers') ? markers : []}

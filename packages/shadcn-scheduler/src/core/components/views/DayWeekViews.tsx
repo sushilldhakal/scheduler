@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react"
-import type { Block, Resource } from "../../types"
+import type { Block, Resource, SchedulerMarker, ShiftDependency, EmployeeAvailability } from "../../types"
 import { getWeeksForBuffer, clamp, toDateISO } from "../../constants"
 import { useSchedulerContext } from "../../context"
 import { useIsMobile } from "../../hooks/useMediaQuery"
@@ -26,8 +26,19 @@ interface DayViewProps {
   onSwipeNavigate?: (dir: number) => void
   isLoading?: boolean
   onNavigate?: (dir: number) => void
-  onBlockMoved?: (block: import("../../types").Block, newDate: string, newStartH: number, newEndH: number) => void
+  onBlockMoved?: (block: Block, newDate: string, newStartH: number, newEndH: number) => void
   onFocusedBlockChange?: (blockId: string | null) => void
+  readOnly?: boolean
+  onBlockCreate?: (block: Block) => void
+  onBlockDelete?: (block: Block) => void
+  onBlockMove?: (block: Block) => void
+  onBlockResize?: (block: Block) => void
+  onBlockPublish?: (block: Block) => void
+  markers?: SchedulerMarker[]
+  onMarkersChange?: (markers: SchedulerMarker[]) => void
+  dependencies?: ShiftDependency[]
+  onDependenciesChange?: (deps: ShiftDependency[]) => void
+  availability?: EmployeeAvailability[]
 }
 
 export function DayView({
@@ -53,6 +64,17 @@ export function DayView({
   onNavigate,
   onBlockMoved,
   onFocusedBlockChange,
+  readOnly,
+  onBlockCreate,
+  onBlockDelete,
+  onBlockMove,
+  onBlockResize,
+  onBlockPublish,
+  markers = [],
+  onMarkersChange,
+  dependencies = [],
+  onDependenciesChange,
+  availability = [],
 }: DayViewProps): React.ReactElement {
   const { categories } = useSchedulerContext()
   const isMobile = useIsMobile()
@@ -128,6 +150,17 @@ export function DayView({
       onNavigate={onNavigate}
       onBlockMoved={onBlockMoved}
       onFocusedBlockChange={onFocusedBlockChange}
+      readOnly={readOnly}
+      onBlockCreate={onBlockCreate}
+      onBlockDelete={onBlockDelete}
+      onBlockMove={onBlockMove}
+      onBlockResize={onBlockResize}
+      onBlockPublish={onBlockPublish}
+      markers={markers}
+      onMarkersChange={onMarkersChange}
+      dependencies={dependencies}
+      onDependenciesChange={onDependenciesChange}
+      availability={availability}
     />
   )
 }
@@ -156,8 +189,19 @@ interface WeekViewProps {
   setZoom?: React.Dispatch<React.SetStateAction<number>>
   isLoading?: boolean
   onNavigate?: (dir: number) => void
-  onBlockMoved?: (block: import("../../types").Block, newDate: string, newStartH: number, newEndH: number) => void
+  onBlockMoved?: (block: Block, newDate: string, newStartH: number, newEndH: number) => void
   onFocusedBlockChange?: (blockId: string | null) => void
+  readOnly?: boolean
+  onBlockCreate?: (block: Block) => void
+  onBlockDelete?: (block: Block) => void
+  onBlockMove?: (block: Block) => void
+  onBlockResize?: (block: Block) => void
+  onBlockPublish?: (block: Block) => void
+  markers?: SchedulerMarker[]
+  onMarkersChange?: (markers: SchedulerMarker[]) => void
+  dependencies?: ShiftDependency[]
+  onDependenciesChange?: (deps: ShiftDependency[]) => void
+  availability?: EmployeeAvailability[]
 }
 
 export function WeekView({
@@ -185,6 +229,17 @@ export function WeekView({
   onNavigate,
   onBlockMoved,
   onFocusedBlockChange,
+  readOnly,
+  onBlockCreate,
+  onBlockDelete,
+  onBlockMove,
+  onBlockResize,
+  onBlockPublish,
+  markers = [],
+  onMarkersChange,
+  dependencies = [],
+  onDependenciesChange,
+  availability = [],
 }: WeekViewProps): React.ReactElement {
   const bufferWeeks = Math.max(1, Math.ceil(bufferDays / 7))
   const allDates = useMemo(
@@ -223,6 +278,17 @@ export function WeekView({
       onNavigate={onNavigate}
       onBlockMoved={onBlockMoved}
       onFocusedBlockChange={onFocusedBlockChange}
+      readOnly={readOnly}
+      onBlockCreate={onBlockCreate}
+      onBlockDelete={onBlockDelete}
+      onBlockMove={onBlockMove}
+      onBlockResize={onBlockResize}
+      onBlockPublish={onBlockPublish}
+      markers={markers}
+      onMarkersChange={onMarkersChange}
+      dependencies={dependencies}
+      onDependenciesChange={onDependenciesChange}
+      availability={availability}
     />
   )
 }

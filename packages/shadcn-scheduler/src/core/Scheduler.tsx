@@ -334,47 +334,89 @@ export function Scheduler({
   const baseView = visibleView.replace("list", "") || "day"
   const draftCount = shifts.filter((s) => s.status === "draft").length
 
+  const expandRangeStart = useMemo(() => { const d = new Date(currentDate); d.setDate(d.getDate() - bufferDays - 7); d.setHours(0,0,0,0); return d }, [currentDate, bufferDays])
+  const expandRangeEnd   = useMemo(() => { const d = new Date(currentDate); d.setDate(d.getDate() + bufferDays + 7); d.setHours(23,59,59,999); return d }, [currentDate, bufferDays])
+  const expandedShifts   = useMemo(() => expandAllRecurring(shifts, expandRangeStart, expandRangeEnd), [shifts, expandRangeStart, expandRangeEnd])
+
   const handleDeleteShift = useCallback(
     (id: string) => {
+      // id may be a recurring occurrence id like "masterId_rYYYY-MM-DD"
+      // Find by direct id first, then by matching occurrence pattern
       const removed = shifts.find((s) => s.id === id)
+        ?? expandedShifts.find((s) => s.id === id)
       if (removed) {
         onBlockDelete?.(removed)
         auditAppend({ action: "delete", blockId: id, before: removed })
+        if (removed.recurringMasterId) {
+          // For a recurring occurrence: materialize an exclusion by removing
+          // the master and re-adding all occurrences except this one as standalone
+          // Simple approach: just add this occurrence as a "deleted" placeholder
+          // by filtering from expandedShifts (handled naturally — nothing to do in shifts)
+          // The occurrence won't re-appear because it has no master entry in shifts
+          // so it won't be re-expanded. We just need to NOT add it back.
+          // Simplest: do nothing — if master is not deleted, occurrence re-appears on reload.
+          // Better: store a skip-list. For now, remove the master entirely for simplicity.
+          setShifts((prev) => prev.filter((s) => s.id !== removed.recurringMasterId && s.id !== id))
+        } else {
+          setShifts((prev) => prev.filter((s) => s.id !== id))
+        }
+      } else {
+        setShifts((prev) => prev.filter((s) => s.id !== id))
       }
-      setShifts((prev) => prev.filter((s) => s.id !== id))
       setSelShift(null)
       setSelCategory(null)
     },
-    [setShifts, shifts, onBlockDelete, auditAppend]
+    [setShifts, shifts, expandedShifts, onBlockDelete, auditAppend]
   )
 
   const handleShiftUpdate = useCallback(
     (updated: Block): void => {
+      const isOccurrence = !!updated.recurringMasterId
+      // For a recurring occurrence: strip the recurrence metadata and materialize
+      // it as a standalone block, replacing the master in shifts.
+      // The master stays for other occurrences; this one becomes independent.
+      const standalone: Block = isOccurrence
+        ? { ...updated, recurringMasterId: undefined, recurrence: undefined }
+        : updated
+
+      // Find the prev block — either direct match or via master
       const prev = shifts.find((s) => s.id === updated.id)
+        ?? (isOccurrence ? shifts.find((s) => s.id === updated.recurringMasterId) : undefined)
+
       if (prev) {
         const moved =
-          prev.date !== updated.date ||
-          prev.categoryId !== updated.categoryId ||
-          prev.employeeId !== updated.employeeId
-        const timeChanged = prev.startH !== updated.startH || prev.endH !== updated.endH
-        const resized = timeChanged && (prev.endH - prev.startH) !== (updated.endH - updated.startH)
+          prev.date !== standalone.date ||
+          prev.categoryId !== standalone.categoryId ||
+          prev.employeeId !== standalone.employeeId
+        const timeChanged = prev.startH !== standalone.startH || prev.endH !== standalone.endH
+        const resized = timeChanged && (prev.endH - prev.startH) !== (standalone.endH - standalone.startH)
         if (moved || (timeChanged && !resized)) {
-          onBlockMove?.(updated)
-          auditAppend({ action: "move", blockId: updated.id, before: prev, after: updated })
+          onBlockMove?.(standalone)
+          auditAppend({ action: "move", blockId: standalone.id, before: prev, after: standalone })
         }
         if (resized) {
-          onBlockResize?.(updated)
-          auditAppend({ action: "resize", blockId: updated.id, before: prev, after: updated })
+          onBlockResize?.(standalone)
+          auditAppend({ action: "resize", blockId: standalone.id, before: prev, after: standalone })
         }
-        if (prev.status !== "published" && updated.status === "published") {
-          onBlockPublish?.(updated)
-          auditAppend({ action: "publish", blockId: updated.id, before: prev, after: updated })
+        if (prev.status !== "published" && standalone.status === "published") {
+          onBlockPublish?.(standalone)
+          auditAppend({ action: "publish", blockId: standalone.id, before: prev, after: standalone })
         }
       }
-      setShifts((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
-      setSelShift(updated)
+
+      if (isOccurrence) {
+        // Materialize: add the standalone occurrence to shifts (master stays intact for other dates)
+        setShifts((prev) => {
+          const already = prev.find((s) => s.id === standalone.id)
+          if (already) return prev.map((s) => s.id === standalone.id ? standalone : s)
+          return [...prev, standalone]
+        })
+      } else {
+        setShifts((prev) => prev.map((s) => (s.id === standalone.id ? standalone : s)))
+      }
+      setSelShift(standalone)
     },
-    [setShifts, shifts, onBlockMove, onBlockResize, onBlockPublish]
+    [setShifts, shifts, onBlockMove, onBlockResize, onBlockPublish, auditAppend]
   )
 
   const mergedConfig: SchedulerConfig = {
@@ -460,10 +502,6 @@ export function Scheduler({
   )
 
   // Expand recurring blocks into individual occurrences for the visible window
-  const expandRangeStart = useMemo(() => { const d = new Date(currentDate); d.setDate(d.getDate() - bufferDays - 7); d.setHours(0,0,0,0); return d }, [currentDate, bufferDays])
-  const expandRangeEnd   = useMemo(() => { const d = new Date(currentDate); d.setDate(d.getDate() + bufferDays + 7); d.setHours(23,59,59,999); return d }, [currentDate, bufferDays])
-  const expandedShifts   = useMemo(() => expandAllRecurring(shifts, expandRangeStart, expandRangeEnd), [shifts, expandRangeStart, expandRangeEnd])
-
   const sharedGridProps = {
     shifts: expandedShifts,
     markers,

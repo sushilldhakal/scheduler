@@ -126,13 +126,15 @@ export const recurringShifts: Block[] = [
 ]
 
 // ── Shift dependencies ────────────────────────────────────────────────────────
+// Use the deterministic conflict scenario shifts as dependency demo targets
 export const demoDependencies: ShiftDependency[] = [
   {
     id: "dep-1",
-    fromId: "s1",
-    toId: "s2",
+    fromId: "conflict-paul-bar",
+    toId: "conflict-paul-kitchen",
     type: "finish-to-start",
     label: "handover",
+    color: "var(--primary)",
   },
 ]
 

@@ -155,6 +155,13 @@ export function ShiftModal({
         </div>
       </div>
 
+      {shift.recurringMasterId && (
+        <div style={{ margin: "0 0 10px", padding: "8px 10px", borderRadius: 8, background: "var(--muted)", border: "1px solid var(--border)", fontSize: 11, color: "var(--muted-foreground)", display: "flex", alignItems: "center", gap: 6 }}>
+          <span>🔁</span>
+          <span><strong style={{ color: "var(--foreground)" }}>Recurring occurrence</strong> — saving changes will detach this date from the series.</span>
+        </div>
+      )}
+
       {hasConflict && (
         <div style={{ margin: "10px 0", padding: 10, borderRadius: 8, border: "1px solid var(--destructive)", fontSize: 12, color: "var(--destructive)" }}>
           ⚠ Overlaps with {overlaps.length} other shift{overlaps.length !== 1 ? "s" : ""}
