@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Scheduler,
   SchedulerSettings,
@@ -70,6 +70,14 @@ export default function DemoPage() {
   const handleAuditEvent = useCallback((entry: AuditEntry) => {
     setAuditLog((prev) => [entry, ...prev].slice(0, 50));
   }, []);
+
+  const schedulerConfig = useMemo(() => createSchedulerConfig({
+    initialScrollToNow: true,
+    snapMinutes: 30,
+    defaultSettings: {
+      rowMode: active.has('availability') ? 'individual' : 'category',
+    },
+  }), [active.has('availability')]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!mounted || !initialDate) {
     return (
@@ -156,15 +164,7 @@ export default function DemoPage() {
           initialView="week"
           initialDate={initialDate}
           bufferDays={7}
-          config={createSchedulerConfig({
-            initialScrollToNow: true,
-            snapMinutes: 30,
-            // Switch to individual row mode when availability is on
-            // so each employee gets their own row with shading
-            ...(active.has('availability') && {
-              defaultSettings: { rowMode: 'individual' as const },
-            }),
-          })}
+          config={schedulerConfig}
           /* New features — toggled by the pill buttons */
           markers={active.has('markers') ? markers : []}
           onMarkersChange={active.has('markers') ? setMarkers : undefined}
