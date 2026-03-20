@@ -1,6 +1,6 @@
 {
-  "buildCommand": "npm run build:web",
-  "installCommand": "npm install",
-  "outputDirectory": "apps/web/.next",
+  "installCommand": "cd ../.. && npm install",
+  "buildCommand": "cd ../.. && npm run build -w @sushill/shadcn-scheduler && npm run build -w web",
+  "outputDirectory": ".next",
   "framework": "nextjs"
 }

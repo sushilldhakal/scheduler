@@ -8,7 +8,8 @@
     "start": "next start",
     "types:check": "fumadocs-mdx && next typegen && tsc --noEmit",
     "postinstall": "fumadocs-mdx",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:web": "cd ../.. && npm run build -w @sushill/shadcn-scheduler && cd apps/web && next build"
   },
   "dependencies": {
     "@mdx-js/react": "^3.1.1",
