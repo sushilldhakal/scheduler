@@ -1,13 +1,13 @@
 import type { CategoryColor, Settings } from "./types"
 
-export const HOUR_W = 88
+export const HOUR_W = 96
 /** Week view: hours between time labels (e.g. 2 = 7am, 9am, 11am...) */
 export const WEEK_TIME_LABEL_GAP = 2
-export const SNAP = 0.5
-export const SIDEBAR_W = 190
-export const SHIFT_H = 42
-export const ROLE_HDR = 38
-export const HOUR_HDR_H = 44
+export const SNAP = 0.25
+export const SIDEBAR_W = 220
+export const SHIFT_H = 56
+export const ROLE_HDR = 48
+export const HOUR_HDR_H = 56
 /** Reserved height at bottom of each category row for the add-shift + button */
 export const ADD_BTN_H = 32
 /** Horizontal scroll buffer (px) for day view - scroll into buffer to navigate prev/next day */
@@ -219,6 +219,8 @@ export function isOutsideWorkingHours(h: number, settings: Settings, dow: number
   return h < wh.from || h >= wh.to
 }
 
-/** CSS for dashed background (outside working hours within a visible day) */
-export const DASHED_BG =
-  "repeating-linear-gradient(-45deg, var(--muted) 0px, var(--muted) 2px, var(--background) 2px, var(--background) 6px)"
+/** CSS for off-hours background — clean flat muted tone, no visual noise */
+export const DASHED_BG = "var(--muted)"
+
+/** CSS for weekend column background */
+export const WEEKEND_BG = "color-mix(in srgb, var(--muted) 60%, transparent)"

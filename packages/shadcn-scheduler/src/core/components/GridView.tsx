@@ -220,7 +220,7 @@ function GridViewInner({
   )
   const ALL_EMPLOYEES = employees
 
-  const HOUR_W = 88 * zoom
+  const HOUR_W = 96 * zoom
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -2132,6 +2132,10 @@ function GridViewInner({
                   {dates.map((d, i) => {
                     const today = isToday(d)
                     const closed = settings.workingHours[d.getDay()] === null
+                    const dow = d.getDay()
+                    const isWeekend = dow === 0 || dow === 6
+                    const dateISO = toDateISO(d)
+                    const dayShiftCount = shifts.filter((s) => s.date === dateISO).length
                     return (
                       <div
                         key={i}
@@ -2141,110 +2145,80 @@ function GridViewInner({
                           width: COL_W_WEEK,
                           flexShrink: 0,
                           textAlign: "center",
-                          padding: "8px 4px 6px",
-                          borderLeft: i === 0 ? "1px solid var(--border)" : "2px solid var(--border)",
-                          borderRight: "1px solid var(--border)",
-                          background: today ? "var(--accent)" : closed ? "var(--muted)" : "var(--background)",
+                          padding: "8px 4px 5px",
+                          borderLeft: "1px solid var(--border)",
+                          borderRight: i === dates.length - 1 ? "1px solid var(--border)" : "none",
+                          background: today
+                            ? "color-mix(in srgb, var(--primary) 8%, var(--background))"
+                            : closed
+                              ? "var(--muted)"
+                              : isWeekend
+                                ? "color-mix(in srgb, var(--muted) 40%, var(--background))"
+                                : "var(--background)",
                           cursor: onDateDoubleClick ? "pointer" : "default",
+                          position: "relative",
                         }}
                       >
+                        {/* Today accent bar at top */}
+                        {today && (
+                          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "var(--primary)", borderRadius: "0 0 2px 2px" }} />
+                        )}
                         <div
                           style={{
-                            fontSize: 9,
+                            fontSize: 10,
                             fontWeight: 700,
-                            color: today ? "var(--primary)" : closed ? "var(--muted-foreground)" : "var(--muted-foreground)",
+                            color: today ? "var(--primary)" : "var(--muted-foreground)",
                             textTransform: "uppercase",
-                            letterSpacing: 0.5,
+                            letterSpacing: 0.8,
+                            marginBottom: 2,
                           }}
                         >
-                          {zoom < 1
-                            ? DOW_MON_FIRST[(d.getDay() + 6) % 7]
-                            : `${MONTHS_SHORT[d.getMonth()]} ${DOW_MON_FIRST[(d.getDay() + 6) % 7]}`}
+                          {DOW_MON_FIRST[(d.getDay() + 6) % 7]}
                         </div>
                         <div
                           style={{
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: 700,
-                            color: today ? "var(--background)" : closed ? "var(--muted-foreground)" : "var(--foreground)/08",
+                            color: today ? "var(--background)" : closed ? "var(--muted-foreground)" : "var(--foreground)",
                             background: today ? "var(--primary)" : "transparent",
-                            width: 28,
-                            height: 28,
+                            width: 32,
+                            height: 32,
                             borderRadius: "50%",
                             display: "inline-flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            margin: "2px auto 0",
+                            margin: "0 auto 3px",
                           }}
                         >
                           {d.getDate()}
                         </div>
-                        {!closed && zoom >= 1.25 ? (
-                          /* zoom >= 1.25: second sub-row with hour tick marks every 2h */
+                        {/* Shift count badge */}
+                        <div style={{ fontSize: 9, fontWeight: 600, color: today ? "var(--primary)" : "var(--muted-foreground)", marginBottom: 3 }}>
+                          {closed ? "Closed" : dayShiftCount > 0 ? `${dayShiftCount} shift${dayShiftCount !== 1 ? "s" : ""}` : "No shifts"}
+                        </div>
+                        {!closed && (
                           <div
                             style={{
                               display: "flex",
                               width: "100%",
-                              marginTop: 3,
-                              borderTop: "1px solid var(--border)",
+                              borderTop: `1px solid ${today ? "color-mix(in srgb, var(--primary) 30%, transparent)" : "var(--border)"}`,
+                              paddingTop: 3,
                               overflow: "hidden",
                             }}
                           >
                             {Array.from(
-                              { length: Math.floor((settings.visibleTo - settings.visibleFrom) / 2) + 1 },
+                              { length: Math.floor((settings.visibleTo - settings.visibleFrom) / weekTimeLabelGap) + 1 },
                               (_, k) => {
-                                const h = Math.min(settings.visibleFrom + k * 2, settings.visibleTo - 0.01)
-                                return (
-                                  <div
-                                    key={h}
-                                    style={{
-                                      flex: 1,
-                                      textAlign: "center",
-                                      fontSize: 7,
-                                      fontWeight: 600,
-                                      color: today && Math.floor(nowH) === Math.floor(h) ? "var(--primary)" : "var(--muted-foreground)",
-                                      paddingTop: 2,
-                                      minWidth: 0,
-                                      overflow: "hidden",
-                                    }}
-                                  >
-                                    {fmt12(h)}
-                                  </div>
-                                )
-                              }
-                            )}
-                          </div>
-                        ) : !closed ? (
-                          /* default: compact time labels */
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              marginTop: 4,
-                              paddingLeft: 2,
-                              paddingRight: 2,
-                            }}
-                          >
-                            {Array.from(
-                              {
-                                length:
-                                  Math.floor(
-                                    (settings.visibleTo - settings.visibleFrom) /
-                                      weekTimeLabelGap
-                                  ) + 1,
-                              },
-                              (_, k) => {
-                                const h = Math.min(
-                                  settings.visibleFrom + k * weekTimeLabelGap,
-                                  settings.visibleTo - 0.01
-                                )
+                                const h = Math.min(settings.visibleFrom + k * weekTimeLabelGap, settings.visibleTo - 0.01)
+                                const isNowHour = today && Math.floor(nowH) === Math.floor(h)
                                 return (
                                   <span
                                     key={h}
                                     title={getTimeLabel(toDateISO(d), h)}
                                     style={{
                                       fontSize: 8,
-                                      fontWeight: 600,
-                                      color: "var(--muted-foreground)",
+                                      fontWeight: isNowHour ? 700 : 500,
+                                      color: isNowHour ? "var(--primary)" : "var(--muted-foreground)",
                                       flex: 1,
                                       textAlign: "center",
                                       minWidth: 0,
@@ -2255,11 +2229,6 @@ function GridViewInner({
                                 )
                               }
                             )}
-                          </div>
-                        ) : null}
-                        {closed && (
-                          <div style={{ fontSize: 8, color: "var(--muted-foreground)", fontWeight: 600, marginTop: 1 }}>
-                            CLOSED
                           </div>
                         )}
                       </div>
@@ -2360,35 +2329,74 @@ function GridViewInner({
                 <div
                   style={{
                     display: "flex",
+                    flexDirection: "column",
                     width: DAY_WIDTH,
                     height: HOUR_HDR_H,
-                    background: "var(--muted)",
+                    background: "var(--background)",
+                    borderBottom: "1px solid var(--border)",
                   }}
                 >
-                  {DAY_VISIBLE_SLOTS.map((h) => {
-                    const dashed = isOutsideWorkingHours(h, settings, dates[0].getDay())
-                    return (
-                      <div
-                        key={String(h)}
-                        title={getTimeLabel(toDateISO(dates[0]), h)}
-                        style={{
-                          width: SLOT_W,
-                          flexShrink: 0,
-                          height: "100%",
-                          display: "flex",
-                          alignItems: "flex-end",
-                          padding: "0 0 6px 8px",
-                          fontSize: dayTimeStep < 1 ? 9 : 11,
-                          fontWeight: 600,
-                          borderRight: "1px solid var(--border)",
-                          background: dashed ? DASHED_BG : hourBg(h, settings, dates[0].getDay()),
-                          color: (dayTimeStep < 1 ? Math.abs(h - nowH) < 0.3 : h === Math.floor(nowH)) ? "var(--primary)" : "var(--muted-foreground)",
-                        }}
-                      >
-                        {getTimeLabel(toDateISO(dates[0]), h)}
-                      </div>
-                    )
-                  })}
+                  {/* Major hour labels row */}
+                  <div style={{ display: "flex", flex: 1 }}>
+                    {DAY_VISIBLE_SLOTS.filter((h) => Number.isInteger(h)).map((h) => {
+                      const isNowHour = Math.floor(nowH) === h
+                      const isWorking = !isOutsideWorkingHours(h, settings, dates[0]?.getDay() ?? 1)
+                      return (
+                        <div
+                          key={String(h)}
+                          title={getTimeLabel(toDateISO(dates[0]!), h)}
+                          style={{
+                            width: HOUR_W,
+                            flexShrink: 0,
+                            height: "100%",
+                            display: "flex",
+                            alignItems: "flex-end",
+                            padding: "0 0 4px 8px",
+                            fontSize: 11,
+                            fontWeight: isNowHour ? 700 : 600,
+                            borderRight: "1px solid var(--border)",
+                            color: isNowHour ? "var(--primary)" : isWorking ? "var(--foreground)" : "var(--muted-foreground)",
+                            background: isWorking ? "transparent" : "var(--muted)",
+                            position: "relative",
+                          }}
+                        >
+                          {/* Now-hour accent */}
+                          {isNowHour && (
+                            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "var(--primary)", opacity: 0.4 }} />
+                          )}
+                          {getTimeLabel(toDateISO(dates[0]!), h)}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {/* Minor 30-min tick marks row */}
+                  {zoom >= 1 && (
+                    <div style={{ display: "flex", height: 8, borderTop: "1px solid var(--border)" }}>
+                      {DAY_VISIBLE_SLOTS.map((h) => {
+                        const isHalf = !Number.isInteger(h)
+                        return (
+                          <div
+                            key={String(h)}
+                            style={{
+                              width: SLOT_W,
+                              flexShrink: 0,
+                              height: "100%",
+                              display: "flex",
+                              alignItems: "flex-end",
+                              justifyContent: "flex-start",
+                              paddingBottom: 1,
+                              paddingLeft: isHalf ? 0 : 0,
+                              borderRight: "1px solid color-mix(in srgb, var(--border) 60%, transparent)",
+                            }}
+                          >
+                            {isHalf && (
+                              <div style={{ width: 1, height: 4, background: "var(--muted-foreground)", opacity: 0.4, marginLeft: SLOT_W / 2 - 0.5 }} />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -2465,6 +2473,10 @@ function GridViewInner({
                     const catShifts = baseShifts.filter((s) => s.categoryId === cat.id)
                     const scheduled = catShifts.length
                     const totalHours = catShifts.reduce((sum, s) => sum + (s.endH - s.startH), 0)
+                    const staffCount = ALL_EMPLOYEES.filter((e) => e.categoryId === cat.id).length
+                    const hoursCapacity = 40
+                    const hoursPercent = Math.min(100, (totalHours / hoursCapacity) * 100)
+                    const isOverCapacity = totalHours > hoursCapacity
                     return (
                       <div
                         key={rowKey}
@@ -2474,10 +2486,8 @@ function GridViewInner({
                           left: 0,
                           right: 0,
                           height: vr.size,
-                          borderBottom: `1px solid ${c.bg}30`,
-                          background: hoveredCategoryId === cat.id
-                            ? `${c.bg}18`
-                            : `${c.bg}08`,
+                          borderBottom: `1px solid ${c.bg}25`,
+                          background: hoveredCategoryId === cat.id ? `${c.bg}14` : `${c.bg}07`,
                           display: "flex",
                           flexDirection: "column",
                           justifyContent: "flex-start",
@@ -2485,7 +2495,9 @@ function GridViewInner({
                           transition: "background 80ms ease",
                         }}
                       >
-                        <div style={{ height: ROLE_HDR, display: "flex", alignItems: "center", padding: "0 10px", gap: 6 }}>
+                        {/* Left accent border */}
+                        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: c.bg, borderRadius: "0 2px 2px 0" }} />
+                        <div style={{ height: ROLE_HDR, display: "flex", alignItems: "center", paddingLeft: 14, paddingRight: 8, gap: 6 }}>
                           {slots.resourceHeader ? (
                             slots.resourceHeader({
                               resource: cat,
@@ -2495,46 +2507,60 @@ function GridViewInner({
                             })
                           ) : (
                             <>
-                              <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.bg, flexShrink: 0, marginTop: 2 }} />
-                              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
-                                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.2 }}>
                                   {cat.name}
                                 </span>
-                                {(totalHours > 0 || scheduled > 0) && (
-                                  <span style={{ fontSize: 9, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                    {totalHours > 0 ? `${totalHours.toFixed(1)}h` : ""}
-                                    {totalHours > 0 && scheduled > 0 ? " · " : ""}
-                                    {scheduled > 0 ? `${scheduled} shift${scheduled !== 1 ? "s" : ""}` : ""}
-                                  </span>
-                                )}
+                                <span style={{ fontSize: 10, color: "var(--muted-foreground)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.2 }}>
+                                  {staffCount} staff
+                                  {scheduled > 0 ? ` · ${scheduled} shift${scheduled !== 1 ? "s" : ""}` : ""}
+                                  {totalHours > 0 ? ` · ${totalHours.toFixed(1)}h` : ""}
+                                </span>
                               </div>
                               <button
                                 type="button"
                                 onClick={() => toggleCollapse(cat.id)}
                                 aria-label={collapsed.has(cat.id) ? "Expand" : "Collapse"}
-                                style={{ border: "none", background: "transparent", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)", transform: collapsed.has(cat.id) ? "rotate(-90deg)" : "none", transition: "transform 0.2s", flexShrink: 0 }}
+                                style={{
+                                  border: "none", background: "transparent", cursor: "pointer",
+                                  padding: 4, display: "flex", alignItems: "center", justifyContent: "center",
+                                  color: "var(--muted-foreground)",
+                                  transform: collapsed.has(cat.id) ? "rotate(-90deg)" : "none",
+                                  transition: "transform 0.2s",
+                                  flexShrink: 0,
+                                  borderRadius: 4,
+                                }}
                               >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
                               </button>
                               <button
+                                type="button"
                                 onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                                   const rect = e.currentTarget.getBoundingClientRect()
                                   setStaffPanel((p) => p?.categoryId === cat.id ? null : { categoryId: cat.id, anchorRect: rect })
                                 }}
-                                style={{ fontSize: 10, fontWeight: 600, color: c.text, background: c.light, border: `1px solid ${c.border}`, borderRadius: 5, padding: "2px 6px", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
+                                style={{
+                                  fontSize: 10, fontWeight: 600, color: c.text, background: c.light,
+                                  border: `1px solid ${c.border}`, borderRadius: 5,
+                                  padding: "3px 7px", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0,
+                                }}
                               >
                                 {labels.staff}
                               </button>
                             </>
                           )}
                         </div>
-                        {totalHours > 0 && (
-                          <div style={{ padding: "0 10px 4px", flexShrink: 0 }}>
-                            <div style={{ height: 3, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
-                              <div style={{ height: "100%", borderRadius: 2, background: c.bg, width: `${Math.min(100, (totalHours / 40) * 100)}%`, transition: "width 200ms ease" }} />
-                            </div>
+                        {/* Hours capacity bar */}
+                        <div style={{ padding: "0 14px 5px", flexShrink: 0 }}>
+                          <div style={{ height: 4, borderRadius: 2, background: "var(--border)", overflow: "hidden" }}>
+                            <div style={{
+                              height: "100%", borderRadius: 2,
+                              background: isOverCapacity ? "var(--destructive)" : c.bg,
+                              width: `${hoursPercent}%`,
+                              transition: "width 300ms ease",
+                            }} />
                           </div>
-                        )}
+                        </div>
                       </div>
                     )
                   }
@@ -2542,6 +2568,7 @@ function GridViewInner({
                   // ── Employee row ──────────────────────────────────────────
                   const empShifts = baseShifts.filter((s) => s.categoryId === cat.id && s.employeeId === emp!.id)
                   const empHours = empShifts.reduce((sum, s) => sum + (s.endH - s.startH), 0)
+                  const initials = emp!.name.split(" ").map((n) => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase()
                   return (
                     <div
                       key={rowKey}
@@ -2551,28 +2578,46 @@ function GridViewInner({
                         left: 0,
                         right: 0,
                         height: vr.size,
-                        borderBottom: "1px solid var(--border)",
-                        background: hoveredCategoryId === cat.id ? `${c.bg}0a` : "var(--muted)",
+                        borderBottom: "1px solid color-mix(in srgb, var(--border) 60%, transparent)",
+                        background: hoveredCategoryId === cat.id ? `${c.bg}0d` : "var(--background)",
                         display: "flex",
-                        alignItems: "flex-start",
-                        paddingLeft: 18,
-                        paddingTop: 4,
-                        gap: 6,
+                        alignItems: "center",
+                        paddingLeft: 14,
+                        paddingRight: 8,
+                        gap: 8,
                         overflow: "hidden",
                         transition: "background 80ms ease",
                       }}
                     >
-                      <div style={{ width: 22, height: 22, borderRadius: "50%", background: c.light, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 8, fontWeight: 700, color: c.text }}>
-                        {emp!.avatar ?? emp!.name.charAt(0).toUpperCase()}
+                      {/* Avatar */}
+                      <div style={{
+                        width: 32, height: 32, borderRadius: "50%",
+                        background: `${c.bg}20`,
+                        border: `1.5px solid ${c.border}`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        flexShrink: 0, fontSize: 11, fontWeight: 700, color: c.text,
+                        letterSpacing: -0.5,
+                      }}>
+                        {emp!.avatar ?? initials}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 }}>
                           {emp!.name}
                         </div>
-                        {empHours > 0 && (
-                          <div style={{ fontSize: 9, color: "var(--muted-foreground)" }}>{empHours.toFixed(1)}h</div>
-                        )}
+                        <div style={{ fontSize: 10, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 }}>
+                          {empHours > 0 ? `${empHours.toFixed(1)}h scheduled` : "No shifts"}
+                        </div>
                       </div>
+                      {empHours > 0 && (
+                        <div style={{
+                          fontSize: 10, fontWeight: 700, flexShrink: 0,
+                          color: empHours > 40 ? "var(--destructive)" : c.text,
+                          background: empHours > 40 ? "color-mix(in srgb, var(--destructive) 10%, transparent)" : c.light,
+                          padding: "2px 6px", borderRadius: 4,
+                        }}>
+                          {empHours.toFixed(0)}h
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -2863,6 +2908,8 @@ function GridViewInner({
                   })
                 }
                 if (isWeekView) {
+                  const dow = date.getDay()
+                  const isWeekend = dow === 0 || dow === 6
                   return (
                     <div
                       key={`bg-${row.key}-${di}`}
@@ -2875,9 +2922,15 @@ function GridViewInner({
                         top,
                         width: COL_W_WEEK,
                         height: rowH,
-                        background: today ? "var(--accent)" : closed ? "var(--muted)" : "var(--background)",
+                        background: today
+                          ? "color-mix(in srgb, var(--primary) 4%, var(--background))"
+                          : closed
+                            ? "var(--muted)"
+                            : isWeekend
+                              ? "color-mix(in srgb, var(--muted) 35%, var(--background))"
+                              : "var(--background)",
                         borderRight: "1px solid var(--border)",
-                        borderBottom: "1px solid var(--border)",
+                        borderBottom: "1px solid color-mix(in srgb, var(--border) 50%, transparent)",
                       }}
                       onPointerEnter={() => {
                         if (!dragEmpId) return
@@ -2888,7 +2941,7 @@ function GridViewInner({
                         { length: settings.visibleTo - settings.visibleFrom + 1 },
                         (_, k) => {
                           const h = settings.visibleFrom + k
-                          const dashed = isOutsideWorkingHours(h, settings, date.getDay())
+                          const outsideWorking = isOutsideWorkingHours(h, settings, date.getDay())
                           return (
                             <div
                               key={k}
@@ -2898,8 +2951,8 @@ function GridViewInner({
                                 top: 0,
                                 width: Math.max(PX_WEEK, 2),
                                 height: "100%",
-                                background: dashed ? DASHED_BG : "transparent",
-                                borderRight: "1px solid var(--sch-b-60)",
+                                background: outsideWorking ? "color-mix(in srgb, var(--muted) 50%, transparent)" : "transparent",
+                                borderRight: "1px solid color-mix(in srgb, var(--border) 40%, transparent)",
                                 pointerEvents: "none",
                               }}
                             />
@@ -2910,7 +2963,8 @@ function GridViewInner({
                   )
                 }
                 return DAY_VISIBLE_SLOTS.map((h) => {
-                  const dashed = isOutsideWorkingHours(h, settings, date.getDay())
+                  const outsideWorking = isOutsideWorkingHours(h, settings, date.getDay())
+                  const isHourBoundary = Number.isInteger(h)
                   return (
                   <div
                     key={`bg-${row.key}-${h}`}
@@ -2923,8 +2977,12 @@ function GridViewInner({
                       top,
                       width: SLOT_W,
                       height: rowH,
-                      background: dashed ? DASHED_BG : hourBg(h, settings, date.getDay()),
-                      borderRight: "1px solid var(--sch-b-60)",
+                      background: outsideWorking
+                        ? "color-mix(in srgb, var(--muted) 70%, transparent)"
+                        : "transparent",
+                      borderRight: isHourBoundary
+                        ? "1px solid color-mix(in srgb, var(--border) 70%, transparent)"
+                        : "1px solid color-mix(in srgb, var(--border) 25%, transparent)",
                     }}
                     onPointerEnter={() => {
                       if (!dragEmpId) return
@@ -3002,17 +3060,55 @@ function GridViewInner({
               nowH < settings.visibleTo ? (
                 <div
                   key={`now-${di}`}
-                  className="pointer-events-none absolute top-0 z-15 h-full w-0.5 bg-destructive/80 shadow-[0_0_6px_var(--destructive)/0.4]"
+                  data-scheduler-now-line
                   style={{
+                    position: "absolute",
+                    pointerEvents: "none",
+                    top: 0,
                     left: isWeekView
                       ? di * COL_W_WEEK + (nowH - settings.visibleFrom) * PX_WEEK
                       : isDayViewMultiDay
                         ? di * DAY_WIDTH + (nowH - settings.visibleFrom) * HOUR_W
                         : (nowH - settings.visibleFrom) * HOUR_W,
+                    width: 2,
                     height: totalHVirtual,
+                    background: "var(--destructive)",
+                    boxShadow: "0 0 8px color-mix(in srgb, var(--destructive) 50%, transparent)",
+                    zIndex: 15,
                   }}
                 >
-                  <div className="absolute -left-1 top-0 h-2.5 w-2.5 rounded-full border border-border bg-destructive/90" />
+                  {/* Pulsing dot at top */}
+                  <div
+                    data-scheduler-now-dot
+                    style={{
+                      position: "absolute",
+                      left: -5,
+                      top: -1,
+                      width: 12,
+                      height: 12,
+                      borderRadius: "50%",
+                      background: "var(--destructive)",
+                      border: "2px solid var(--background)",
+                    }}
+                  />
+                  {/* Time pill label */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 8,
+                      top: -9,
+                      background: "var(--destructive)",
+                      color: "var(--destructive-foreground)",
+                      fontSize: 9,
+                      fontWeight: 700,
+                      padding: "1px 5px",
+                      borderRadius: 4,
+                      whiteSpace: "nowrap",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {fmt12(nowH)}
+                  </div>
                 </div>
               ) : null
             )}
@@ -3350,7 +3446,7 @@ function GridViewInner({
                       left = (cs - settings.visibleFrom) * HOUR_W + 2
                       width = Math.max((ce - cs) * HOUR_W - 4, 18)
                     }
-                    const top = catTop + ROLE_HDR + track * SHIFT_H + 3
+                    const top = catTop + ROLE_HDR + track * SHIFT_H + 4
                     const variant = settings.badgeVariant ?? "both"
                     const canDrag = (variant === "drag" || variant === "both") && shift.draggable !== false
                     const showResize = !readOnly && (variant === "resize" || variant === "both") && width >= 48 && shift.resizable !== false
@@ -3362,29 +3458,47 @@ function GridViewInner({
                     const hasConflict = conflictIds.has(shift.id)
                     const isPast = shift.date < toDateISO(new Date()) || (sameDay(shift.date, new Date()) && shift.endH < nowH)
                     const isLive = sameDay(shift.date, new Date()) && nowH >= shift.startH && nowH < shift.endH
+                    const blockH = SHIFT_H - 8
                     const blockStyle: React.CSSProperties = {
                       position: "absolute", left, top, width,
-                      height: SHIFT_H - 6, borderRadius: 6,
+                      height: blockH, borderRadius: 8,
                       cursor: canDrag ? (isDrag ? "grabbing" : isTouchDevice ? "default" : "grab") : "default",
                       userSelect: "none",
                       touchAction: isDrag ? "none" : isTouchDevice ? "pan-y" : "none",
-                      opacity: isDrag ? 0.85 : isDeleting ? 0 : isPast ? 0.6 : 1,
+                      opacity: isDrag ? 0.88 : isDeleting ? 0 : isPast ? 0.55 : 1,
                       zIndex: isDrag ? 50 : isSelected ? 12 : isActivating ? 15 : 8,
-                      overflow: "visible", display: "flex", alignItems: "center",
-                      background: isDraft ? "transparent" : `linear-gradient(135deg,${c.bg},${c.bg}cc)`,
-                      border: isDraft ? `1.5px dashed ${c.bg}` : isSelected ? `2px solid ${c.bg}` : `1px solid ${c.bg}88`,
-                      boxShadow: isDrag ? `0 20px 40px -8px ${c.bg}60, 0 8px 16px -4px rgba(0,0,0,0.2)` : isDraft ? "none" : `0 2px 6px ${c.bg}44`,
-                      transition: isDrag ? "none" : isDeleting ? "opacity 150ms ease-out" : "transform 150ms ease-out",
-                      contain: "layout style", willChange: isDrag ? "transform" : "auto",
+                      overflow: "hidden", display: "flex", alignItems: "stretch",
+                      background: isDraft ? `${c.bg}15` : c.bg,
+                      border: isDraft
+                        ? `1.5px solid ${c.bg}80`
+                        : hasConflict || isDropConflict
+                          ? `2px solid var(--destructive)`
+                          : isSelected
+                            ? `2px solid ${c.bg}`
+                            : `1px solid ${c.bg}55`,
+                      boxShadow: isDrag
+                        ? `0 20px 40px -8px ${c.bg}60, 0 8px 16px -4px rgba(0,0,0,0.25)`
+                        : isActivating
+                          ? `0 8px 24px -4px ${c.bg}80, 0 0 0 3px ${c.bg}33`
+                          : isSelected
+                            ? `0 0 0 3px ${c.bg}44, 0 2px 8px ${c.bg}44`
+                            : isLive
+                              ? `0 0 0 2px ${c.bg}55, 0 2px 8px ${c.bg}55`
+                              : isDraft
+                                ? `0 1px 4px ${c.bg}20`
+                                : `0 2px 8px ${c.bg}44`,
+                      transition: isDrag ? "none" : isDeleting ? "opacity 150ms ease-out" : "box-shadow 150ms ease-out, transform 150ms ease-out",
+                      contain: "layout style paint", willChange: isDrag ? "transform" : "auto",
                     }
                     if (isDrag) {
                       blockStyle.left = 0
                       blockStyle.top = 0
                       blockStyle.zIndex = 200
                       blockStyle.pointerEvents = "none"
-                      blockStyle.boxShadow = `0 20px 48px -8px ${c.bg}70, 0 8px 24px -4px rgba(0,0,0,0.25)`
-                      // transform set by DOM in onPM, reset on drop in onPU/onPC
-                    } else if (isActivating) blockStyle.transform = "scale(1.06)"
+                      blockStyle.boxShadow = `0 24px 48px -8px ${c.bg}70, 0 8px 24px -4px rgba(0,0,0,0.3)`
+                    } else if (isActivating) {
+                      blockStyle.transform = "scale(1.04)"
+                    }
                     return (
                       <ContextMenu key={shift.id}>
                         <ContextMenuTrigger asChild>
@@ -3398,12 +3512,61 @@ function GridViewInner({
                         onPointerDown={canDrag ? (e: React.PointerEvent<HTMLDivElement>) => onBD(e, shift) : undefined}
                         onDoubleClick={(e) => { e.stopPropagation(); if (!dragId) onShiftClick(shift, cat) }}
                         onKeyDown={(e) => onBlockKeyDown(e, shift, cat)}
-                        className={cn("group/block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring", isNew && "animate-[scaleIn_120ms_ease-out]", (isDropConflict || hasConflict) && "ring-2 ring-destructive border-destructive", isDraft && "opacity-90", isLive && "shadow-[0_0_0_2px_var(--primary)/0.4]")}
+                        className={cn("group/block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring", isNew && "animate-[scaleIn_120ms_ease-out]")}
                         style={blockStyle}
                       >
+                        {/* Left accent strip — darker overlay on left edge */}
+                        <div style={{ width: 4, flexShrink: 0, background: "rgba(0,0,0,0.18)", borderRadius: "8px 0 0 8px" }} />
 
+                        {/* Main content */}
+                        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 8px 0 8px", flex: 1, minWidth: 0, overflow: "hidden", gap: 2 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 3, minWidth: 0 }}>
+                            {hasConflict && <AlertTriangle size={9} style={{ flexShrink: 0, color: isDraft ? "var(--destructive)" : "rgba(255,255,255,0.9)" }} />}
+                            <span style={{
+                              fontSize: 12, fontWeight: 700,
+                              color: isDraft ? c.text : "rgba(255,255,255,0.97)",
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.2,
+                            }}>
+                              {shift.employee}
+                            </span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+                            <span style={{
+                              fontSize: 10, fontWeight: 400,
+                              color: isDraft ? c.bg : "rgba(255,255,255,0.75)",
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.2,
+                            }}>
+                              {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}
+                            </span>
+                            {/* Break indicator inline */}
+                            {shift.breakStartH !== undefined && shift.breakEndH !== undefined && width >= 80 && (
+                              <span style={{ fontSize: 9, color: isDraft ? c.bg : "rgba(255,255,255,0.65)", flexShrink: 0, display: "flex", alignItems: "center", gap: 2 }}>
+                                ☕ {Math.round((shift.breakEndH - shift.breakStartH) * 60)}m
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                        {/* Break gap indicator */}
+                        {/* Status badge — top right */}
+                        {width >= 72 && (
+                          <div style={{
+                            position: "absolute", top: 4, right: showResize ? 14 : 6,
+                            fontSize: 8, fontWeight: 700, lineHeight: 1,
+                            padding: "2px 5px", borderRadius: 10,
+                            background: hasConflict
+                              ? "rgba(239,68,68,0.85)"
+                              : isDraft
+                                ? "rgba(0,0,0,0.25)"
+                                : "rgba(255,255,255,0.22)",
+                            color: "rgba(255,255,255,0.95)",
+                            pointerEvents: "none",
+                            whiteSpace: "nowrap",
+                          }}>
+                            {hasConflict ? "Conflict" : isDraft ? "Draft" : isLive ? "Live" : ""}
+                          </div>
+                        )}
+
+                        {/* Break gap background overlay */}
                         {shift.breakStartH !== undefined && shift.breakEndH !== undefined && (() => {
                           const dur = shift.endH - shift.startH
                           if (dur <= 0) return null
@@ -3412,41 +3575,46 @@ function GridViewInner({
                           return (
                             <div
                               style={{
-                                position: "absolute",
-                                top: 0,
+                                position: "absolute", top: 0,
                                 left: `${breakLeft}%`,
                                 width: `${Math.max(breakWidth, 2)}%`,
                                 height: "100%",
-                                background: "rgba(0,0,0,0.18)",
-                                borderLeft: "1px solid rgba(255,255,255,0.4)",
-                                borderRight: "1px solid rgba(255,255,255,0.4)",
-                                pointerEvents: "none",
-                                zIndex: 2,
+                                background: "rgba(0,0,0,0.15)",
+                                borderLeft: "1px dashed rgba(255,255,255,0.35)",
+                                borderRight: "1px dashed rgba(255,255,255,0.35)",
+                                pointerEvents: "none", zIndex: 2,
                               }}
-                              title={`Break ${shift.breakStartH}:00–${shift.breakEndH}:00`}
+                              title={`Break ${getTimeLabel(shift.date, shift.breakStartH!)}–${getTimeLabel(shift.date, shift.breakEndH!)}`}
                             />
                           )
                         })()}
-                        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 12px", flex: 1, minWidth: 0, overflow: "hidden" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 3, minWidth: 0 }}>
-                            {hasConflict && <AlertTriangle size={9} className="shrink-0 text-destructive" style={{ flexShrink: 0 }} />}
-                            <span style={{ fontSize: 10, fontWeight: 700, color: isDraft ? c.bg : "rgba(255,255,255,0.97)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: "1.2" }}>
-                              {shift.employee}
-                            </span>
-                          </div>
-                          <span style={{ fontSize: 9, color: isDraft ? c.bg : "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: "1.2", marginTop: 1 }}>
-                            {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}
-                          </span>
-                        </div>
 
                         {showResize && (
-                          <div data-resize="left" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)} className="absolute left-0 top-0 h-full cursor-ew-resize flex items-center justify-center" style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: "var(--primary)", borderRadius: "6px 0 0 6px" }}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /></div>
+                          <div
+                            data-resize="left"
+                            onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
+                            className="absolute left-0 top-0 h-full cursor-ew-resize flex items-center justify-center"
+                            style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 12, background: "rgba(0,0,0,0.25)", borderRadius: "8px 0 0 8px", zIndex: 3 }}
+                          >
+                            <div style={{ display: "flex", flexDirection: "column", gap: 3, pointerEvents: "none" }}>
+                              <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
+                              <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
+                              <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
+                            </div>
                           </div>
                         )}
                         {showResize && (
-                          <div data-resize="right" onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)} className="absolute right-0 top-0 h-full cursor-ew-resize flex items-center justify-center" style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9, background: "var(--primary)", borderRadius: "0 6px 6px 0" }}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /><div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--primary-foreground)" }} /></div>
+                          <div
+                            data-resize="right"
+                            onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
+                            className="absolute right-0 top-0 h-full cursor-ew-resize flex items-center justify-center"
+                            style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 12, background: "rgba(0,0,0,0.25)", borderRadius: "0 8px 8px 0", zIndex: 3 }}
+                          >
+                            <div style={{ display: "flex", flexDirection: "column", gap: 3, pointerEvents: "none" }}>
+                              <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
+                              <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
+                              <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
+                            </div>
                           </div>
                         )}
                       </div>
@@ -3542,7 +3710,7 @@ function GridViewInner({
                   const track = trackNums[si] ?? 0
                   const isDraft = shift.status === "draft"
                   const isDrag = dragId === shift.id
-                  const top = catTop + track * SHIFT_H + 3
+                  const top = catTop + track * SHIFT_H + 4
                   let left: number, width: number
                   if (isWeekView) {
                     const cs = Math.max(shift.startH, settings.visibleFrom)
@@ -3574,28 +3742,42 @@ function GridViewInner({
                   const isSelected = selectedBlockIds.has(shift.id)
                   const isActivating = activatingBlockId === shift.id
                   const hasConflict = conflictIds.has(shift.id)
+                  const blockH = SHIFT_H - 8
                   const blockStyle: React.CSSProperties = {
                     position: "absolute", left, top, width,
-                    height: SHIFT_H - 6, borderRadius: 6,
+                    height: blockH, borderRadius: 8,
                     cursor: canDrag ? (isDrag ? "grabbing" : isTouchDevice ? "default" : "grab") : "default",
                     userSelect: "none",
                     touchAction: isDrag ? "none" : isTouchDevice ? "pan-y" : "none",
-                    opacity: isDrag ? 0.85 : isDeleting ? 0 : isPast ? 0.6 : 1,
+                    opacity: isDrag ? 0.88 : isDeleting ? 0 : isPast ? 0.55 : 1,
                     zIndex: isDrag ? 50 : isSelected ? 12 : isActivating ? 15 : 8,
-                    overflow: "visible", display: "flex", alignItems: "center",
-                    background: isDraft ? "transparent" : `linear-gradient(135deg,${c.bg},${c.bg}cc)`,
-                    border: isDraft ? `1.5px dashed ${c.bg}` : isSelected ? `2px solid ${c.bg}` : `1px solid ${c.bg}88`,
+                    overflow: "hidden", display: "flex", alignItems: "stretch",
+                    background: isDraft ? `${c.bg}15` : c.bg,
+                    border: isDraft
+                      ? `1.5px solid ${c.bg}80`
+                      : hasConflict || isDropConflict
+                        ? `2px solid var(--destructive)`
+                        : isSelected
+                          ? `2px solid ${c.bg}`
+                          : `1px solid ${c.bg}55`,
                     boxShadow: isDrag
-                      ? `0 20px 40px -8px ${c.bg}60, 0 8px 16px -4px rgba(0,0,0,0.2)`
-                      : isActivating ? `0 8px 24px -4px ${c.bg}80, 0 0 0 3px ${c.bg}33`
-                      : isDraft ? "none"
-                      : isSelected ? `0 0 0 3px ${c.bg}44, 0 2px 6px ${c.bg}44`
-                      : `0 2px 6px ${c.bg}44`,
+                      ? `0 20px 40px -8px ${c.bg}60, 0 8px 16px -4px rgba(0,0,0,0.25)`
+                      : isActivating
+                        ? `0 8px 24px -4px ${c.bg}80, 0 0 0 3px ${c.bg}33`
+                        : isSelected
+                          ? `0 0 0 3px ${c.bg}44, 0 2px 8px ${c.bg}44`
+                          : isLive
+                            ? `0 0 0 2px ${c.bg}55, 0 2px 8px ${c.bg}55`
+                            : isDraft
+                              ? `0 1px 4px ${c.bg}20`
+                              : `0 2px 8px ${c.bg}44`,
                     transition: isDrag
-                      ? "transform 100ms ease-out, box-shadow 100ms ease-out"
-                      : isActivating ? "transform 200ms ease-out, box-shadow 200ms ease-out"
-                      : isDeleting ? "opacity 150ms ease-out"
-                      : "transform 150ms ease-out",
+                      ? "none"
+                      : isActivating
+                        ? "transform 200ms ease-out, box-shadow 200ms ease-out"
+                        : isDeleting
+                          ? "opacity 150ms ease-out"
+                          : "box-shadow 150ms ease-out, transform 150ms ease-out",
                     contain: "layout style paint",
                     willChange: isDrag ? "transform" : "auto",
                   }
@@ -3604,9 +3786,10 @@ function GridViewInner({
                     blockStyle.top = 0
                     blockStyle.zIndex = 200
                     blockStyle.pointerEvents = "none"
-                    blockStyle.boxShadow = `0 20px 48px -8px ${c.bg}70, 0 8px 24px -4px rgba(0,0,0,0.25)`
-                  } else if (isActivating) blockStyle.transform = "scale(1.06)"
-                  const showTooltip = tooltipBlockId === shift.id
+                    blockStyle.boxShadow = `0 24px 48px -8px ${c.bg}70, 0 8px 24px -4px rgba(0,0,0,0.3)`
+                  } else if (isActivating) {
+                    blockStyle.transform = "scale(1.04)"
+                  }
                   const conflictCount = getConflictCount(shifts, shift.id)
                   const blockSlotProps = {
                     block: shift, resource: cat, isDraft, isDragging: isDrag,
@@ -3637,27 +3820,62 @@ function GridViewInner({
                       className={cn(
                         "group/block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                         isNew && "animate-[scaleIn_120ms_ease-out]",
-                        (isDropConflict || hasConflict) && "ring-2 ring-destructive border-destructive",
-                        isDraft && "opacity-90",
-                        isLive && "shadow-[0_0_0_2px_var(--primary)/0.4]"
                       )}
                       style={blockStyle}
                     >
                       {slots.block ? slots.block(blockSlotProps) : (
                         <>
-                          
-                          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 12px", flex: 1, minWidth: 0, overflow: "hidden" }}>
+                          {/* Left accent strip */}
+                          <div style={{ width: 4, flexShrink: 0, background: "rgba(0,0,0,0.18)", borderRadius: "8px 0 0 8px" }} />
+
+                          {/* Main content */}
+                          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 8px", flex: 1, minWidth: 0, overflow: "hidden", gap: 2 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 3, minWidth: 0 }}>
-                              {hasConflict && <AlertTriangle size={9} className="shrink-0 text-destructive" style={{ flexShrink: 0 }} />}
-                              <span style={{ fontSize: 10, fontWeight: 700, color: isDraft ? c.bg : "rgba(255,255,255,0.97)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: "1.2" }}>
+                              {hasConflict && <AlertTriangle size={9} style={{ flexShrink: 0, color: isDraft ? "var(--destructive)" : "rgba(255,255,255,0.9)" }} />}
+                              <span style={{
+                                fontSize: 12, fontWeight: 700,
+                                color: isDraft ? c.text : "rgba(255,255,255,0.97)",
+                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.2,
+                              }}>
                                 {shift.employee}
                               </span>
                             </div>
-                            <span style={{ fontSize: 9, color: isDraft ? c.bg : "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: "1.2", marginTop: 1 }}>
-                              {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}
-                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 4, minWidth: 0 }}>
+                              <span style={{
+                                fontSize: 10, fontWeight: 400,
+                                color: isDraft ? c.bg : "rgba(255,255,255,0.75)",
+                                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.2,
+                              }}>
+                                {getTimeLabel(shift.date, shift.startH)}–{getTimeLabel(shift.date, shift.endH)}
+                              </span>
+                              {shift.breakStartH !== undefined && shift.breakEndH !== undefined && width >= 80 && (
+                                <span style={{ fontSize: 9, color: isDraft ? c.bg : "rgba(255,255,255,0.65)", flexShrink: 0 }}>
+                                  ☕ {Math.round((shift.breakEndH - shift.breakStartH) * 60)}m
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          {/* Break gap indicator */}
+
+                          {/* Status badge */}
+                          {width >= 72 && (hasConflict || isDraft || isLive) && (
+                            <div style={{
+                              position: "absolute", top: 4, right: showResize ? 14 : 6,
+                              fontSize: 8, fontWeight: 700, lineHeight: 1,
+                              padding: "2px 5px", borderRadius: 10,
+                              background: hasConflict
+                                ? "rgba(239,68,68,0.85)"
+                                : isDraft
+                                  ? "rgba(0,0,0,0.25)"
+                                  : "rgba(255,255,255,0.25)",
+                              color: "rgba(255,255,255,0.95)",
+                              pointerEvents: "none",
+                              whiteSpace: "nowrap",
+                            }}>
+                              {hasConflict ? "Conflict" : isDraft ? "Draft" : "Live"}
+                            </div>
+                          )}
+
+                          {/* Break gap overlay */}
                           {shift.breakStartH !== undefined && shift.breakEndH !== undefined && (() => {
                             const dur = shift.endH - shift.startH
                             if (dur <= 0) return null
@@ -3670,12 +3888,12 @@ function GridViewInner({
                                   left: `${breakLeft}%`,
                                   width: `${Math.max(breakWidth, 2)}%`,
                                   height: "100%",
-                                  background: "rgba(0,0,0,0.18)",
-                                  borderLeft: "1px solid rgba(255,255,255,0.4)",
-                                  borderRight: "1px solid rgba(255,255,255,0.4)",
+                                  background: "rgba(0,0,0,0.15)",
+                                  borderLeft: "1px dashed rgba(255,255,255,0.35)",
+                                  borderRight: "1px dashed rgba(255,255,255,0.35)",
                                   pointerEvents: "none", zIndex: 2,
                                 }}
-                                title={`Break ${shift.breakStartH}:00–${shift.breakEndH}:00`}
+                                title={`Break ${getTimeLabel(shift.date, shift.breakStartH!)}–${getTimeLabel(shift.date, shift.breakEndH!)}`}
                               />
                             )
                           })()}
@@ -3684,19 +3902,13 @@ function GridViewInner({
                             <div
                               data-resize="left"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
-
                               className="absolute left-0 top-0 flex h-full cursor-ew-resize items-center justify-center"
-                              style={{
-                                width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9,
-                                minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined,
-                                background: "var(--primary)",
-                                borderRadius: "6px 0 0 6px",
-                              }}
+                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 12, background: "rgba(0,0,0,0.25)", borderRadius: "8px 0 0 8px", zIndex: 3 }}
                             >
-                              <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
-                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
-                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
-                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
+                              <div style={{ display: "flex", flexDirection: "column", gap: 3, pointerEvents: "none" }}>
+                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
+                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
+                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
                               </div>
                             </div>
                           )}
@@ -3704,19 +3916,13 @@ function GridViewInner({
                             <div
                               data-resize="right"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
-
                               className="absolute right-0 top-0 flex h-full cursor-ew-resize items-center justify-center"
-                              style={{
-                                width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 9,
-                                minWidth: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : undefined,
-                                background: "var(--primary)",
-                                borderRadius: "0 6px 6px 0",
-                              }}
+                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 12, background: "rgba(0,0,0,0.25)", borderRadius: "0 8px 8px 0", zIndex: 3 }}
                             >
-                              <div style={{ display: "flex", flexDirection: "column", gap: 2, pointerEvents: "none" }}>
-                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
-                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
-                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "var(--background)" }} />
+                              <div style={{ display: "flex", flexDirection: "column", gap: 3, pointerEvents: "none" }}>
+                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
+                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
+                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
                               </div>
                             </div>
                           )}

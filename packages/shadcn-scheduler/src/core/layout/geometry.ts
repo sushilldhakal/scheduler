@@ -29,7 +29,7 @@ export function makeGridConfig(
   isDayMultiDay: boolean,
   snapHours: number
 ): GridConfig {
-  const hourW    = 88 * zoom
+  const hourW    = 96 * zoom
   const vh       = visibleTo - visibleFrom
   const colWWeek = Math.max(vh * 18, 160) * zoom
   return {
@@ -71,9 +71,9 @@ export function blockRect(
 
   return {
     left,
-    top:    catTop + ROLE_HDR + track * SHIFT_H + 3,
+    top:    catTop + ROLE_HDR + track * SHIFT_H + 4,
     width,
-    height: SHIFT_H - 6,
+    height: SHIFT_H - 8,
   }
 }
 
