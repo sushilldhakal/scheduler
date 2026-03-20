@@ -264,6 +264,25 @@ export interface SchedulerSlots {
    *  When provided, replaces the default tooltip entirely — position/portal handling is unchanged. */
   tooltip?: (block: Block, resource: Resource) => ReactNode
 }
+
+// ─── Resource utilisation histogram ──────────────────────────────────────────
+
+/** Optional per-resource capacity override for the utilisation histogram. */
+export interface HistogramCapacity {
+  resourceId: string   // categoryId or employeeId
+  /** Maximum scheduled hours before the bar turns red. */
+  hours: number
+}
+
+/**
+ * Configuration for the resource utilisation histogram rendered below the grid.
+ * Pass via the `histogramConfig` prop on <Scheduler>.
+ */
+export interface HistogramConfig {
+  /** Per-resource capacity limits. Bars are colour-coded green / amber / red. */
+  capacities?: HistogramCapacity[]
+}
+
 /** A vertical marker line rendered over the grid at a specific date+hour. */
 export interface SchedulerMarker {
   id: string

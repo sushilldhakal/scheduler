@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useContext, useRef, useMemo } from "react"
-import type { Block, Resource, Settings, SchedulerSlots, SchedulerMarker, ShiftDependency, EmployeeAvailability } from "./types"
+import type { Block, Resource, Settings, SchedulerSlots, SchedulerMarker, ShiftDependency, EmployeeAvailability, HistogramConfig } from "./types"
 import { Button } from "./components/ui/button"
 import { Plus, ZoomIn, ZoomOut } from "lucide-react"
 import { SchedulerProvider, nextUid, SchedulerContext } from "./context"
@@ -12,6 +12,7 @@ import { UserSelect } from "./components/UserSelect"
 import { AddShiftModal } from "./components/modals/AddShiftModal"
 import { ShiftModal } from "./components/modals/ShiftModal"
 import { BottomSheet } from "./components/ui/BottomSheet"
+import { ResourceHistogram } from "./components/ResourceHistogram"
 import { useIsMobile } from "./hooks/useMediaQuery"
 import { DayView, WeekView } from "./components/views/DayWeekViews"
 import { MonthView } from "./components/views/MonthView"
@@ -89,6 +90,12 @@ export interface SchedulerProps {
   onDependenciesChange?: (deps: ShiftDependency[]) => void
   /** Per-employee availability windows. Slots outside these ranges are shaded in the grid. */
   availability?: EmployeeAvailability[]
+  /** When true, renders a resource utilisation histogram below the scheduler grid. */
+  showHistogram?: boolean
+  /** Height of the histogram panel in pixels. Default 120. */
+  histogramHeight?: number
+  /** Configuration for the histogram (capacity limits per resource). */
+  histogramConfig?: HistogramConfig
 }
 
 export interface SchedulerHeaderActions {
@@ -126,6 +133,9 @@ export function Scheduler({
   dependencies = [],
   onDependenciesChange,
   availability = [],
+  showHistogram = false,
+  histogramHeight = 120,
+  histogramConfig,
 }: SchedulerProps): React.ReactElement {
   const parentCtx = useContext(SchedulerContext)
   const slots = slotsProp ?? {}
@@ -800,6 +810,17 @@ export function Scheduler({
             />
           )}
         </div>
+
+        {/* Resource utilisation histogram */}
+        {showHistogram && (
+          <ResourceHistogram
+            shifts={expandedShifts}
+            rangeStart={expandRangeStart}
+            rangeEnd={expandRangeEnd}
+            height={histogramHeight}
+            config={histogramConfig}
+          />
+        )}
 
         {addCtx && (
           <AddShiftModal

@@ -21,6 +21,7 @@ export const Scheduler = Object.assign(SchedulerCore, {
 export type { SchedulerProps, SchedulerHeaderActions } from "./core/Scheduler"
 export { RosterActions } from "./core/components/RosterActions"
 export { SchedulerSettings } from "./core/components/settings/SchedulerSettings"
+export { ResourceHistogram } from "./core/components/ResourceHistogram"
 export { ChangeBadgeVariantInput } from "./core/components/settings/ChangeBadgeVariantInput"
 export { ChangeVisibleHoursInput } from "./core/components/settings/ChangeVisibleHoursInput"
 export { ChangeWorkingHoursInput } from "./core/components/settings/ChangeWorkingHoursInput"
@@ -44,7 +45,7 @@ export type {
   TimeSlotLabelSlotProps,
   EmptyCellSlotProps,
   EmptyStateSlotProps,
-  RecurrenceRule, RecurrenceFreq, ShiftDependency, DependencyType, EmployeeAvailability, AvailabilityWindow } from "./core/types"
+  RecurrenceRule, RecurrenceFreq, ShiftDependency, DependencyType, EmployeeAvailability, AvailabilityWindow , HistogramConfig, HistogramCapacity } from "./core/types"
 export {
   createSchedulerConfig,
   createRosterConfig,
