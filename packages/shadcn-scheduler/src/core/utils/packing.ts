@@ -1,4 +1,4 @@
-import type { Block } from "../types"
+import type { Block, EmployeeAvailability } from "../types"
 import { ROLE_HDR, SHIFT_H, ADD_BTN_H } from "../constants"
 
 /**
@@ -76,4 +76,32 @@ export function getCategoryRowHeight(categoryId: string, dayBlocks: Block[]): nu
   const sorted = [...rs].sort((a, b) => a.startH - b.startH)
   const trackCount = packShifts(sorted).reduce((mx, t) => Math.max(mx, t + 1), 1)
   return ROLE_HDR + trackCount * SHIFT_H + ADD_BTN_H
+}
+
+/**
+ * Returns true if the given hour slot is UNAVAILABLE for the employee on that date.
+ * If no availability entry exists for the employee, they are always available.
+ */
+export function isUnavailable(
+  employeeId: string,
+  date: Date,
+  hour: number,
+  availability: EmployeeAvailability[],
+): boolean {
+  const entry = availability.find((a) => a.employeeId === employeeId)
+  if (!entry || entry.windows.length === 0) return false
+
+  const dateISO = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+  const dow = date.getDay()
+
+  // Find matching windows (date-specific overrides dayOfWeek)
+  const matching = entry.windows.filter((w) =>
+    (w.date && w.date === dateISO) ||
+    (!w.date && (w.dayOfWeek === undefined || w.dayOfWeek === dow))
+  )
+
+  if (matching.length === 0) return true // no window covers this day → unavailable
+
+  // Available if any window covers this hour
+  return !matching.some((w) => hour >= w.startH && hour < w.endH)
 }

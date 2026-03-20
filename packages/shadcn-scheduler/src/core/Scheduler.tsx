@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useContext, useRef } from "react"
-import type { Block, Resource, Settings, SchedulerSlots , SchedulerMarker } from "./types"
+import React, { useState, useCallback, useContext, useRef, useMemo } from "react"
+import type { Block, Resource, Settings, SchedulerSlots, SchedulerMarker, ShiftDependency, EmployeeAvailability } from "./types"
 import { Button } from "./components/ui/button"
 import { Plus, ZoomIn, ZoomOut } from "lucide-react"
 import { SchedulerProvider, nextUid, SchedulerContext } from "./context"
-import { getWeekDates, sameDay, toDateISO } from "./constants"
+import { getWeekDates, sameDay, toDateISO, ZOOM_LEVELS } from "./constants"
+import { expandAllRecurring } from "./utils/recurrence"
 import { findConflicts } from "./utils/packing"
 import { TodayButton, DateNavigator } from "./components/DateNavigator"
 import { ViewTabs } from "./components/ViewTabs"
@@ -83,6 +84,11 @@ export interface SchedulerProps {
   /** Optional marker lines rendered over the grid at specific date+hour positions. */
   markers?: SchedulerMarker[]
   onMarkersChange?: (markers: SchedulerMarker[]) => void
+  /** Directed arrows between blocks (finish-to-start, start-to-start, finish-to-finish). */
+  dependencies?: ShiftDependency[]
+  onDependenciesChange?: (deps: ShiftDependency[]) => void
+  /** Per-employee availability windows. Slots outside these ranges are shaded in the grid. */
+  availability?: EmployeeAvailability[]
 }
 
 export interface SchedulerHeaderActions {
@@ -117,6 +123,9 @@ export function Scheduler({
   onAuditEvent,
   markers = [],
   onMarkersChange,
+  dependencies = [],
+  onDependenciesChange,
+  availability = [],
 }: SchedulerProps): React.ReactElement {
   const parentCtx = useContext(SchedulerContext)
   const slots = slotsProp ?? {}
@@ -440,8 +449,13 @@ export function Scheduler({
     [onVisibleRangeChange]
   )
 
+  // Expand recurring blocks into individual occurrences for the visible window
+  const expandRangeStart = useMemo(() => { const d = new Date(currentDate); d.setDate(d.getDate() - bufferDays - 7); d.setHours(0,0,0,0); return d }, [currentDate, bufferDays])
+  const expandRangeEnd   = useMemo(() => { const d = new Date(currentDate); d.setDate(d.getDate() + bufferDays + 7); d.setHours(23,59,59,999); return d }, [currentDate, bufferDays])
+  const expandedShifts   = useMemo(() => expandAllRecurring(shifts, expandRangeStart, expandRangeEnd), [shifts, expandRangeStart, expandRangeEnd])
+
   const sharedGridProps = {
-    shifts,
+    shifts: expandedShifts,
     markers,
     onMarkersChange,
     setShifts,
@@ -469,6 +483,9 @@ export function Scheduler({
     onBlockMove,
     onBlockResize,
     onBlockPublish,
+    dependencies,
+    onDependenciesChange,
+    availability,
   }
 
   const handleSetDate = useCallback((action: React.SetStateAction<Date>) => {
@@ -643,12 +660,26 @@ export function Scheduler({
                     >
                       Now
                     </Button>
-                    <Button variant="outline" size="icon" onClick={handleZoomOut} disabled={zoom <= 0.5}>
-                      <ZoomOut size={16} />
-                    </Button>
-                    <Button variant="outline" size="icon" onClick={handleZoomIn} disabled={zoom >= 2}>
-                      <ZoomIn size={16} />
-                    </Button>
+                    {/* Zoom slider — draggable, snaps to ZOOM_LEVELS */}
+                    <div className="flex items-center gap-1.5 rounded-md border border-border bg-background px-2 h-8">
+                      <ZoomOut size={13} className="text-muted-foreground shrink-0" onClick={handleZoomOut} style={{ cursor: zoom <= 0.5 ? "default" : "pointer", opacity: zoom <= 0.5 ? 0.4 : 1 }} />
+                      <input
+                        type="range"
+                        min={0}
+                        max={ZOOM_LEVELS.length - 1}
+                        step={1}
+                        value={ZOOM_LEVELS.indexOf(zoom as typeof ZOOM_LEVELS[number]) >= 0 ? ZOOM_LEVELS.indexOf(zoom as typeof ZOOM_LEVELS[number]) : Math.round((zoom - 0.5) / 0.25)}
+                        onChange={(e) => {
+                          const idx = Number(e.target.value)
+                          const level = ZOOM_LEVELS[idx]
+                          if (level !== undefined) setZoom(level)
+                        }}
+                        className="w-20 h-1 accent-primary cursor-pointer"
+                        aria-label={`Zoom level ${zoom}x`}
+                      />
+                      <ZoomIn size={13} className="text-muted-foreground shrink-0" onClick={handleZoomIn} style={{ cursor: zoom >= 2 ? "default" : "pointer", opacity: zoom >= 2 ? 0.4 : 1 }} />
+                      <span className="text-[10px] font-medium text-muted-foreground w-6 text-right tabular-nums">{zoom}x</span>
+                    </div>
                   </div>
                 )}
               <div className="flex w-full items-center gap-2">
@@ -745,7 +776,7 @@ export function Scheduler({
               <TimelineView
                 date={currentDate}
                 dates={timelineDates}
-                shifts={shifts}
+                shifts={expandedShifts}
                 setShifts={setShifts}
                 selEmps={selEmps}
                 onShiftClick={onShiftClick}

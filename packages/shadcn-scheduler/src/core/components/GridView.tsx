@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import { createPortal } from "react-dom"
-import type { Block, Resource , SchedulerMarker } from "../types"
+import type { Block, Resource , SchedulerMarker , ShiftDependency, EmployeeAvailability } from "../types"
 import { useSchedulerContext } from "../context"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import {
@@ -33,7 +33,7 @@ import {
   RESIZE_HANDLE_MIN_TOUCH_PX,
   ZOOM_LEVELS,
 } from "../constants"
-import { packShifts, getCategoryRowHeight, findConflicts, getConflictCount, wouldConflictAt } from "../utils/packing"
+import { packShifts, getCategoryRowHeight, findConflicts, getConflictCount, wouldConflictAt, isUnavailable } from "../utils/packing"
 import { useScrollToNow } from "../hooks/useScrollToNow"
 import { useMediaQuery, useIsTablet } from "../hooks/useMediaQuery"
 import { useFlatRows } from "../hooks/useFlatRows"
@@ -124,6 +124,9 @@ interface GridViewProps {
   /** Marker lines rendered over the grid at specific date+hour positions. */
   markers?: SchedulerMarker[]
   onMarkersChange?: (markers: SchedulerMarker[]) => void
+  dependencies?: ShiftDependency[]
+  onDependenciesChange?: (deps: ShiftDependency[]) => void
+  availability?: EmployeeAvailability[]
 }
 
 interface StaffPanelState {
@@ -192,6 +195,11 @@ function GridViewInner({
   onBlockMove,
   onBlockResize,
   onBlockPublish,
+  markers = [],
+  onMarkersChange,
+  dependencies = [],
+  onDependenciesChange,
+  availability = [],
 }: GridViewProps): React.ReactElement {
   const { categories, employees, nextUid, getColor, labels, settings, slots, snapMinutes, allowOvernight, getTimeLabel } = useSchedulerContext()
   const CATEGORIES =
@@ -317,6 +325,15 @@ function GridViewInner({
     selectedBlockIds.forEach((id) => onDeleteShift(id))
     setSelectedBlockIds(new Set())
   }, [selectedBlockIds, onDeleteShift])
+
+  const moveSelectedBlocks = useCallback((offsetDays: number) => {
+    setShifts((prev) => prev.map((s) => {
+      if (!selectedBlockIds.has(s.id)) return s
+      const d = new Date(s.date + "T12:00:00")
+      d.setDate(d.getDate() + offsetDays)
+      return { ...s, date: toDateISO(d) }
+    }))
+  }, [selectedBlockIds, setShifts])
 
   const COL_W_WEEK = useMemo((): number => {
     if (!isWeekView) return HOUR_W
@@ -2643,6 +2660,43 @@ function GridViewInner({
                 />
               )
             })()}
+            {/* Availability shading — per-employee unavailable time overlay */}
+            {availability.length > 0 && rowVirtualizer.getVirtualItems().map((vr) => {
+              const row = flatRows[vr.index]
+              if (!row || row.kind === "category") return null
+              const emp = row.employee!
+              return dates.map((date, di) => {
+                const unavailableSlots: number[] = []
+                for (let h = settings.visibleFrom; h < settings.visibleTo; h++) {
+                  if (isUnavailable(emp.id, date, h, availability)) unavailableSlots.push(h)
+                }
+                if (unavailableSlots.length === 0) return null
+                return unavailableSlots.map((h) => {
+                  const left = isWeekView
+                    ? di * COL_W_WEEK + (h - settings.visibleFrom) * PX_WEEK
+                    : isDayViewMultiDay
+                      ? di * DAY_WIDTH + (h - settings.visibleFrom) * HOUR_W
+                      : (h - settings.visibleFrom) * HOUR_W
+                  const width = isWeekView ? PX_WEEK : HOUR_W
+                  return (
+                    <div
+                      key={`avail-${emp.id}-${di}-${h}`}
+                      style={{
+                        position: "absolute",
+                        left,
+                        top: vr.start,
+                        width,
+                        height: vr.size,
+                        background: "repeating-linear-gradient(135deg, transparent, transparent 4px, color-mix(in oklch, var(--muted-foreground) 15%, transparent) 4px, color-mix(in oklch, var(--muted-foreground) 15%, transparent) 8px)",
+                        borderRight: "1px solid color-mix(in oklch, var(--border) 40%, transparent)",
+                        pointerEvents: "none",
+                        zIndex: 3,
+                      }}
+                    />
+                  )
+                })
+              })
+            })}
             {rowVirtualizer.getVirtualItems().map((vr) => {
               const row = flatRows[vr.index]
               if (!row) return null
@@ -2935,6 +2989,120 @@ function GridViewInner({
               )
             })}
 
+            {/* SVG dependency arrows — rendered above markers, below blocks */}
+            {dependencies.length > 0 && (() => {
+              // Build a lookup: blockId → { left, top } in grid coords
+              const blockPos: Record<string, { startX: number; endX: number; centerY: number }> = {}
+              for (const s of shifts) {
+                const di = isWeekView
+                  ? dates.findIndex((d) => sameDay(d, s.date))
+                  : isDayViewMultiDay
+                    ? dates.findIndex((d) => sameDay(d, s.date))
+                    : 0
+                if (di < 0) continue
+                const rowKey = rowMode === "individual"
+                  ? `emp:${s.employeeId}`
+                  : `cat:${s.categoryId}`
+                const rowTop = categoryTops[rowKey] ?? 0
+                const rowH   = categoryHeights[rowKey] ?? ROLE_HDR
+                const startX = isWeekView
+                  ? di * COL_W_WEEK + (s.startH - settings.visibleFrom) * PX_WEEK
+                  : isDayViewMultiDay
+                    ? di * DAY_WIDTH + (s.startH - settings.visibleFrom) * HOUR_W
+                    : (s.startH - settings.visibleFrom) * HOUR_W
+                const endX = isWeekView
+                  ? di * COL_W_WEEK + (s.endH - settings.visibleFrom) * PX_WEEK
+                  : isDayViewMultiDay
+                    ? di * DAY_WIDTH + (s.endH - settings.visibleFrom) * HOUR_W
+                    : (s.endH - settings.visibleFrom) * HOUR_W
+                blockPos[s.id] = { startX, endX, centerY: rowTop + rowH / 2 }
+              }
+              return (
+                <svg
+                  style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, pointerEvents: "none", zIndex: 17, overflow: "visible" }}
+                  aria-hidden
+                >
+                  <defs>
+                    {["var(--primary)", "var(--destructive)", "var(--muted-foreground)"].map((col, ci) => (
+                      <marker key={ci} id={`arr-${ci}`} markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                        <polygon points="0 0, 7 3.5, 0 7" fill={col} />
+                      </marker>
+                    ))}
+                  </defs>
+                  {dependencies.map((dep) => {
+                    const from = blockPos[dep.fromId]
+                    const to   = blockPos[dep.toId]
+                    if (!from || !to) return null
+                    const type  = dep.type ?? "finish-to-start"
+                    const color = dep.color ?? "var(--primary)"
+                    const markerIdx = color === "var(--destructive)" ? 1 : color === "var(--muted-foreground)" ? 2 : 0
+                    let x1 = from.endX, y1 = from.centerY
+                    let x2 = to.startX, y2 = to.centerY
+                    if (type === "start-to-start")   { x1 = from.startX; x2 = to.startX }
+                    if (type === "finish-to-finish")  { x1 = from.endX;  x2 = to.endX   }
+                    // Curved cubic bezier
+                    const dx = Math.abs(x2 - x1)
+                    const cp = Math.max(dx * 0.5, 40)
+                    const d  = `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`
+                    return (
+                      <g key={dep.id}>
+                        <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray={dep.type === "start-to-start" || dep.type === "finish-to-finish" ? "4 3" : undefined} markerEnd={`url(#arr-${markerIdx})`} opacity={0.75} />
+                        {dep.label && (
+                          <text x={(x1 + x2) / 2} y={Math.min(y1, y2) - 4} fontSize={9} fill={color} textAnchor="middle" fontWeight={600}>{dep.label}</text>
+                        )}
+                      </g>
+                    )
+                  })}
+                </svg>
+              )
+            })()}
+
+            {/* SVG dependency arrows */}
+            {dependencies.length > 0 && (() => {
+              const blockPos: Record<string, { startX: number; endX: number; centerY: number }> = {}
+              for (const s of shifts) {
+                const di = isWeekView || isDayViewMultiDay ? dates.findIndex((d) => sameDay(d, s.date)) : 0
+                if (di < 0) continue
+                const rowKey = rowMode === "individual" ? `emp:${s.employeeId}` : `cat:${s.categoryId}`
+                const rowTop = categoryTops[rowKey] ?? 0
+                const rowH   = categoryHeights[rowKey] ?? ROLE_HDR
+                const startX = isWeekView
+                  ? di * COL_W_WEEK + (s.startH - settings.visibleFrom) * PX_WEEK
+                  : isDayViewMultiDay ? di * DAY_WIDTH + (s.startH - settings.visibleFrom) * HOUR_W
+                  : (s.startH - settings.visibleFrom) * HOUR_W
+                const endX = isWeekView
+                  ? di * COL_W_WEEK + (s.endH - settings.visibleFrom) * PX_WEEK
+                  : isDayViewMultiDay ? di * DAY_WIDTH + (s.endH - settings.visibleFrom) * HOUR_W
+                  : (s.endH - settings.visibleFrom) * HOUR_W
+                blockPos[s.id] = { startX, endX, centerY: rowTop + rowH / 2 }
+              }
+              return (
+                <svg style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, pointerEvents: "none", zIndex: 17, overflow: "visible" }} aria-hidden>
+                  <defs>
+                    <marker id="dep-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                      <polygon points="0 0, 7 3.5, 0 7" fill="var(--primary)" />
+                    </marker>
+                  </defs>
+                  {dependencies.map((dep) => {
+                    const from = blockPos[dep.fromId]
+                    const to   = blockPos[dep.toId]
+                    if (!from || !to) return null
+                    const type  = dep.type ?? "finish-to-start"
+                    const color = dep.color ?? "var(--primary)"
+                    const x1 = type === "start-to-start" ? from.startX : from.endX
+                    const x2 = type === "finish-to-finish" ? to.endX   : to.startX
+                    const cp = Math.max(Math.abs(x2 - x1) * 0.5, 40)
+                    const d  = `M ${x1} ${from.centerY} C ${x1 + cp} ${from.centerY}, ${x2 - cp} ${to.centerY}, ${x2} ${to.centerY}`
+                    return (
+                      <g key={dep.id}>
+                        <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray={type !== "finish-to-start" ? "4 3" : undefined} markerEnd="url(#dep-arrow)" opacity={0.7} />
+                        {dep.label && <text x={(x1 + x2) / 2} y={Math.min(from.centerY, to.centerY) - 4} fontSize={9} fill={color} textAnchor="middle" fontWeight={600}>{dep.label}</text>}
+                      </g>
+                    )
+                  })}
+                </svg>
+              )
+            })()}
             {/* Rows */}
             {rowVirtualizer.getVirtualItems().map((vr) => {
               const row = flatRows[vr.index]
@@ -3726,6 +3894,40 @@ function GridViewInner({
             }}
           >
             Delete
+          </button>
+          <button
+            type="button"
+            onClick={() => moveSelectedBlocks(-1)}
+            title="Move selected back 1 day"
+            style={{
+              background: "var(--secondary)",
+              color: "var(--secondary-foreground)",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              padding: "4px 10px",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            ← Day
+          </button>
+          <button
+            type="button"
+            onClick={() => moveSelectedBlocks(1)}
+            title="Move selected forward 1 day"
+            style={{
+              background: "var(--secondary)",
+              color: "var(--secondary-foreground)",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              padding: "4px 10px",
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Day →
           </button>
           <button
             type="button"

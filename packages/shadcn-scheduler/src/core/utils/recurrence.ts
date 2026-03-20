@@ -1,0 +1,134 @@
+import type { Block, RecurrenceRule } from "../types"
+import { toDateISO, sameDay } from "../constants"
+
+/** Max occurrences to generate when no `until` or `count` is set */
+const MAX_AUTO = 365
+
+/**
+ * Given a master block with a `recurrence` rule, generate all occurrence
+ * blocks within the given date window [rangeStart, rangeEnd] (inclusive).
+ *
+ * Each occurrence is a copy of the master with:
+ *   - a stable id: `${master.id}_r${YYYY-MM-DD}`
+ *   - `recurringMasterId` pointing back to the master
+ *   - `recurrence` omitted (occurrences are not themselves masters)
+ *
+ * The master's own date is always included as the first occurrence.
+ */
+export function expandRecurrence(
+  master: Block,
+  rangeStart: Date,
+  rangeEnd: Date,
+): Block[] {
+  const rule = master.recurrence
+  if (!rule) return []
+
+  const masterDate = new Date(master.date + "T12:00:00")
+  const freq        = rule.freq
+  const interval    = Math.max(1, rule.interval ?? 1)
+  const until       = rule.until ? new Date(rule.until + "T23:59:59") : null
+  const maxCount    = rule.count ?? MAX_AUTO
+  const byDay       = rule.byDay ?? null
+
+  // Effective end: whichever is earlier — rule's until or our range end
+  const effectiveEnd = until && until < rangeEnd ? until : rangeEnd
+
+  const occurrences: Block[] = []
+  let current = new Date(masterDate)
+  let count = 0
+
+  while (current <= effectiveEnd && count < maxCount) {
+    // Check byDay constraint for weekly recurrence
+    const dayOk = !byDay || byDay.includes(current.getDay())
+
+    if (dayOk && current >= rangeStart) {
+      const dateISO = toDateISO(current)
+      occurrences.push({
+        ...master,
+        id: `${master.id}_r${dateISO}`,
+        date: dateISO,
+        recurrence: undefined,
+        recurringMasterId: master.id,
+      })
+    }
+
+    if (dayOk) count++
+    if (count >= maxCount) break
+
+    // Advance to next candidate
+    current = advance(current, freq, interval, byDay)
+  }
+
+  return occurrences
+}
+
+function advance(
+  from: Date,
+  freq: RecurrenceRule["freq"],
+  interval: number,
+  byDay: number[] | null,
+): Date {
+  const d = new Date(from)
+
+  if (freq === "daily") {
+    d.setDate(d.getDate() + interval)
+  } else if (freq === "weekly") {
+    if (byDay && byDay.length > 1) {
+      // Multi-day weekly: find the next matching day within the week(s)
+      const sorted = [...byDay].sort((a, b) => a - b)
+      const todayDow = from.getDay()
+      const next = sorted.find((dow) => dow > todayDow)
+      if (next !== undefined) {
+        d.setDate(d.getDate() + (next - todayDow))
+      } else {
+        // Wrap to next week cycle
+        const firstDow = sorted[0]!
+        const daysToFirstNextWeek = 7 * interval - todayDow + firstDow
+        d.setDate(d.getDate() + daysToFirstNextWeek)
+      }
+    } else {
+      d.setDate(d.getDate() + 7 * interval)
+    }
+  } else if (freq === "monthly") {
+    d.setMonth(d.getMonth() + interval)
+  }
+
+  return d
+}
+
+/**
+ * Given a full shifts array that may contain master blocks with recurrence rules,
+ * return a new array where each master is replaced by its occurrences within
+ * the visible date window. Non-recurring blocks pass through unchanged.
+ *
+ * Masters themselves are removed — only occurrences appear in the output.
+ * An occurrence on the master's own date gets the master's id (not the _rYYYY-MM-DD form)
+ * so existing references (onShiftClick, etc.) keep working.
+ */
+export function expandAllRecurring(
+  shifts: Block[],
+  rangeStart: Date,
+  rangeEnd: Date,
+): Block[] {
+  const out: Block[] = []
+
+  for (const shift of shifts) {
+    if (!shift.recurrence) {
+      out.push(shift)
+      continue
+    }
+
+    const expanded = expandRecurrence(shift, rangeStart, rangeEnd)
+
+    // Restore the master's own id on the occurrence that lands on its date
+    for (const occ of expanded) {
+      if (sameDay(occ.date, shift.date)) {
+        out.push({ ...occ, id: shift.id, recurringMasterId: undefined, recurrence: shift.recurrence })
+      } else {
+        out.push(occ)
+      }
+    }
+  }
+
+  return out
+}

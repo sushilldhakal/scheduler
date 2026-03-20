@@ -2,6 +2,66 @@ import type { ReactNode, RefObject } from "react"
 
 // ─── Core Data Types ─────────────────────────────────────────────────────────
 
+
+// ─── Recurrence ───────────────────────────────────────────────────────────────
+
+/**
+ * RFC 5545-compatible recurrence rule (subset).
+ * Stored on the "master" block; occurrences are generated at render time.
+ */
+export type RecurrenceFreq = "daily" | "weekly" | "monthly"
+
+export interface RecurrenceRule {
+  freq: RecurrenceFreq
+  /** Repeat every N periods. Default 1. */
+  interval?: number
+  /** Days of week (0=Sun…6=Sat). Only meaningful when freq="weekly". */
+  byDay?: number[]
+  /** ISO date string (YYYY-MM-DD) — last occurrence date (inclusive). */
+  until?: string
+  /** Stop after N occurrences (ignored when until is set). */
+  count?: number
+}
+
+// ─── Shift dependencies ───────────────────────────────────────────────────────
+
+/**
+ * A directed relationship between two blocks.
+ * Rendered as an SVG arrow from the end of `fromId` to the start of `toId`.
+ */
+export type DependencyType = "finish-to-start" | "start-to-start" | "finish-to-finish"
+
+export interface ShiftDependency {
+  id: string
+  fromId: string
+  toId: string
+  type?: DependencyType   // default "finish-to-start"
+  color?: string          // CSS color, default var(--primary)
+  label?: string
+}
+
+
+// ─── Employee availability ────────────────────────────────────────────────────
+
+/**
+ * Declares available time windows for an employee.
+ * Slots outside these windows are shaded in the grid (unavailable overlay).
+ * If an employee has no entry here they are treated as always available.
+ */
+export interface AvailabilityWindow {
+  /** 0=Sun … 6=Sat. Absent = applies to all days. */
+  dayOfWeek?: number
+  /** Specific ISO date (YYYY-MM-DD). Takes precedence over dayOfWeek. */
+  date?: string
+  startH: number
+  endH: number
+}
+
+export interface EmployeeAvailability {
+  employeeId: string
+  windows: AvailabilityWindow[]
+}
+
 /**
  * A single schedule block (shift/slot). Generic TMeta is the extensibility escape hatch
  * for domain-specific data (e.g. money, episode numbers, qualification codes).
@@ -24,6 +84,10 @@ export interface Block<TMeta = Record<string, unknown>> {
   status: "draft" | "published"
   /** Optional domain-specific payload. Fully typed when you use Block<YourMeta>. */
   meta?: TMeta
+  /** Recurrence rule — when present, this is a master block; occurrences are generated automatically. */
+  recurrence?: RecurrenceRule
+  /** When this is a generated occurrence, points to the master block id. */
+  recurringMasterId?: string
 }
 
 // ─── Tree / flat-row model ────────────────────────────────────────────────────

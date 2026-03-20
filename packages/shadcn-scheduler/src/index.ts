@@ -44,7 +44,7 @@ export type {
   TimeSlotLabelSlotProps,
   EmptyCellSlotProps,
   EmptyStateSlotProps,
-} from "./core/types"
+  RecurrenceRule, RecurrenceFreq, ShiftDependency, DependencyType, EmployeeAvailability, AvailabilityWindow } from "./core/types"
 export {
   createSchedulerConfig,
   createRosterConfig,
@@ -59,6 +59,7 @@ export type { SchedulerPresetName } from "./core/config"
 export { DEFAULT_SETTINGS, DEFAULT_CATEGORY_COLORS, getCategoryColor, toDateISO, parseBlockDate, sameDay, snapToInterval } from "./core/constants"
 export { findConflicts } from "./core/utils/packing"
 export { exportToCSV, exportToImage, exportToPDF, exportToICS } from "./core/utils/export"
+export { expandRecurrence, expandAllRecurring } from "./core/utils/recurrence"
 export { formatInTimezone, formatTimeInTimezone } from "./core/utils/timezone"
 export { nextUid } from "./core/context"
 export { useLongPress } from "./core/hooks/useLongPress"
