@@ -67,14 +67,16 @@
   }
 }
 
-/* Shift block: resize handles hidden by default, shown on group hover */
+/* Shift block: resize handles hidden + non-interactive by default, revealed on hover */
 [data-scheduler-block] [data-resize] {
   opacity: 0;
+  pointer-events: none;
   transition: opacity 120ms ease;
 }
 [data-scheduler-block]:hover [data-resize],
 [data-scheduler-block]:focus-within [data-resize] {
   opacity: 1;
+  pointer-events: auto;
 }
 
 /* Snap line indicator during drag */

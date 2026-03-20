@@ -1283,6 +1283,7 @@ function GridViewInner({
 
   const onBD = useCallback(
     (e: React.PointerEvent<HTMLDivElement>, shift: Block): void => {
+      if (e.button !== 0) return
       if (readOnly) return
       if (shift.draggable === false) return
       if ((e.target as HTMLElement).dataset.resize) return
@@ -1396,6 +1397,7 @@ function GridViewInner({
 
   const onRRD = useCallback(
     (e: React.PointerEvent<HTMLDivElement>, shift: Block): void => {
+      if (e.button !== 0) return
       if (readOnly) return
       e.stopPropagation()
       e.currentTarget.setPointerCapture(e.pointerId)
@@ -1426,6 +1428,7 @@ function GridViewInner({
 
   const onRLD = useCallback(
     (e: React.PointerEvent<HTMLDivElement>, shift: Block): void => {
+      if (e.button !== 0) return
       if (readOnly) return
       e.stopPropagation()
       e.currentTarget.setPointerCapture(e.pointerId)
@@ -3681,6 +3684,7 @@ function GridViewInner({
                         onPointerEnter={() => { if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current); tooltipTimerRef.current = setTimeout(() => setTooltipBlockId(shift.id), TOOLTIP_HOVER_MS) }}
                         onPointerLeave={() => { if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current); tooltipTimerRef.current = null; if (tooltipLeaveTimerRef.current) clearTimeout(tooltipLeaveTimerRef.current); tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS) }}
                         onPointerDown={canDrag ? (e: React.PointerEvent<HTMLDivElement>) => onBD(e, shift) : undefined}
+                        onContextMenu={() => { setTooltipBlockId(null); if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current) }}
                         onDoubleClick={(e) => { e.stopPropagation(); if (!dragId) onShiftClick(shift, cat) }}
                         onKeyDown={(e) => onBlockKeyDown(e, shift, cat)}
                         className={cn("group/block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring", isNew && "animate-[scaleIn_120ms_ease-out]")}
@@ -3988,6 +3992,7 @@ function GridViewInner({
                         tooltipLeaveTimerRef.current = setTimeout(() => setTooltipBlockId(null), TOOLTIP_LEAVE_MS)
                       }}
                       onPointerDown={canDrag ? (e: React.PointerEvent<HTMLDivElement>) => onBD(e, shift) : undefined}
+                      onContextMenu={() => { setTooltipBlockId(null); if (tooltipTimerRef.current) clearTimeout(tooltipTimerRef.current) }}
                       onDoubleClick={(e) => { e.stopPropagation(); if (!dragId) onShiftClick(shift, cat) }}
                       onKeyDown={(e) => onBlockKeyDown(e, shift, cat)}
                       className={cn(
