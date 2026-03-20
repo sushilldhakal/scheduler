@@ -264,6 +264,22 @@ function GridViewInner({
   const [shiftToDeleteConfirm, setShiftToDeleteConfirm] = useState<Block | null>(null)
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null)
   const blockRefsRef = useRef<Record<string, HTMLDivElement | null>>({})
+  /** Dep-draw drag state — which block/side we started from and current pointer pos */
+  const depDragRef = useRef<{
+    fromId: string
+    fromSide: "top" | "right" | "bottom" | "left"
+    startX: number   // grid-relative X of the dot we dragged from
+    startY: number   // grid-relative Y of the dot we dragged from
+    curX: number
+    curY: number
+  } | null>(null)
+  /** Ref to the live SVG preview path — updated via direct DOM mutation, zero re-renders */
+  const depPreviewPathRef = useRef<SVGPathElement | null>(null)
+  const depPreviewArrowRef = useRef<SVGMarkerElement | null>(null)
+  /** ID of the dep SVG layer element — used to attach the preview path */
+  const depSvgRef = useRef<SVGSVGElement | null>(null)
+  /** Block currently hovered for dep-draw targeting highlight */
+  const [depHoveredBlockId, setDepHoveredBlockId] = useState<string | null>(null)
   /** P12-01: IDs of blocks just added (one-frame scale-in animation). */
   const [newlyAddedIds, setNewlyAddedIds] = useState<Set<string>>(new Set())
   /** P12-02: IDs of blocks being deleted (fade-out then remove). */
@@ -1122,6 +1138,149 @@ function GridViewInner({
     return { srcTrack, srcCategoryKey: rowKey }
   }, [shiftIndex, rowMode])
 
+  // ── Dependency draw handlers ──────────────────────────────────────────────
+  // ── Dep-draw: stable handler refs so addEventListener/removeEventListener identity is constant ──
+  const depMoveHandlerRef = useRef<((e: PointerEvent) => void) | null>(null)
+  const depUpHandlerRef   = useRef<((e: PointerEvent) => void) | null>(null)
+
+  // Keep onDependenciesChange + dependencies in a ref so handlers are never stale
+  const onDependenciesChangeRef = useRef(onDependenciesChange)
+  const dependenciesRef = useRef(dependencies)
+  onDependenciesChangeRef.current = onDependenciesChange
+  dependenciesRef.current = dependencies
+
+  const startDepDraw = useCallback((
+    e: React.PointerEvent<HTMLDivElement>,
+    shift: Block,
+    side: "top" | "right" | "bottom" | "left"
+  ) => {
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    const el = blockRefsRef.current[shift.id]
+    if (!el || !scrollRef.current) return
+    const scrollEl = scrollRef.current
+    const scrollRect = scrollEl.getBoundingClientRect()
+    const br = el.getBoundingClientRect()
+    const dotX = scrollEl.scrollLeft + (
+      side === "left"   ? br.left  - scrollRect.left :
+      side === "right"  ? br.right - scrollRect.left :
+      br.left + br.width / 2 - scrollRect.left
+    )
+    const dotY = scrollEl.scrollTop + (
+      side === "top"    ? br.top    - scrollRect.top :
+      side === "bottom" ? br.bottom - scrollRect.top :
+      br.top + br.height / 2 - scrollRect.top
+    )
+    depDragRef.current = { fromId: shift.id, fromSide: side, startX: dotX, startY: dotY, curX: dotX, curY: dotY }
+
+    // Create live preview path in the dep SVG layer
+    if (depSvgRef.current && !depPreviewPathRef.current) {
+      depSvgRef.current.style.pointerEvents = "auto"
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
+      path.setAttribute("fill", "none")
+      path.setAttribute("stroke", "var(--primary)")
+      path.setAttribute("stroke-width", "2")
+      path.setAttribute("stroke-dasharray", "6 3")
+      path.setAttribute("opacity", "0.8")
+      path.setAttribute("marker-end", "url(#dep-preview-arrow)")
+      depPreviewPathRef.current = path
+      depSvgRef.current.appendChild(path)
+    }
+
+    // Define handlers and store in refs so removeEventListener works by identity
+    const onMove = (ev: PointerEvent) => {
+      const drag = depDragRef.current
+      if (!drag || !scrollRef.current) return
+      const sEl = scrollRef.current
+      const r = sEl.getBoundingClientRect()
+      drag.curX = sEl.scrollLeft + ev.clientX - r.left
+      drag.curY = sEl.scrollTop  + ev.clientY - r.top
+      const p = depPreviewPathRef.current
+      if (p) {
+        const cp = Math.max(Math.abs(drag.curX - drag.startX) * 0.5, 40)
+        p.setAttribute("d", `M ${drag.startX} ${drag.startY} C ${drag.startX + cp} ${drag.startY}, ${drag.curX - cp} ${drag.curY}, ${drag.curX} ${drag.curY}`)
+      }
+      let hoverId: string | null = null
+      for (const [id, bEl] of Object.entries(blockRefsRef.current)) {
+        if (!bEl || id === drag.fromId) continue
+        const br2 = bEl.getBoundingClientRect()
+        if (ev.clientX >= br2.left && ev.clientX <= br2.right && ev.clientY >= br2.top && ev.clientY <= br2.bottom) {
+          hoverId = id; break
+        }
+      }
+      setDepHoveredBlockId(hoverId)
+    }
+
+    const onUp = (ev: PointerEvent) => {
+      document.removeEventListener("pointermove", onMove)
+      document.removeEventListener("pointerup", onUp)
+      depMoveHandlerRef.current = null
+      depUpHandlerRef.current   = null
+      const drag = depDragRef.current
+      depDragRef.current = null
+      if (depPreviewPathRef.current) { depPreviewPathRef.current.remove(); depPreviewPathRef.current = null }
+      if (depSvgRef.current) depSvgRef.current.style.pointerEvents = "none"
+      setDepHoveredBlockId(null)
+      if (!drag || !onDependenciesChangeRef.current) return
+      let targetId: string | null = null
+      for (const [id, bEl] of Object.entries(blockRefsRef.current)) {
+        if (!bEl || id === drag.fromId) continue
+        const br2 = bEl.getBoundingClientRect()
+        if (ev.clientX >= br2.left && ev.clientX <= br2.right && ev.clientY >= br2.top && ev.clientY <= br2.bottom) {
+          targetId = id; break
+        }
+      }
+      if (!targetId) return
+      const type: ShiftDependency["type"] =
+        drag.fromSide === "left"  ? "start-to-start" :
+        drag.fromSide === "top"   ? "start-to-start" :
+        "finish-to-start"
+      const newDep: ShiftDependency = {
+        id: `dep-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        fromId: drag.fromId,
+        toId: targetId,
+        type,
+        color: "var(--primary)",
+      }
+      onDependenciesChangeRef.current([...dependenciesRef.current, newDep])
+    }
+
+    depMoveHandlerRef.current = onMove
+    depUpHandlerRef.current   = onUp
+    document.addEventListener("pointermove", onMove)
+    document.addEventListener("pointerup",   onUp)
+  }, [])
+
+  /** Render the 4 connection dots — shown on block hover to create dependencies */
+  const renderDepDots = useCallback((shift: Block, isVisible: boolean) => {
+    if (!isVisible || !onDependenciesChange) return null
+    const DOT = 9, HALF = DOT / 2
+    const dots: { side: "top"|"right"|"bottom"|"left"; style: React.CSSProperties }[] = [
+      { side: "top",    style: { top: -HALF, left: "50%", transform: "translateX(-50%)" } },
+      { side: "right",  style: { right: -HALF, top: "50%", transform: "translateY(-50%)" } },
+      { side: "bottom", style: { bottom: -HALF, left: "50%", transform: "translateX(-50%)" } },
+      { side: "left",   style: { left: -HALF, top: "50%", transform: "translateY(-50%)" } },
+    ]
+    return dots.map(({ side, style }) => (
+      <div
+        key={side}
+        data-dep-dot={side}
+        onPointerDown={(e) => startDepDraw(e, shift, side)}
+        style={{
+          position: "absolute",
+          width: DOT, height: DOT,
+          borderRadius: "50%",
+          background: "var(--primary)",
+          border: "2px solid var(--background)",
+          boxShadow: "0 0 0 1.5px var(--primary)",
+          cursor: "crosshair",
+          zIndex: 30,
+          ...style,
+        }}
+      />
+    ))
+  }, [onDependenciesChange, startDepDraw])
+
   const onBD = useCallback(
     (e: React.PointerEvent<HTMLDivElement>, shift: Block): void => {
       if (readOnly) return
@@ -1799,7 +1958,7 @@ function GridViewInner({
     // Only start rubber-band on primary button, not on blocks/resize handles/empty-cell targets
     if (e.button !== 0) return
     const target = e.target as HTMLElement
-    if (target.closest("[data-scheduler-block]") || target.closest("[data-resize]") || target.closest("[data-empty-cell]")) return
+    if (target.closest("[data-scheduler-block]") || target.closest("[data-resize]") || target.closest("[data-empty-cell]") || target.closest("[data-dep-dot]")) return
     if (ds.current) return // drag already active
     const el = scrollRef.current
     if (!el) return
@@ -3191,8 +3350,8 @@ function GridViewInner({
             })}
 
 
-            {/* SVG dependency arrows */}
-            {dependencies.length > 0 && (() => {
+            {/* SVG dependency arrows — always rendered so dep-draw preview has a container */}
+            {(() => {
               const blockPos: Record<string, { startX: number; endX: number; centerY: number }> = {}
               for (const s of shifts) {
                 const di = isWeekView || isDayViewMultiDay ? dates.findIndex((d) => sameDay(d, s.date)) : 0
@@ -3211,9 +3370,16 @@ function GridViewInner({
                 blockPos[s.id] = { startX, endX, centerY: rowTop + rowH / 2 }
               }
               return (
-                <svg style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, pointerEvents: "none", zIndex: 17, overflow: "visible" }} aria-hidden>
+                <svg
+                  ref={depSvgRef}
+                  style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, pointerEvents: "none", zIndex: 17, overflow: "visible" }}
+                  aria-hidden
+                >
                   <defs>
-                    {/* One arrowhead marker per unique color so custom colors work */}
+                    {/* Preview arrowhead for dep-draw */}
+                    <marker id="dep-preview-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                      <polygon points="0 0, 8 4, 0 8" fill="var(--primary)" opacity="0.8" />
+                    </marker>
                     {Array.from(new Set(dependencies.map(d => d.color ?? "var(--primary)"))).map((col, ci) => (
                       <marker key={ci} id={`dep-arr-${ci}`} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
                         <polygon points="0 0, 8 4, 0 8" fill={col} />
@@ -3233,11 +3399,16 @@ function GridViewInner({
                       const x2 = type === "finish-to-finish" ? to.endX   : to.startX
                       const y1 = from.centerY
                       const y2 = to.centerY
-                      // Wider stroke and higher opacity so it's clearly visible
                       const cp = Math.max(Math.abs(x2 - x1) * 0.5, 60)
                       const d  = `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`
                       return (
                         <g key={dep.id}>
+                          {/* Wide invisible hit area — easy to click to delete */}
+                          <path
+                            d={d} fill="none" stroke="transparent" strokeWidth={14}
+                            style={{ pointerEvents: "auto", cursor: "pointer" }}
+                            onClick={() => onDependenciesChange?.(dependencies.filter(dd => dd.id !== dep.id))}
+                          />
                           <path d={d} fill="none" stroke={color} strokeWidth={2.5} strokeDasharray={type !== "finish-to-start" ? "5 3" : undefined} markerEnd={`url(#dep-arr-${ci})`} opacity={0.9} />
                           {dep.label && (
                             <text x={(x1 + x2) / 2} y={Math.min(y1, y2) - 6} fontSize={10} fill={color} textAnchor="middle" fontWeight={700}
@@ -3617,6 +3788,8 @@ function GridViewInner({
                             </div>
                           </div>
                         )}
+                        {/* Dep-draw dots — 4 connection points, visible on hover */}
+                        {renderDepDots(shift, tooltipBlockId === shift.id || depHoveredBlockId === shift.id)}
                       </div>
                         </ContextMenuTrigger>
 
@@ -3926,6 +4099,8 @@ function GridViewInner({
                               </div>
                             </div>
                           )}
+                          {/* Dep-draw dots — 4 connection points, visible on hover */}
+                          {renderDepDots(shift, tooltipBlockId === shift.id || depHoveredBlockId === shift.id)}
                         </>
                       )}
                     </div>
