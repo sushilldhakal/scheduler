@@ -63,6 +63,10 @@ interface DragState {
   grabOffsetY: number
   /** Scroll container rect captured at drag start — stable until drag ends */
   gridRect: DOMRect | null
+  /** Lane (track) the block occupied when grabbed — ghost uses this so it renders at the correct vertical slot */
+  srcTrack: number
+  /** Row key at drag start — when ghost crosses into a different row, srcTrack resets to 0 */
+  srcCategoryKey: string
 }
 
 interface GridViewProps {
@@ -1099,6 +1103,25 @@ function GridViewInner({
     }
   }, [isStaffDragging, onStaffPointerMove, onStaffPointerUp, onStaffPointerCancel])
 
+  /** Compute the lane (track) a block occupies in its row at the moment of drag start.
+   *  Used so the ghost renders at the correct vertical slot instead of always at lane 0. */
+  const getSrcTrack = useCallback((shift: Block): { srcTrack: number; srcCategoryKey: string } => {
+    const rowKey = rowMode === "individual"
+      ? `emp:${shift.employeeId}`
+      : `cat:${shift.categoryId}`
+    // Find the day's shifts for this block's row — same logic as render path
+    const dayKey = `${shift.categoryId}:${shift.date}`
+    const dayShifts = shiftIndex.get(dayKey) ?? []
+    const filtered = rowMode === "individual"
+      ? dayShifts.filter((s) => s.employeeId === shift.employeeId)
+      : dayShifts
+    const sorted = [...filtered].sort((a, b) => a.startH - b.startH)
+    const trackNums = packShifts(sorted)
+    const idx = sorted.findIndex((s) => s.id === shift.id)
+    const srcTrack = idx >= 0 ? (trackNums[idx] ?? 0) : 0
+    return { srcTrack, srcCategoryKey: rowKey }
+  }, [shiftIndex, rowMode])
+
   const onBD = useCallback(
     (e: React.PointerEvent<HTMLDivElement>, shift: Block): void => {
       if (readOnly) return
@@ -1127,6 +1150,7 @@ function GridViewInner({
         const gRect = scrollRef.current?.getBoundingClientRect() ?? null
         const grabOffsetX = blockRect ? e.clientX - blockRect.left : 0
         const grabOffsetY = blockRect ? e.clientY - blockRect.top  : (SHIFT_H - 6) / 2
+        const { srcTrack, srcCategoryKey } = getSrcTrack(shift)
         ds.current = {
           type: "move",
           id: shift.id,
@@ -1141,6 +1165,8 @@ function GridViewInner({
           grabOffsetX,
           grabOffsetY,
           gridRect: gRect,
+          srcTrack,
+          srcCategoryKey,
         }
         setDragId(shift.id)
         setActivatingBlockId(null)
@@ -1206,7 +1232,7 @@ function GridViewInner({
       document.addEventListener("pointermove", onMove, { capture: true })
       document.addEventListener("pointerup", onUp, { capture: true })
     },
-    [getGridXY, readOnly, toggleBlockSelect, CATEGORIES, getColor, clearBlockLongPress]
+    [getGridXY, readOnly, toggleBlockSelect, CATEGORIES, getColor, clearBlockLongPress, getSrcTrack]
   )
 
   const onRRD = useCallback(
@@ -1215,6 +1241,7 @@ function GridViewInner({
       e.stopPropagation()
       e.currentTarget.setPointerCapture(e.pointerId)
       const { x } = getGridXY(e.clientX, e.clientY)
+      const { srcTrack, srcCategoryKey } = getSrcTrack(shift)
       ds.current = {
         type: "resize-right",
         id: shift.id,
@@ -1230,10 +1257,12 @@ function GridViewInner({
         grabOffsetX: 0,
         grabOffsetY: 0,
         gridRect: scrollRef.current?.getBoundingClientRect() ?? null,
+        srcTrack,
+        srcCategoryKey,
       }
       setDragId(shift.id)
     },
-    [getGridXY, readOnly]
+    [getGridXY, readOnly, getSrcTrack]
   )
 
   const onRLD = useCallback(
@@ -1242,6 +1271,7 @@ function GridViewInner({
       e.stopPropagation()
       e.currentTarget.setPointerCapture(e.pointerId)
       const { x } = getGridXY(e.clientX, e.clientY)
+      const { srcTrack, srcCategoryKey } = getSrcTrack(shift)
       ds.current = {
         type: "resize-left",
         id: shift.id,
@@ -1257,6 +1287,8 @@ function GridViewInner({
         grabOffsetX: 0,
         grabOffsetY: 0,
         gridRect: scrollRef.current?.getBoundingClientRect() ?? null,
+        srcTrack,
+        srcCategoryKey,
       }
       setDragId(shift.id)
     },
@@ -1526,7 +1558,7 @@ function GridViewInner({
         left = (cs - settings.visibleFrom) * HOUR_W + 2
         width = Math.max((ce - cs) * HOUR_W - 4, 10)
       }
-      const pixelTop = top + ROLE_HDR + 3
+      const pixelTop = top + ROLE_HDR + (ghostKey === d.srcCategoryKey ? d.srcTrack : 0) * SHIFT_H + 3
       const c = getColor(cat.colorIdx)
 
       // ── Snapped drop-zone ghost: real card appearance, no dashed border ──
