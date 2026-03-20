@@ -850,6 +850,10 @@ function GridViewInner({
   /** Edge-scroll RAF: direction (-1 left, 0 none, 1 right) + speed multiplier */
   const edgeScrollRef = useRef<{ dirX: number; speedX: number; dirY: number; speedY: number } | null>(null)
   const edgeRafRef = useRef<number | null>(null)
+  /** Raw pointer position updated every pointermove — read by drag RAF loop */
+  const dragPointerRef = useRef<{ clientX: number; clientY: number } | null>(null)
+  /** RAF id for the drag ghost update loop */
+  const dragRafRef = useRef<number | null>(null)
   const layoutRef = useRef({
     categoryTops: {} as Record<string, number>,
     categoryHeights: {} as Record<string, number>,
@@ -857,6 +861,7 @@ function GridViewInner({
     shifts: [] as Block[],
     CATEGORIES: [] as Resource[],
     collapsed: new Set<string>(),
+    flatRows: [] as typeof flatRows,
   })
   layoutRef.current = {
     categoryTops,
@@ -865,6 +870,7 @@ function GridViewInner({
     shifts,
     CATEGORIES,
     collapsed,
+    flatRows,
   }
   const [dragId, setDragId] = useState<string | null>(null)
   const gridPointerIdsRef = useRef<Set<number>>(new Set())
@@ -1154,7 +1160,7 @@ function GridViewInner({
           if (Math.hypot(mv.clientX - downX, mv.clientY - downY) >= DESKTOP_DRAG_THRESHOLD) {
             document.removeEventListener("pointermove", onMove, { capture: true })
             document.removeEventListener("pointerup", onUp, { capture: true })
-            startDrag(e)
+            startDrag(mv as unknown as React.PointerEvent<HTMLDivElement>)
           }
         }
         const onUp = (): void => {
@@ -1464,20 +1470,32 @@ function GridViewInner({
       const cat = lay.CATEGORIES.find((c) => c.id === categoryId)
       const ghostEl = ghostRef.current
       // Update hovered row highlight
-      setHoveredCategoryId(cat?.id ?? null)
+      if ((cat?.id ?? null) !== hoveredCategoryId) setHoveredCategoryId(cat?.id ?? null)
       if (!orig || !cat || lay.collapsed.has(cat.id) || !ghostEl) {
         if (ghostEl) ghostEl.style.display = "none"
         return
       }
 
-      // Use employee-row top if we know the employee, else category header top
-      const origShift = lay.shifts.find((s) => s.id === d.id)
-      const empKey = origShift ? `emp:${origShift.employeeId}` : null
-      const top = (empKey ? lay.categoryTops[empKey] : null)
+      // Find the flat row the cursor is currently over — this is where the ghost should render.
+      // Previously used origShift.employeeId (source row) which locked the ghost to the origin row.
+      const hoveredRow = lay.flatRows.find((row) => {
+        const k = row.kind === "employee" && row.employee
+          ? `emp:${row.employee.id}`
+          : `cat:${row.category.id}`
+        const t = lay.categoryTops[k] ?? 0
+        const h = lay.categoryHeights[k] ?? 0
+        return y >= t && y < t + h
+      }) ?? null
+      const ghostKey = hoveredRow
+        ? hoveredRow.kind === "employee" && hoveredRow.employee
+          ? `emp:${hoveredRow.employee.id}`
+          : `cat:${hoveredRow.category.id}`
+        : `cat:${cat.id}`
+      const top = lay.categoryTops[ghostKey]
         ?? lay.categoryTops[`cat:${cat.id}`]
         ?? lay.categoryTops[cat.id]
         ?? 0
-      const rowH = (empKey ? lay.categoryHeights[empKey] : null)
+      const rowH = lay.categoryHeights[ghostKey]
         ?? lay.categoryHeights[`cat:${cat.id}`]
         ?? lay.categoryHeights[cat.id]
         ?? 40
@@ -1546,15 +1564,25 @@ function GridViewInner({
       }
 
       // ── Real block follows cursor — lifted card feel ─────────────────────────
+      // Write transform via RAF to decouple from React event timing.
+      // dragPointerRef is updated every pointermove; RAF reads it once per frame.
       if (d.type === "move") {
-        const sr = d.gridRect
-        if (sr) {
-          const cursorLeft = (scrollRef.current?.scrollLeft ?? 0) + (e.clientX - sr.left) - d.grabOffsetX
-          const cursorTop  = (scrollRef.current?.scrollTop ?? 0) + (e.clientY - sr.top) - d.grabOffsetY
-          const liftedEl = blockRefsRef.current[d.id]
-          if (liftedEl) {
-            liftedEl.style.transform = `translate(${cursorLeft}px, ${cursorTop}px)`
+        dragPointerRef.current = { clientX: e.clientX, clientY: e.clientY }
+        if (dragRafRef.current === null) {
+          const rafLoop = () => {
+            const pos = dragPointerRef.current
+            const drag = ds.current
+            if (!pos || !drag || drag.type !== "move") { dragRafRef.current = null; return }
+            const sr = drag.gridRect
+            if (sr) {
+              const cursorLeft = (scrollRef.current?.scrollLeft ?? 0) + (pos.clientX - sr.left) - drag.grabOffsetX
+              const cursorTop  = (scrollRef.current?.scrollTop  ?? 0) + (pos.clientY - sr.top)  - drag.grabOffsetY
+              const liftedEl = blockRefsRef.current[drag.id]
+              if (liftedEl) liftedEl.style.transform = `translate(${cursorLeft}px, ${cursorTop}px)`
+            }
+            dragRafRef.current = requestAnimationFrame(rafLoop)
           }
+          dragRafRef.current = requestAnimationFrame(rafLoop)
         }
       }
     },
@@ -1568,6 +1596,8 @@ function GridViewInner({
         const el = blockRefsRef.current[ds.current.id]
         if (el) el.style.transform = ""
       }
+      if (dragRafRef.current !== null) { cancelAnimationFrame(dragRafRef.current); dragRafRef.current = null }
+      dragPointerRef.current = null
       ds.current = null
       setDragId(null)
       setHoveredCategoryId(null)
@@ -1645,6 +1675,8 @@ function GridViewInner({
       // Normal successful drop — reset transform before React re-renders position
       const droppedEl = blockRefsRef.current[d.id]
       if (droppedEl) droppedEl.style.transform = ""
+      if (dragRafRef.current !== null) { cancelAnimationFrame(dragRafRef.current); dragRafRef.current = null }
+      dragPointerRef.current = null
       ds.current = null
       setDragId(null)
       setHoveredCategoryId(null)
@@ -3359,7 +3391,7 @@ function GridViewInner({
                       background: isDraft ? "transparent" : `linear-gradient(135deg,${c.bg},${c.bg}cc)`,
                       border: isDraft ? `1.5px dashed ${c.bg}` : isSelected ? `2px solid ${c.bg}` : `1px solid ${c.bg}88`,
                       boxShadow: isDrag ? `0 20px 40px -8px ${c.bg}60, 0 8px 16px -4px rgba(0,0,0,0.2)` : isDraft ? "none" : `0 2px 6px ${c.bg}44`,
-                      transition: isDrag ? "transform 100ms ease-out, box-shadow 100ms ease-out" : isDeleting ? "opacity 150ms ease-out" : "transform 150ms ease-out",
+                      transition: isDrag ? "none" : isDeleting ? "opacity 150ms ease-out" : "transform 150ms ease-out",
                       contain: "layout style", willChange: isDrag ? "transform" : "auto",
                     }
                     if (isDrag) {
