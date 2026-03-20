@@ -111,19 +111,27 @@ export function expandAllRecurring(
   rangeEnd: Date,
 ): Block[] {
   const out: Block[] = []
+  // Track seen IDs — last write wins, prevents duplicate key React errors
+  const seen = new Set<string>()
 
   for (const shift of shifts) {
     if (!shift.recurrence) {
-      out.push(shift)
+      if (!seen.has(shift.id)) { seen.add(shift.id); out.push(shift) }
       continue
     }
 
     const expanded = expandRecurrence(shift, rangeStart, rangeEnd)
 
-    // Restore the master's own id on the occurrence that lands on its date
+    // Restore the master's own id on the occurrence that lands on its date.
+    // Deliberately do NOT restore recurrence — if this occurrence ends up back
+    // in the shifts array it must not be treated as a master and re-expanded,
+    // which is exactly what caused the duplicate-key error on shift creation.
     for (const occ of expanded) {
+      const id = sameDay(occ.date, shift.date) ? shift.id : occ.id
+      if (seen.has(id)) continue
+      seen.add(id)
       if (sameDay(occ.date, shift.date)) {
-        out.push({ ...occ, id: shift.id, recurringMasterId: undefined, recurrence: shift.recurrence })
+        out.push({ ...occ, id: shift.id, recurringMasterId: shift.id })
       } else {
         out.push(occ)
       }
