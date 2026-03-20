@@ -251,6 +251,7 @@ function GridViewInner({
   const [selectedBlockIds, setSelectedBlockIds] = useState<Set<string>>(new Set())
   /** Rubber-band drag selection rect — null when not active */
   const [selRect, setSelRect] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
+  const [pendingMarker, setPendingMarker] = useState<{ id: string; clientX: number; clientY: number } | null>(null)
   const selRectStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null)
 
   const [staffPanel, setStaffPanel] = useState<StaffPanelState | null>(null)
@@ -1965,13 +1966,39 @@ function GridViewInner({
     if (ds.current) return // drag already active
     const el = scrollRef.current
     if (!el) return
-    e.currentTarget.setPointerCapture(e.pointerId)
+    // NOTE: do NOT setPointerCapture here — capturing on every click routes
+    // pointer events from Radix portals (context menu items) back to this element,
+    // making context menu items unclickable. Only capture after the pointer has
+    // moved enough to confirm this is actually a rubber-band drag, not a click.
+    const downX = e.clientX
+    const downY = e.clientY
+    const pointerId = e.pointerId
+    const RUBBER_BAND_THRESHOLD = 4
     const rect = el.getBoundingClientRect()
-    const x = el.scrollLeft + e.clientX - rect.left
-    const y = el.scrollTop  + e.clientY - rect.top
-    selRectStartRef.current = { x, y, scrollLeft: el.scrollLeft, scrollTop: el.scrollTop }
-    setSelRect({ x0: x, y0: y, x1: x, y1: y })
-  }, [])
+    const x0 = el.scrollLeft + e.clientX - rect.left
+    const y0 = el.scrollTop  + e.clientY - rect.top
+    selRectStartRef.current = { x: x0, y: y0, scrollLeft: el.scrollLeft, scrollTop: el.scrollTop }
+
+    const onFirstMove = (mv: PointerEvent) => {
+      if (Math.hypot(mv.clientX - downX, mv.clientY - downY) >= RUBBER_BAND_THRESHOLD) {
+        document.removeEventListener("pointermove", onFirstMove, { capture: true })
+        // Now we're sure it's a drag — capture the pointer
+        const gridEl = gridRef.current
+        if (gridEl) gridEl.setPointerCapture(pointerId)
+        const r2 = el.getBoundingClientRect()
+        const x1 = el.scrollLeft + mv.clientX - r2.left
+        const y1 = el.scrollTop  + mv.clientY - r2.top
+        setSelRect({ x0, y0, x1, y1 })
+      }
+    }
+    const onCancel = () => {
+      document.removeEventListener("pointermove", onFirstMove, { capture: true })
+      document.removeEventListener("pointerup", onCancel, { capture: true })
+      if (!selRect) selRectStartRef.current = null
+    }
+    document.addEventListener("pointermove", onFirstMove, { capture: true })
+    document.addEventListener("pointerup", onCancel, { capture: true })
+  }, [selRect])
 
   const onRubberBandPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!selRectStartRef.current) return
@@ -2292,14 +2319,16 @@ function GridViewInner({
             ))
             const markerDate = dates[clampedDi]
             if (!markerDate) return
+            const newId = `marker-${Date.now()}`
             onMarkersChange([...markers, {
-              id: `marker-${Date.now()}`,
+              id: newId,
               date: toDateISO(markerDate),
               hour: Math.round(hour * 4) / 4,
               label: "",
               color: "var(--primary)",
               draggable: true,
             }])
+            setPendingMarker({ id: newId, clientX: e.clientX, clientY: e.clientY })
           } : undefined}
         >
           <div
@@ -3472,10 +3501,10 @@ function GridViewInner({
                       })
                     })()}
                   </svg>
-                  {/* Hit-area layer — separate SVG with pointerEvents auto so clicks work */}
+                  {/* Hit-area layer — pointerEvents none on SVG, but paths use SVG pointer-events="stroke" attribute which works independently */}
                   {onDependenciesChange && dependencies.length > 0 && (
                     <svg
-                      style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, pointerEvents: "none", zIndex: 18, overflow: "visible" }}
+                      style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, overflow: "visible", zIndex: 18 }}
                       aria-hidden
                     >
                       {dependencies.map((dep) => {
@@ -3496,7 +3525,8 @@ function GridViewInner({
                             fill="none"
                             stroke="transparent"
                             strokeWidth={16}
-                            style={{ pointerEvents: "stroke", cursor: "pointer" }}
+                            pointerEvents="stroke"
+                            style={{ cursor: "pointer" }}
                             onClick={() => onDependenciesChange(dependencies.filter(dd => dd.id !== dep.id))}
                           />
                         )
@@ -4354,7 +4384,68 @@ function GridViewInner({
         )
       })()}
 
-      {/* Multi-select bulk action bar */}
+      {/* Marker label input — shown immediately after placing a marker */}
+      {pendingMarker && onMarkersChange && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            top: pendingMarker.clientY + 12,
+            left: pendingMarker.clientX,
+            zIndex: 999999,
+            background: "var(--popover)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            padding: "8px 10px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            minWidth: 180,
+          }}
+        >
+          <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)" }}>
+            Label this marker (optional)
+          </span>
+          <input
+            autoFocus
+            placeholder="e.g. Deadline, Sprint start…"
+            style={{
+              border: "1px solid var(--border)",
+              borderRadius: 5,
+              padding: "4px 8px",
+              fontSize: 12,
+              background: "var(--background)",
+              color: "var(--foreground)",
+              outline: "none",
+              width: "100%",
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === "Escape") {
+                const label = (e.target as HTMLInputElement).value.trim()
+                if (label) {
+                  onMarkersChange(markers.map((m) =>
+                    m.id === pendingMarker.id ? { ...m, label } : m
+                  ))
+                }
+                setPendingMarker(null)
+              }
+            }}
+            onBlur={(e) => {
+              const label = e.target.value.trim()
+              if (label) {
+                onMarkersChange(markers.map((m) =>
+                  m.id === pendingMarker.id ? { ...m, label } : m
+                ))
+              }
+              setPendingMarker(null)
+            }}
+          />
+          <span style={{ fontSize: 10, color: "var(--muted-foreground)" }}>
+            Press Enter to confirm · Esc or click away to skip
+          </span>
+        </div>,
+        document.body
+      )}
       {selectedBlockIds.size > 0 && (
         <div
           style={{
