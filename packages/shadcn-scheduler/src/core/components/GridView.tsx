@@ -2282,13 +2282,19 @@ function GridViewInner({
             background: "var(--muted)",
             borderBottom: "2px solid var(--border)",
             flexShrink: 0,
+            height: HOUR_HDR_H,
             display: "flex",
             flexDirection: "column",
             justifyContent: "flex-end",
-            padding: "0 0 0 0",
+            padding: "0 8px 6px",
+            gap: 4,
           }}>
-            {/* Sort column buttons */}
-            <div style={{ display: "flex", alignItems: "center", padding: "0 10px 4px", gap: 2, minHeight: 38 }}>
+            {/* Resources label */}
+            <div style={{ fontSize: 9, fontWeight: 700, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.8, paddingLeft: 2 }}>
+              {labels.category ?? "Resources"}
+            </div>
+            {/* Sort buttons */}
+            <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
               {(["name", "hours", "scheduled"] as const).map((col) => {
                 const colLabel = col === "name" ? labels.category ?? "Category" : col === "hours" ? "Hours" : "Shifts"
                 const isActive = sortBy === col
@@ -2300,15 +2306,15 @@ function GridViewInner({
                     onClick={() => toggleSort(col)}
                     style={{
                       fontSize: 9,
-                      fontWeight: isActive ? 700 : 600,
+                      fontWeight: isActive ? 700 : 500,
                       color: isActive ? "var(--foreground)" : "var(--muted-foreground)",
                       textTransform: "uppercase",
                       letterSpacing: 0.5,
-                      background: isActive ? "var(--accent)" : "transparent",
-                      border: "none",
+                      background: isActive ? "var(--background)" : "transparent",
+                      border: isActive ? "1px solid var(--border)" : "1px solid transparent",
                       cursor: "pointer",
-                      padding: "2px 4px",
-                      borderRadius: 3,
+                      padding: "2px 6px",
+                      borderRadius: 4,
                       display: "flex",
                       alignItems: "center",
                       gap: 2,
@@ -2317,11 +2323,14 @@ function GridViewInner({
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
-                      transition: "background 100ms, color 100ms",
+                      transition: "background 100ms, color 100ms, border-color 100ms",
+                      boxShadow: isActive ? "0 1px 2px rgba(0,0,0,0.06)" : "none",
                     }}
+                    onPointerEnter={(e) => { if (!isActive) e.currentTarget.style.background = "var(--accent)" }}
+                    onPointerLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent" }}
                   >
                     {colLabel}
-                    <span style={{ fontSize: 8, opacity: isActive ? 1 : 0.4 }}>
+                    <span style={{ fontSize: 8, opacity: isActive ? 1 : 0.5, marginLeft: 1 }}>
                       {isActive ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
                     </span>
                   </button>
@@ -2661,7 +2670,10 @@ function GridViewInner({
                             position: "relative",
                             display: "flex",
                             flexDirection: "column",
-                            borderRight: i < dates.length - 1 ? "2px solid var(--sch-day-line)" : "1px solid var(--sch-day-line)",
+                            borderRight: today
+                              ? "2px solid color-mix(in srgb, var(--primary) 50%, var(--sch-day-line))"
+                              : i < dates.length - 1 ? "2px solid var(--sch-day-line)" : "1px solid var(--sch-day-line)",
+                            borderLeft: today ? "2px solid color-mix(in srgb, var(--primary) 50%, var(--sch-day-line))" : undefined,
                           }}
                         >
                           {/* Today accent bar at top */}
