@@ -436,6 +436,8 @@ function GridViewInner({
   }, [isWeekView, hasDayScrollNav, isDayViewMultiDay, weekViewScrollCol, COL_W_WEEK, centerDayIdx, DAY_WIDTH])
 
   const prevDatesRef = useRef(dates)
+  // Track previous zoom so we can anchor-scroll when zoom changes
+  const prevZoomRef = useRef(zoom)
   React.useLayoutEffect(() => {
     if (prevDatesRef.current !== dates) {
       const oldDates = prevDatesRef.current
@@ -470,6 +472,26 @@ function GridViewInner({
       }
     }
   }, [dates, isDayViewMultiDay, isWeekView, hasDayScrollNav, weekViewScrollCol, centerDayIdx, DAY_WIDTH, COL_W_WEEK])
+
+  // ── Anchor zoom: keep the visible horizontal center fixed when zoom changes ──
+  useEffect(() => {
+    const prevZoom = prevZoomRef.current
+    prevZoomRef.current = zoom
+    if (prevZoom === zoom) return
+    const el = scrollRef.current
+    if (!el) return
+    // The content width scales proportionally with zoom.
+    // ratio = new content width / old content width = zoom / prevZoom
+    const ratio = zoom / prevZoom
+    const centerX = el.scrollLeft + el.clientWidth / 2
+    const newScrollLeft = Math.max(0, centerX * ratio - el.clientWidth / 2)
+    el.scrollLeft = newScrollLeft
+    // Sync header
+    if (headerRef.current) {
+      headerRef.current.scrollLeft = newScrollLeft
+      headerRef.current.style.setProperty("--sx", newScrollLeft + "px")
+    }
+  }, [zoom])
 
   const focusedDateTime = focusedDate?.getTime()
   useEffect(() => {
@@ -2362,8 +2384,8 @@ function GridViewInner({
                         style={{
                           width: COL_W_WEEK,
                           flexShrink: 0,
-                          borderLeft: "1px solid var(--border)",
-                          borderRight: i === dates.length - 1 ? "1px solid var(--border)" : "none",
+                          borderLeft: "1px solid var(--sch-day-line)",
+                          borderRight: i === dates.length - 1 ? "1px solid var(--sch-day-line)" : "none",
                           background: today
                             ? "color-mix(in srgb, var(--primary) 8%, var(--background))"
                             : closed
@@ -4524,22 +4546,33 @@ function GridViewInner({
             <div style={{ padding: "6px 14px 4px", fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5 }}>
               Zoom
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 14px 8px" }}>
-              <button
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border)", background: "var(--background)", cursor: zoom <= 0.5 ? "not-allowed" : "pointer", opacity: zoom <= 0.5 ? 0.4 : 1 }}
-                onClick={() => { if (zoom > 0.5) { setZoom(zoom - 0.25); } }}
-              >
-                <ZoomOut size={13} />
-              </button>
-              <div style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 14px 8px" }}>
+              <ZoomOut
+                size={13}
+                style={{ flexShrink: 0, cursor: zoom <= 0.5 ? "default" : "pointer", opacity: zoom <= 0.5 ? 0.35 : 0.7, color: "var(--foreground)" }}
+                onClick={() => { if (setZoom && zoom > 0.5) setZoom((z) => Math.max(0.5, z - 0.25)) }}
+              />
+              <input
+                type="range"
+                min={0}
+                max={5}
+                step={1}
+                value={[0.5, 0.75, 1, 1.25, 1.5, 2].indexOf(zoom) >= 0 ? [0.5, 0.75, 1, 1.25, 1.5, 2].indexOf(zoom) : Math.round((zoom - 0.5) / 0.25)}
+                onChange={(e) => {
+                  const levels = [0.5, 0.75, 1, 1.25, 1.5, 2]
+                  const level = levels[Number(e.target.value)]
+                  if (level !== undefined && setZoom) setZoom(level)
+                }}
+                style={{ flex: 1, height: 4, accentColor: "var(--primary)", cursor: "pointer" }}
+              />
+              <ZoomIn
+                size={13}
+                style={{ flexShrink: 0, cursor: zoom >= 2 ? "default" : "pointer", opacity: zoom >= 2 ? 0.35 : 0.7, color: "var(--foreground)" }}
+                onClick={() => { if (setZoom && zoom < 2) setZoom((z) => Math.min(2, z + 0.25)) }}
+              />
+              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", minWidth: 28, textAlign: "right" }}>
                 {Math.round(zoom * 100)}%
-              </div>
-              <button
-                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border)", background: "var(--background)", cursor: zoom >= 3 ? "not-allowed" : "pointer", opacity: zoom >= 3 ? 0.4 : 1 }}
-                onClick={() => { if (zoom < 3) { setZoom(zoom + 0.25); } }}
-              >
-                <ZoomIn size={13} />
-              </button>
+              </span>
             </div>
 
             {/* Divider */}

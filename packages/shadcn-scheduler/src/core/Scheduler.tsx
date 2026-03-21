@@ -709,26 +709,6 @@ export function Scheduler({
                     >
                       Now
                     </Button>
-                    {/* Zoom slider — draggable, snaps to ZOOM_LEVELS */}
-                    <div className="flex items-center gap-1.5 rounded-md border border-border bg-background px-2 h-8">
-                      <ZoomOut size={13} className="text-muted-foreground shrink-0" onClick={handleZoomOut} style={{ cursor: zoom <= 0.5 ? "default" : "pointer", opacity: zoom <= 0.5 ? 0.4 : 1 }} />
-                      <input
-                        type="range"
-                        min={0}
-                        max={ZOOM_LEVELS.length - 1}
-                        step={1}
-                        value={ZOOM_LEVELS.indexOf(zoom as typeof ZOOM_LEVELS[number]) >= 0 ? ZOOM_LEVELS.indexOf(zoom as typeof ZOOM_LEVELS[number]) : Math.round((zoom - 0.5) / 0.25)}
-                        onChange={(e) => {
-                          const idx = Number(e.target.value)
-                          const level = ZOOM_LEVELS[idx]
-                          if (level !== undefined) setZoom(level)
-                        }}
-                        className="w-20 h-1 accent-primary cursor-pointer"
-                        aria-label={`Zoom level ${zoom}x`}
-                      />
-                      <ZoomIn size={13} className="text-muted-foreground shrink-0" onClick={handleZoomIn} style={{ cursor: zoom >= 2 ? "default" : "pointer", opacity: zoom >= 2 ? 0.4 : 1 }} />
-                      <span className="text-[10px] font-medium text-muted-foreground w-6 text-right tabular-nums">{zoom}x</span>
-                    </div>
                   </div>
                 )}
               <div className="flex w-full items-center gap-2">
