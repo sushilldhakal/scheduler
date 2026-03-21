@@ -1568,7 +1568,17 @@ function GridViewInner({
       if (state.dirY !== 0) {
         scrollRef.current.scrollTop += state.dirY * state.speedY * EDGE_SCROLL_MAX
         if (sidebarScrollRef.current) {
-          sidebarScrollRef.current.scrollTop = scrollRef.current.scrollTop
+          const edgeSt = scrollRef.current.scrollTop
+          sidebarScrollRef.current.scrollTop = edgeSt
+          const catHeaders = sidebarScrollRef.current.querySelectorAll<HTMLDivElement>("[data-sidebar-cat]")
+          catHeaders.forEach((header) => {
+            const catStart = parseFloat(header.dataset.catStart ?? "0")
+            const catSize  = parseFloat(header.dataset.catSize ?? "0")
+            const headerH  = parseFloat(header.dataset.headerH ?? "50")
+            const maxTop   = catStart + catSize - headerH
+            const stickyTop = Math.min(Math.max(edgeSt - catStart, 0), Math.max(maxTop - catStart, 0))
+            header.style.top = `${catStart + stickyTop}px`
+          })
         }
       }
       edgeRafRef.current = requestAnimationFrame(tick)
@@ -2134,6 +2144,16 @@ function GridViewInner({
       const st = el.scrollTop
       if (sidebarScrollRef.current) {
         sidebarScrollRef.current.scrollTop = st
+        // Sticky category headers: clamp top so header sticks until next category
+        const catHeaders = sidebarScrollRef.current.querySelectorAll<HTMLDivElement>("[data-sidebar-cat]")
+        catHeaders.forEach((header) => {
+          const catStart = parseFloat(header.dataset.catStart ?? "0")
+          const catSize  = parseFloat(header.dataset.catSize ?? "0")
+          const headerH  = parseFloat(header.dataset.headerH ?? "50")
+          const maxTop   = catStart + catSize - headerH
+          const stickyTop = Math.min(Math.max(st - catStart, 0), Math.max(maxTop - catStart, 0))
+          header.style.top = `${catStart + stickyTop}px`
+        })
       }
     }
     el.addEventListener("scroll", handler, { passive: true })
@@ -2395,9 +2415,13 @@ function GridViewInner({
                     return (
                       <div
                         key={rowKey}
+                        data-sidebar-cat={cat.id}
+                        data-cat-start={vr.start}
+                        data-cat-size={vr.size}
+                        data-header-h={ROLE_HDR}
                         style={{
-                          position: "sticky",
-                          top: 0,
+                          position: "absolute",
+                          top: vr.start,
                           left: 0,
                           right: 0,
                           height: vr.size,
