@@ -228,10 +228,6 @@ function GridViewInner({
   /** Sidebar rows container — translated vertically to sync with grid scrollTop */
   const sidebarScrollRef = useRef<HTMLDivElement>(null)
   /** Current grid scrollTop — read synchronously during render for sticky sidebar headers */
-  const gridScrollTopRef = useRef(0)
-  /** Re-render trigger for sidebar sticky headers — updated on scroll via rAF */
-  const [sidebarScrollTop, setSidebarScrollTop] = useState(0)
-  const sidebarRafRef = useRef<number | null>(null)
   /** Inner wide div inside headerRef — translateX'd instead of scrollLeft to avoid layout recalc lag */
   const headerInnerRef = useRef<HTMLDivElement>(null)
   const initRef = useRef<boolean>(false)
@@ -1575,14 +1571,7 @@ function GridViewInner({
         scrollRef.current.scrollTop += state.dirY * state.speedY * EDGE_SCROLL_MAX
         if (sidebarScrollRef.current) {
           const edgeSt = scrollRef.current.scrollTop
-          gridScrollTopRef.current = edgeSt
-          sidebarScrollRef.current.style.transform = `translateY(-${edgeSt}px)`
-          if (sidebarRafRef.current === null) {
-            sidebarRafRef.current = requestAnimationFrame(() => {
-              sidebarRafRef.current = null
-              setSidebarScrollTop(gridScrollTopRef.current)
-            })
-          }
+          sidebarScrollRef.current.scrollTop = edgeSt
         }
       }
       edgeRafRef.current = requestAnimationFrame(tick)
@@ -2147,15 +2136,7 @@ function GridViewInner({
       const sl = el.scrollLeft
       const st = el.scrollTop
       if (sidebarScrollRef.current) {
-        gridScrollTopRef.current = st
-        sidebarScrollRef.current.style.transform = `translateY(-${st}px)`
-        // Throttled setState so sidebar category headers re-render with updated sticky top
-        if (sidebarRafRef.current === null) {
-          sidebarRafRef.current = requestAnimationFrame(() => {
-            sidebarRafRef.current = null
-            setSidebarScrollTop(gridScrollTopRef.current)
-          })
-        }
+        sidebarScrollRef.current.scrollTop = st
       }
     }
     el.addEventListener("scroll", handler, { passive: true })
@@ -2284,9 +2265,7 @@ function GridViewInner({
         toggleSort={toggleSort}
         flatRows={flatRows}
         rowVirtualizer={rowVirtualizer}
-        totalHVirtual={totalHVirtual}
         sidebarScrollRef={sidebarScrollRef}
-        sidebarScrollTop={sidebarScrollTop}
         ALL_EMPLOYEES={ALL_EMPLOYEES}
         baseShifts={shifts}
         isWeekView={!!isWeekView}
