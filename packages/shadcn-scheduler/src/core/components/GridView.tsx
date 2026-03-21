@@ -1571,7 +1571,6 @@ function GridViewInner({
         scrollRef.current.scrollTop += state.dirY * state.speedY * EDGE_SCROLL_MAX
         if (sidebarScrollRef.current) {
           const edgeSt = scrollRef.current.scrollTop
-          sidebarScrollRef.current.scrollTop = edgeSt
         }
       }
       edgeRafRef.current = requestAnimationFrame(tick)
@@ -2135,9 +2134,7 @@ function GridViewInner({
       const el = e.currentTarget as HTMLDivElement
       const sl = el.scrollLeft
       const st = el.scrollTop
-      if (sidebarScrollRef.current) {
-        sidebarScrollRef.current.scrollTop = st
-      }
+
     }
     el.addEventListener("scroll", handler, { passive: true })
     return () => el.removeEventListener("scroll", handler)
@@ -2252,39 +2249,56 @@ function GridViewInner({
         </div>
       )}
 
-      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden", position: "relative" }}>
-      <GridViewSidebar
-        sidebarCollapsed={sidebarCollapsed}
-        sidebarWidth={sidebarWidth}
-        setSidebarWidth={setSidebarWidth}
-        toggleSidebar={toggleSidebar}
-        HOUR_HDR_H={HOUR_HDR_H}
-        ROLE_HDR={ROLE_HDR}
-        sortBy={sortBy}
-        sortDir={sortDir}
-        toggleSort={toggleSort}
-        flatRows={flatRows}
-        rowVirtualizer={rowVirtualizer}
-        sidebarScrollRef={sidebarScrollRef}
-        ALL_EMPLOYEES={ALL_EMPLOYEES}
-        baseShifts={shifts}
-        isWeekView={!!isWeekView}
-        isDayViewMultiDay={!!isDayViewMultiDay}
-        focusedDate={focusedDate}
-        dates={dates}
-        selEmps={selEmps}
-        collapsed={collapsed}
-        toggleCollapse={toggleCollapse}
-        hoveredCategoryId={hoveredCategoryId}
-        setStaffPanel={setStaffPanel}
-        setAddPrompt={setAddPrompt}
-        slots={slots}
-      />
-              <div
-          ref={scrollRef}
-          onScroll={isWeekView ? onWeekScroll : onDayScroll}
-          style={{ flex: 1, overflowX: "auto", overflowY: "auto", scrollbarGutter: "stable", minWidth: 0 } as React.CSSProperties}
-        >
+      <div
+        ref={scrollRef}
+        onScroll={isWeekView ? onWeekScroll : onDayScroll}
+        style={{ flex: 1, display: "flex", overflow: "auto", scrollbarGutter: "stable", position: "relative", minHeight: 0 } as React.CSSProperties}
+      >
+        {/* Sidebar — sticky left so it doesn't scroll horizontally */}
+        <div style={{
+          position: "sticky",
+          left: 0,
+          zIndex: 22,
+          flexShrink: 0,
+          width: sidebarCollapsed ? 0 : sidebarWidth,
+          minWidth: sidebarCollapsed ? 0 : sidebarWidth,
+          transition: "width 150ms ease, min-width 150ms ease",
+          background: "var(--muted)",
+          borderRight: "1px solid var(--border)",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "visible",
+        }}>
+          <GridViewSidebar
+            sidebarCollapsed={sidebarCollapsed}
+            sidebarWidth={sidebarWidth}
+            setSidebarWidth={setSidebarWidth}
+            toggleSidebar={toggleSidebar}
+            HOUR_HDR_H={HOUR_HDR_H}
+            ROLE_HDR={ROLE_HDR}
+            sortBy={sortBy}
+            sortDir={sortDir}
+            toggleSort={toggleSort}
+            flatRows={flatRows}
+            rowVirtualizer={rowVirtualizer}
+            ALL_EMPLOYEES={ALL_EMPLOYEES}
+            baseShifts={shifts}
+            isWeekView={!!isWeekView}
+            isDayViewMultiDay={!!isDayViewMultiDay}
+            focusedDate={focusedDate}
+            dates={dates}
+            selEmps={selEmps}
+            collapsed={collapsed}
+            toggleCollapse={toggleCollapse}
+            hoveredCategoryId={hoveredCategoryId}
+            setStaffPanel={setStaffPanel}
+            setAddPrompt={setAddPrompt}
+            slots={slots}
+          />
+        </div>
+
+        {/* Grid column */}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
           <div
             style={{
               display: "flex",
