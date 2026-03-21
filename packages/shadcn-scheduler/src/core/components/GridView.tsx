@@ -226,6 +226,8 @@ function GridViewInner({
   const sidebarRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
+  /** Inner wide div inside headerRef — translateX'd instead of scrollLeft to avoid layout recalc lag */
+  const headerInnerRef = useRef<HTMLDivElement>(null)
   const initRef = useRef<boolean>(false)
   const lastReportedDayIdxRef = useRef<number>(-1)
   const scrollTriggeredUpdateRef = useRef(false)
@@ -418,7 +420,7 @@ function GridViewInner({
           scrollRef.current.scrollLeft = 0
         }
         if (headerRef.current) {
-          headerRef.current.scrollLeft = scrollRef.current.scrollLeft
+          if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${scrollRef.current.scrollLeft}px)`
           headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px')
         }
         if (sidebarRef.current) {
@@ -452,7 +454,7 @@ function GridViewInner({
             } else if (isWeekView) {
               scrollRef.current.scrollLeft -= diffDays * COL_W_WEEK
             }
-            if (headerRef.current) { headerRef.current.scrollLeft = scrollRef.current.scrollLeft; headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px') }
+            if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${scrollRef.current.scrollLeft}px)`; headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px') }
             if (sidebarRef.current) sidebarRef.current.scrollTop = scrollRef.current.scrollTop
           }
           scrollTriggeredUpdateRef.current = false
@@ -466,7 +468,7 @@ function GridViewInner({
             const vw = scrollRef.current.clientWidth
             scrollRef.current.scrollLeft = Math.max(0, centerDayIdx * DAY_WIDTH + DAY_WIDTH / 2 - vw / 2)
           }
-          if (headerRef.current) { headerRef.current.scrollLeft = scrollRef.current.scrollLeft; headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px') }
+          if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${scrollRef.current.scrollLeft}px)`; headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px') }
           if (sidebarRef.current) sidebarRef.current.scrollTop = scrollRef.current.scrollTop
         }
       }
@@ -488,7 +490,7 @@ function GridViewInner({
     el.scrollLeft = newScrollLeft
     // Sync header
     if (headerRef.current) {
-      headerRef.current.scrollLeft = newScrollLeft
+      if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${newScrollLeft}px)`
       headerRef.current.style.setProperty("--sx", newScrollLeft + "px")
     }
   }, [zoom])
@@ -506,7 +508,7 @@ function GridViewInner({
     const targetScroll = Math.max(0, idx * DAY_WIDTH + DAY_WIDTH / 2 - vw / 2)
     scrollRef.current.scrollLeft = targetScroll
     if (headerRef.current) {
-      headerRef.current.scrollLeft = scrollRef.current.scrollLeft
+      if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${scrollRef.current.scrollLeft}px)`
       headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px')
     }
     lastReportedDayIdxRef.current = idx
@@ -601,7 +603,7 @@ function GridViewInner({
         }
       }
 
-      if (headerRef.current) { headerRef.current.scrollLeft = el.scrollLeft; headerRef.current.style.setProperty('--sx', el.scrollLeft + 'px') }
+      if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${el.scrollLeft}px)`; headerRef.current.style.setProperty('--sx', el.scrollLeft + 'px') }
       if (sidebarRef.current) sidebarRef.current.scrollTop = el.scrollTop
       reportVisibleRange(el)
     },
@@ -613,7 +615,7 @@ function GridViewInner({
       if (isWeekView) return
       const el = e.currentTarget
       if (sidebarRef.current) sidebarRef.current.scrollTop = el.scrollTop
-      if (headerRef.current) { headerRef.current.scrollLeft = el.scrollLeft; headerRef.current.style.setProperty('--sx', el.scrollLeft + 'px') }
+      if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${el.scrollLeft}px)`; headerRef.current.style.setProperty('--sx', el.scrollLeft + 'px') }
       if (isDayViewMultiDay && setDate) {
         const sl = el.scrollLeft
         const vw = el.clientWidth
@@ -658,7 +660,7 @@ function GridViewInner({
           })
           requestAnimationFrame(() => {
             if (scrollRef.current) scrollRef.current.scrollLeft = DAY_SCROLL_BUFFER
-            if (headerRef.current) { headerRef.current.scrollLeft = DAY_SCROLL_BUFFER; headerRef.current.style.setProperty('--sx', DAY_SCROLL_BUFFER + 'px') }
+            if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${DAY_SCROLL_BUFFER}px)`; headerRef.current.style.setProperty('--sx', DAY_SCROLL_BUFFER + 'px') }
           })
         } else if (sl > DAY_SCROLL_BUFFER + DAY_WIDTH - DAY_SCROLL_BUFFER / 2) {
           setDate((d) => {
@@ -668,7 +670,7 @@ function GridViewInner({
           })
           requestAnimationFrame(() => {
             if (scrollRef.current) scrollRef.current.scrollLeft = DAY_SCROLL_BUFFER
-            if (headerRef.current) { headerRef.current.scrollLeft = DAY_SCROLL_BUFFER; headerRef.current.style.setProperty('--sx', DAY_SCROLL_BUFFER + 'px') }
+            if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${DAY_SCROLL_BUFFER}px)`; headerRef.current.style.setProperty('--sx', DAY_SCROLL_BUFFER + 'px') }
           })
         }
       }
@@ -1582,7 +1584,7 @@ function GridViewInner({
       }
       if (state.dirX !== 0) {
         scrollRef.current.scrollLeft += state.dirX * state.speedX * EDGE_SCROLL_MAX
-        if (headerRef.current) { headerRef.current.scrollLeft = scrollRef.current.scrollLeft; headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px') }
+        if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${scrollRef.current.scrollLeft}px)`; headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px') }
       }
       if (state.dirY !== 0) {
         scrollRef.current.scrollTop += state.dirY * state.speedY * EDGE_SCROLL_MAX
@@ -2146,7 +2148,7 @@ function GridViewInner({
     const handler = (e: Event) => {
       // Immediately sync header — no React batching delay
       const sl = (e.currentTarget as HTMLDivElement).scrollLeft
-      if (headerRef.current) { headerRef.current.scrollLeft = sl; headerRef.current.style.setProperty('--sx', sl + 'px') }
+      if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${sl}px)`; headerRef.current.style.setProperty('--sx', sl + 'px') }
       if (sidebarRef.current) sidebarRef.current.scrollTop = (e.currentTarget as HTMLDivElement).scrollTop
     }
     el.addEventListener("scroll", handler, { passive: true })
@@ -2194,7 +2196,7 @@ function GridViewInner({
           ? todayIdx * DAY_WIDTH + (nowH - settings.visibleFrom) * HOUR_W
           : (nowH - settings.visibleFrom) * HOUR_W
       : 0
-  const scrollToNow = useScrollToNow(scrollRef, nowPositionPx, headerRef)
+  const scrollToNow = useScrollToNow(scrollRef, nowPositionPx, headerRef, headerInnerRef)
   useEffect(() => {
     if (scrollToNowRef) scrollToNowRef.current = scrollToNow
     return () => {
@@ -2349,10 +2351,12 @@ function GridViewInner({
           }}
         >
           <div
+            ref={headerInnerRef}
             style={{
               display: "flex",
               width: isWeekView || isDayViewMultiDay ? TOTAL_W : hasDayScrollNav ? TOTAL_W : DAY_WIDTH,
               minWidth: isWeekView || isDayViewMultiDay ? TOTAL_W : hasDayScrollNav ? TOTAL_W : DAY_WIDTH,
+              willChange: "transform",
             }}
           >
             {hasDayScrollNav && (
