@@ -2171,7 +2171,7 @@ function GridViewInner({
           ? todayIdx * DAY_WIDTH + (nowH - settings.visibleFrom) * HOUR_W
           : (nowH - settings.visibleFrom) * HOUR_W
       : 0
-  const scrollToNow = useScrollToNow(scrollRef, nowPositionPx)
+  const scrollToNow = useScrollToNow(scrollRef, nowPositionPx, headerRef)
   useEffect(() => {
     if (scrollToNowRef) scrollToNowRef.current = scrollToNow
     return () => {

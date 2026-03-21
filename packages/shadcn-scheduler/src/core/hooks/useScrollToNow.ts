@@ -1,12 +1,14 @@
 import { useCallback, useRef } from "react"
 
 /**
- * Returns a stable scrollToNow function that scrolls the container so the given
- * content X position (e.g. the "now" line) is visible, ideally centered.
+ * Returns a stable scrollToNow function that scrolls the grid container so
+ * the "now" line is centred in the viewport. Also syncs headerRef.scrollLeft
+ * and the --sx CSS variable so the sticky date labels update immediately.
  */
 export function useScrollToNow(
-  scrollRef: React.RefObject<HTMLDivElement | null>,
-  nowPositionPx: number
+  scrollRef:  React.RefObject<HTMLDivElement | null>,
+  nowPositionPx: number,
+  headerRef?: React.RefObject<HTMLDivElement | null>,
 ): () => void {
   const positionRef = useRef(nowPositionPx)
   positionRef.current = nowPositionPx
@@ -14,13 +16,23 @@ export function useScrollToNow(
   const scrollToNow = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
-    const center = el.clientWidth / 2
+
+    const viewW  = el.clientWidth
     const target = Math.max(
       0,
-      Math.min(positionRef.current - center, el.scrollWidth - el.clientWidth)
+      Math.min(positionRef.current - viewW / 2, el.scrollWidth - viewW)
     )
-    el.scrollLeft = target
-  }, [])
+
+    // Smooth scroll so it feels intentional, not jarring
+    el.scrollTo({ left: target, behavior: "smooth" })
+
+    // Sync header immediately (smooth scroll fires onScroll events but
+    // we also update directly so sticky --sx label moves in one frame)
+    if (headerRef?.current) {
+      headerRef.current.scrollLeft = target
+      headerRef.current.style.setProperty("--sx", target + "px")
+    }
+  }, [])   // refs are stable — no deps needed
 
   return scrollToNow
 }

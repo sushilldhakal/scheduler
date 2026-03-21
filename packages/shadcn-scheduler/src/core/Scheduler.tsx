@@ -663,7 +663,8 @@ export function Scheduler({
                 size="sm"
                 onClick={() => {
                   handleTodayClick()
-                  scrollToNowRef.current?.()
+                  // RAF: wait for React to re-render with updated dates/nowPositionPx
+                  requestAnimationFrame(() => scrollToNowRef.current?.())
                 }}
                 className="shrink-0"
               >
@@ -703,7 +704,7 @@ export function Scheduler({
                       size="sm"
                       onClick={() => {
                         handleTodayClick()
-                        scrollToNowRef.current?.()
+                        requestAnimationFrame(() => scrollToNowRef.current?.())
                       }}
                     >
                       Now
