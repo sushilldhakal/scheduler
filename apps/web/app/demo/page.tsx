@@ -83,7 +83,7 @@ export default function DemoPage() {
   if (!mounted || !initialDate) {
     return (
       <div className={containerClass}>
-        <div className="scheduler-wrapper w-full h-[700px] rounded-lg border animate-pulse bg-muted not-prose" />
+        <div className="scheduler-wrapper w-full rounded-lg border animate-pulse bg-muted not-prose" />
       </div>
     );
   }
@@ -139,7 +139,7 @@ export default function DemoPage() {
 
       {/* Audit log */}
       {showAudit && auditLog.length > 0 && (
-        <div className="mb-2 max-h-32 overflow-y-auto rounded-md border border-border bg-muted/50 p-2 not-prose">
+        <div className="mb-2 overflow-y-auto rounded-md border border-border bg-muted/50 p-2 not-prose">
           {auditLog.map((entry, i) => (
             <div key={i} className="flex items-center gap-2 py-0.5 text-[11px] font-mono text-muted-foreground">
               <span className="shrink-0 text-foreground font-semibold">{entry.action}</span>
@@ -156,7 +156,7 @@ export default function DemoPage() {
       )}
 
       {/* Scheduler */}
-      <div className="scheduler-wrapper w-full overflow-hidden not-prose" style={{ height: '72vh', minHeight: 500 }}>
+      <div className="scheduler-wrapper w-full overflow-hidden not-prose" style={{}}>
         <Scheduler
           categories={categories}
           employees={employees}
@@ -173,7 +173,7 @@ export default function DemoPage() {
           onDependenciesChange={active.has('dependencies') ? setDependencies : undefined}
           availability={active.has('availability') ? demoAvailability : []}
           showHistogram={active.has('histogram')}
-          histogramHeight={130}
+          histogramHeight={330}
           histogramConfig={active.has('histogram') ? HISTOGRAM_CONFIG : undefined}
           onAuditEvent={active.has('audit') ? handleAuditEvent : undefined}
           footerSlot={({ onSettingsChange }) => (
