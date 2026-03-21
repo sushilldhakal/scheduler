@@ -2521,6 +2521,7 @@ function GridViewInner({
             )
           })()}
         </div>
+        </div>
         {/* Custom resize handle */}
         <div
           style={{
@@ -4356,7 +4357,6 @@ function GridViewInner({
               <div style={{ width: DAY_SCROLL_BUFFER, flexShrink: 0, minWidth: DAY_SCROLL_BUFFER }} />
             )}
           </div>
-        </div>
         </div>
       </div>
 
