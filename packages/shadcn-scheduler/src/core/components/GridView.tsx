@@ -1567,6 +1567,9 @@ function GridViewInner({
       }
       if (state.dirY !== 0) {
         scrollRef.current.scrollTop += state.dirY * state.speedY * EDGE_SCROLL_MAX
+        if (sidebarRowsRef.current) {
+          sidebarRowsRef.current.style.transform = `translateY(-${scrollRef.current.scrollTop}px)`
+        }
       }
       edgeRafRef.current = requestAnimationFrame(tick)
     }
