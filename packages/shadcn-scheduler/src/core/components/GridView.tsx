@@ -2655,68 +2655,84 @@ function GridViewInner({
                           title={onDateDoubleClick ? "Double-click to open day view" : undefined}
                           style={{
                             width: COL_W_WEEK, flexShrink: 0,
+                            height: HOUR_HDR_H,
                             background: colBg,
                             cursor: onDateDoubleClick ? "pointer" : "default",
                             position: "relative",
+                            display: "flex",
+                            flexDirection: "column",
                           }}
                         >
                           {/* Today accent bar at top */}
                           {today && (
                             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "var(--primary)", borderRadius: "0 0 2px 2px", zIndex: 1 }} />
                           )}
-                          {/* ── Sticky date label — overflow:clip lets sticky escape, but clips overflow ── */}
+
+                          {/* ── Sticky date label: overflow:clip container + sticky left:0 inner ── */}
                           {(() => {
                             const dateISO = toDateISO(d)
                             const dayShiftCount = shifts.filter((s) => s.date === dateISO).length
                             return (
                               <div style={{
-                                position: "absolute", top: 0, left: 0,
-                                width: COL_W_WEEK, height: "100%",
-                                overflow: "clip",   // clips content at column edge without breaking sticky
-                                pointerEvents: "none",
-                                zIndex: 2,
+                                // In-flow spacer so time row is pushed below; absolute overlay carries the sticky label
+                                position: "relative",
+                                flex: "0 0 38px",
+                                overflow: "clip",  // clips label at column edge without breaking sticky
                               }}>
+                                {/* Absolute full-width overlay for the sticky label */}
                                 <div style={{
-                                  position: "sticky", left: 0,
-                                  display: "flex", alignItems: "center", gap: 6,
-                                  padding: "6px 10px 4px",
-                                  background: colBg,
-                                  width: "max-content",
-                                  pointerEvents: "auto",
+                                  position: "absolute", top: 0, left: 0,
+                                  width: COL_W_WEEK, height: "100%",
+                                  overflow: "clip",
+                                  pointerEvents: "none",
+                                  zIndex: 2,
                                 }}>
                                   <div style={{
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
-                                    background: today ? "var(--primary)" : "transparent",
-                                    fontWeight: 700, fontSize: 14,
-                                    color: today ? "var(--background)" : closed ? "var(--muted-foreground)" : "var(--foreground)",
+                                    position: "sticky", left: 0,
+                                    height: "100%",
+                                    display: "flex", alignItems: "center", gap: 8,
+                                    padding: "0 10px",
+                                    background: colBg,
+                                    width: "max-content",
+                                    pointerEvents: "auto",
                                   }}>
-                                    {d.getDate()}
-                                  </div>
-                                  <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-                                    <span style={{
-                                      fontSize: 11, fontWeight: 700, lineHeight: 1.2,
-                                      color: today ? "var(--primary)" : closed ? "var(--muted-foreground)" : "var(--foreground)",
-                                      whiteSpace: "nowrap",
+                                    <div style={{
+                                      display: "flex", alignItems: "center", justifyContent: "center",
+                                      width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                                      background: today ? "var(--primary)" : "transparent",
+                                      fontWeight: 700, fontSize: 15,
+                                      color: today ? "var(--background)" : closed ? "var(--muted-foreground)" : "var(--foreground)",
                                     }}>
-                                      {DOW_MON_FIRST[(d.getDay() + 6) % 7]} · {MONTHS_SHORT[d.getMonth()]}
-                                    </span>
-                                    <span style={{ fontSize: 9, fontWeight: 500, color: today ? "var(--primary)" : "var(--muted-foreground)", lineHeight: 1.2, whiteSpace: "nowrap" }}>
-                                      {closed ? "Closed" : dayShiftCount > 0 ? `${dayShiftCount} shift${dayShiftCount !== 1 ? "s" : ""}` : "No shifts"}
-                                    </span>
+                                      {d.getDate()}
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                                      <span style={{
+                                        fontSize: 11, fontWeight: 700, lineHeight: 1.3,
+                                        color: today ? "var(--primary)" : closed ? "var(--muted-foreground)" : "var(--foreground)",
+                                        whiteSpace: "nowrap",
+                                      }}>
+                                        {DOW_MON_FIRST[(d.getDay() + 6) % 7]} · {MONTHS_SHORT[d.getMonth()]}
+                                      </span>
+                                      <span style={{ fontSize: 9, fontWeight: 500, color: today ? "var(--primary)" : "var(--muted-foreground)", lineHeight: 1.3, whiteSpace: "nowrap" }}>
+                                        {closed ? "Closed" : dayShiftCount > 0 ? `${dayShiftCount} shift${dayShiftCount !== 1 ? "s" : ""}` : "No shifts"}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             )
                           })()}
-                          {/* Time labels — scroll freely at bottom of column */}
+
+                          {/* Time labels — sit below date label, fill remaining height */}
                           {!closed && (
                             <div
                               style={{
                                 display: "flex",
+                                flex: 1,
+                                alignItems: "flex-end",
                                 width: "100%",
                                 borderTop: `1px solid ${today ? "color-mix(in srgb, var(--primary) 30%, transparent)" : "var(--border)"}`,
-                                paddingTop: 3,
+                                paddingBottom: 3,
                                 overflow: "hidden",
                               }}
                             >
