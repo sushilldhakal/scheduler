@@ -3544,10 +3544,13 @@ function GridViewInner({
                       })
                     })()}
                   </svg>
-                  {/* Hit-area layer — pointerEvents none on SVG, but paths use SVG pointer-events="stroke" attribute which works independently */}
+                  {/* Hit-area layer — SVG must have pointerEvents:none so only the
+                      individual path elements (with pointerEvents="stroke") intercept
+                      clicks. Without this the full TOTAL_W × totalHVirtual SVG rect
+                      at zIndex:18 absorbs every click, making all blocks unclickable. */}
                   {onDependenciesChange && dependencies.length > 0 && (
                     <svg
-                      style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, overflow: "visible", zIndex: 18 }}
+                      style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, overflow: "visible", zIndex: 18, pointerEvents: "none" }}
                       aria-hidden
                     >
                       {dependencies.map((dep) => {
@@ -3566,9 +3569,9 @@ function GridViewInner({
                             key={`hit-${dep.id}`}
                             d={d}
                             fill="none"
-                            stroke="transparent"
+                            stroke="rgba(0,0,0,0.001)"
                             strokeWidth={16}
-                            pointerEvents="stroke"
+                            pointerEvents="visibleStroke"
                             style={{ cursor: "pointer" }}
                             onClick={() => onDependenciesChange(dependencies.filter(dd => dd.id !== dep.id))}
                           />
