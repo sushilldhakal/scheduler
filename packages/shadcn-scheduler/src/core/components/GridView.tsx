@@ -2258,8 +2258,7 @@ function GridViewInner({
             borderRight: "1px solid var(--border)",
             background: "var(--muted)",
             position: "relative",
-            overflowY: "hidden",
-            pointerEvents: "none",
+            overflow: "hidden",
           }}
         >
           {/* Sticky sidebar header — aligns with the date+time header in the grid */}
