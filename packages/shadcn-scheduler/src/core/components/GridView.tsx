@@ -1569,15 +1569,14 @@ function GridViewInner({
         scrollRef.current.scrollTop += state.dirY * state.speedY * EDGE_SCROLL_MAX
         if (sidebarScrollRef.current) {
           const edgeSt = scrollRef.current.scrollTop
-          sidebarScrollRef.current.scrollTop = edgeSt
+          sidebarScrollRef.current.style.transform = `translateY(-${edgeSt}px)`
           const catHeaders = sidebarScrollRef.current.querySelectorAll<HTMLDivElement>("[data-sidebar-cat]")
           catHeaders.forEach((header) => {
             const catStart = parseFloat(header.dataset.catStart ?? "0")
             const catSize  = parseFloat(header.dataset.catSize ?? "0")
             const headerH  = parseFloat(header.dataset.headerH ?? "50")
-            const maxTop   = catStart + catSize - headerH
-            const stickyTop = Math.min(Math.max(edgeSt - catStart, 0), Math.max(maxTop - catStart, 0))
-            header.style.top = `${catStart + stickyTop}px`
+            const clampedOffset = Math.min(Math.max(edgeSt - catStart, 0), Math.max(catSize - headerH, 0))
+            header.style.top = `${catStart + clampedOffset}px`
           })
         }
       }
@@ -2143,16 +2142,16 @@ function GridViewInner({
       const sl = el.scrollLeft
       const st = el.scrollTop
       if (sidebarScrollRef.current) {
-        sidebarScrollRef.current.scrollTop = st
-        // Sticky category headers: clamp top so header sticks until next category
+        // Translate the rows container to sync with grid scroll
+        sidebarScrollRef.current.style.transform = `translateY(-${st}px)`
+        // Sticky category headers: override top within the translated container
         const catHeaders = sidebarScrollRef.current.querySelectorAll<HTMLDivElement>("[data-sidebar-cat]")
         catHeaders.forEach((header) => {
           const catStart = parseFloat(header.dataset.catStart ?? "0")
           const catSize  = parseFloat(header.dataset.catSize ?? "0")
           const headerH  = parseFloat(header.dataset.headerH ?? "50")
-          const maxTop   = catStart + catSize - headerH
-          const stickyTop = Math.min(Math.max(st - catStart, 0), Math.max(maxTop - catStart, 0))
-          header.style.top = `${catStart + stickyTop}px`
+          const clampedOffset = Math.min(Math.max(st - catStart, 0), Math.max(catSize - headerH, 0))
+          header.style.top = `${catStart + clampedOffset}px`
         })
       }
     }
@@ -2384,17 +2383,7 @@ function GridViewInner({
               const refLabel = refDate.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" })
             }
             return (
-              <div
-                ref={sidebarScrollRef}
-                style={{
-                  flex: 1,
-                  overflowY: "auto",
-                  overflowX: "hidden",
-                  scrollbarWidth: "none",
-                  minHeight: 0,
-                } as React.CSSProperties}
-              >
-              <div style={{ position: "relative", height: totalHVirtual }}>
+              <div ref={sidebarScrollRef} style={{ position: "relative", height: totalHVirtual }}>
                 {rowVirtualizer.getVirtualItems().map((vr) => {
                   const row = flatRows[vr.index]
                   if (!row) return null
@@ -2561,7 +2550,6 @@ function GridViewInner({
                     </div>
                   )
                 })}
-              </div>
               </div>
             )
           })()}
