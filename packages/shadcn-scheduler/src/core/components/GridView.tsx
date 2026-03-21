@@ -2653,8 +2653,6 @@ function GridViewInner({
                           style={{
                             width: COL_W_WEEK,
                             flexShrink: 0,
-                            borderLeft: "1px solid var(--sch-day-line)",
-                            borderRight: i === dates.length - 1 ? "1px solid var(--sch-day-line)" : "none",
                             background: today
                               ? "color-mix(in srgb, var(--primary) 8%, var(--background))"
                               : closed
@@ -2761,8 +2759,6 @@ function GridViewInner({
                             style={{
                               width: DAY_WIDTH,
                               flexShrink: 0,
-                              borderLeft: i === 0 ? "1px solid var(--border)" : "2px solid var(--border)",
-                              borderRight: "1px solid var(--border)",
                               padding: "4px 0",
                               background: "var(--background)",
                               overflow: "hidden",
@@ -2801,8 +2797,6 @@ function GridViewInner({
                             display: "flex",
                             width: DAY_WIDTH,
                             flexShrink: 0,
-                            borderLeft: i === 0 ? "1px solid var(--border)" : "2px solid var(--border)",
-                            borderRight: "1px solid var(--border)",
                             background: isToday(d) ? "var(--accent)" : "transparent",
                           }}
                         >
