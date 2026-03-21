@@ -224,6 +224,8 @@ function GridViewInner({
   const scrollRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
+  /** Sidebar rows container — translated vertically to sync with grid scrollTop */
+  const sidebarRowsRef = useRef<HTMLDivElement>(null)
   /** Inner wide div inside headerRef — translateX'd instead of scrollLeft to avoid layout recalc lag */
   const headerInnerRef = useRef<HTMLDivElement>(null)
   const initRef = useRef<boolean>(false)
@@ -2124,8 +2126,12 @@ function GridViewInner({
     if (!el) return
     const handler = (e: Event) => {
       // Immediately sync header — no React batching delay
-      const sl = (e.currentTarget as HTMLDivElement).scrollLeft
-      
+      const el = e.currentTarget as HTMLDivElement
+      const sl = el.scrollLeft
+      const st = el.scrollTop
+      if (sidebarRowsRef.current) {
+        sidebarRowsRef.current.style.transform = `translateY(-${st}px)`
+      }
     }
     el.addEventListener("scroll", handler, { passive: true })
     return () => el.removeEventListener("scroll", handler)
@@ -2355,7 +2361,7 @@ function GridViewInner({
               const refLabel = refDate.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" })
             }
             return (
-              <div style={{ position: "relative", height: totalHVirtual }}>
+              <div ref={sidebarRowsRef} style={{ position: "relative", height: totalHVirtual, willChange: "transform" }}>
                 {rowVirtualizer.getVirtualItems().map((vr) => {
                   const row = flatRows[vr.index]
                   if (!row) return null
@@ -2678,17 +2684,9 @@ function GridViewInner({
                             position: "relative",
                             display: "flex",
                             flexDirection: "column",
-                            borderRight: today
-                              ? "2px solid color-mix(in srgb, var(--primary) 50%, var(--sch-day-line))"
-                              : i < dates.length - 1 ? "2px solid var(--sch-day-line)" : "1px solid var(--sch-day-line)",
-                            borderLeft: today ? "2px solid color-mix(in srgb, var(--primary) 50%, var(--sch-day-line))" : undefined,
+                            borderRight: i < dates.length - 1 ? "2px solid var(--sch-day-line)" : "1px solid var(--sch-day-line)",
                           }}
                         >
-                          {/* Today accent bar at top */}
-                          {today && (
-                            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "var(--primary)", borderRadius: "0 0 2px 2px", zIndex: 1 }} />
-                          )}
-
                           {/* ── Sticky date label: overflow:clip container + sticky left:0 inner ── */}
                           {(() => {
                             const dateISO = toDateISO(d)
