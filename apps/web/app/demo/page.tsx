@@ -156,7 +156,7 @@ export default function DemoPage() {
       )}
 
       {/* Scheduler */}
-      <div className="scheduler-wrapper w-full overflow-hidden not-prose" style={{}}>
+      <div className="scheduler-wrapper w-full overflow-hidden not-prose" style={{ height: '72vh', minHeight: 500 }}>
         <Scheduler
           categories={categories}
           employees={employees}

@@ -2,40 +2,50 @@
 /* Add this once to your app's global CSS */
 
 :root {
-  --sch-bg-95:    color-mix(in oklch, var(--background) 95%, transparent);
-  --sch-fg-08:    color-mix(in oklch, var(--foreground) 8%, transparent);
-  --sch-fg-12:    color-mix(in oklch, var(--foreground) 12%, transparent);
-  --sch-b-12:   color-mix(in oklch, var(--border) 12%, transparent);
-  --sch-b-60:   color-mix(in oklch, var(--border) 60%, transparent);
-  --sch-fg-13:    color-mix(in oklch, var(--foreground) 13%, transparent);
-  --sch-muted-30: color-mix(in oklch, var(--muted) 30%, transparent);
-  --sch-primary-40:   color-mix(in oklch, var(--primary) 40%, transparent);
-  --sch-destr-04: color-mix(in oklch, var(--destructive) 4%, transparent);
-  --sch-destr-40: color-mix(in oklch, var(--destructive) 40%, transparent);
+  --sch-bg-95:      color-mix(in oklch, var(--background) 95%, transparent);
+  --sch-fg-08:      color-mix(in oklch, var(--foreground) 8%,  transparent);
+  --sch-fg-12:      color-mix(in oklch, var(--foreground) 12%, transparent);
+  --sch-fg-13:      color-mix(in oklch, var(--foreground) 13%, transparent);
+  --sch-fg-20:      color-mix(in oklch, var(--foreground) 20%, transparent);
+  --sch-fg-35:      color-mix(in oklch, var(--foreground) 35%, transparent);
+  /* Grid lines — foreground-based so they're always visible in light AND dark mode */
+  --sch-hour-line:  color-mix(in oklch, var(--foreground) 10%, transparent);  /* dim hour ticks */
+  --sch-half-line:  color-mix(in oklch, var(--foreground) 5%,  transparent);  /* even dimmer 30min */
+  --sch-day-line:   color-mix(in oklch, var(--foreground) 22%, transparent);  /* clear day boundary */
+  --sch-row-line:   color-mix(in oklch, var(--foreground) 8%,  transparent);  /* row bottom */
+  /* Keep old names for backwards compat */
+  --sch-b-12:       color-mix(in oklch, var(--foreground) 8%,  transparent);
+  --sch-b-60:       color-mix(in oklch, var(--foreground) 12%, transparent);
+  --sch-muted-30:   color-mix(in oklch, var(--muted) 30%, transparent);
+  --sch-primary-40: color-mix(in oklch, var(--primary) 40%, transparent);
+  --sch-destr-04:   color-mix(in oklch, var(--destructive) 4%,  transparent);
+  --sch-destr-40:   color-mix(in oklch, var(--destructive) 40%, transparent);
 }
 
 @keyframes scaleIn {
   from { transform: scale(0.85); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  to   { transform: scale(1);    opacity: 1; }
 }
 
 @keyframes slideInFromLeft {
   from { transform: translateX(-8px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
 
 @keyframes slideInFromRight {
   from { transform: translateX(8px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  to   { transform: translateX(0);   opacity: 1; }
 }
 
-/* CSS containment: isolate scheduler as a rendering island */
+/* CSS containment: layout+style only — NOT paint.
+   contain:paint would clip Radix portal overlays (context menus, tooltips)
+   and break pointer-event routing to portals. */
 [data-scheduler-block] {
-  contain: layout style paint;
+  contain: layout style;
 }
 
 [data-scheduler-ghost] {
-  contain: layout style paint;
+  contain: layout style;
   will-change: transform;
 }
 
@@ -45,4 +55,3 @@
     outline-offset: 1px;
   }
 }
-

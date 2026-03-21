@@ -3134,9 +3134,9 @@ function GridViewInner({
                           width: SLOT_W,
                           height: rowH,
                           background: dashed ? DASHED_BG : hourBg(h, settings, date.getDay()),
-                          borderRight: "1px solid var(--sch-b-60)",
+                          borderRight: "1px solid var(--sch-hour-line)",
                           // Day boundary: stronger border at the start of each new day
-                          borderLeft: h === settings.visibleFrom && di > 0 ? "2px solid var(--border)" : undefined,
+                          borderLeft: h === settings.visibleFrom && di > 0 ? "2px solid var(--sch-day-line)" : undefined,
                         }}
                         onPointerEnter={() => {
                           if (!dragEmpId) return
@@ -3168,8 +3168,8 @@ function GridViewInner({
                             : isWeekend
                               ? "color-mix(in srgb, var(--muted) 35%, var(--background))"
                               : "var(--background)",
-                        borderRight: di < dates.length - 1 ? "2px solid var(--border)" : "1px solid var(--border)",
-                        borderBottom: "1px solid color-mix(in srgb, var(--border) 50%, transparent)",
+                        borderRight: di < dates.length - 1 ? "2px solid var(--sch-day-line)" : "1px solid var(--sch-day-line)",
+                        borderBottom: "1px solid var(--sch-row-line)",
                       }}
                       onPointerEnter={() => {
                         if (!dragEmpId) return
@@ -3191,7 +3191,7 @@ function GridViewInner({
                                 width: Math.max(PX_WEEK, 2),
                                 height: "100%",
                                 background: outsideWorking ? "color-mix(in srgb, var(--muted) 50%, transparent)" : "transparent",
-                                borderRight: "1px solid color-mix(in srgb, var(--border) 40%, transparent)",
+                                borderRight: "1px solid var(--sch-hour-line)",
                                 pointerEvents: "none",
                               }}
                             />
@@ -3220,8 +3220,8 @@ function GridViewInner({
                         ? "color-mix(in srgb, var(--muted) 70%, transparent)"
                         : "transparent",
                       borderRight: isHourBoundary
-                        ? "1px solid color-mix(in srgb, var(--border) 70%, transparent)"
-                        : "1px solid color-mix(in srgb, var(--border) 25%, transparent)",
+                        ? "1px solid var(--sch-hour-line)"
+                        : "1px solid var(--sch-half-line)",
                     }}
                     onPointerEnter={() => {
                       if (!dragEmpId) return
