@@ -224,8 +224,8 @@ function GridViewInner({
   const scrollRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
-  /** Sidebar rows container — translated vertically to sync with grid scrollTop */
-  const sidebarRowsRef = useRef<HTMLDivElement>(null)
+  /** Sidebar body scroll container — scrollTop synced to grid for sticky category headers */
+  const sidebarScrollRef = useRef<HTMLDivElement>(null)
   /** Inner wide div inside headerRef — translateX'd instead of scrollLeft to avoid layout recalc lag */
   const headerInnerRef = useRef<HTMLDivElement>(null)
   const initRef = useRef<boolean>(false)
@@ -1567,8 +1567,8 @@ function GridViewInner({
       }
       if (state.dirY !== 0) {
         scrollRef.current.scrollTop += state.dirY * state.speedY * EDGE_SCROLL_MAX
-        if (sidebarRowsRef.current) {
-          sidebarRowsRef.current.style.transform = `translateY(-${scrollRef.current.scrollTop}px)`
+        if (sidebarScrollRef.current) {
+          sidebarScrollRef.current.scrollTop = scrollRef.current.scrollTop
         }
       }
       edgeRafRef.current = requestAnimationFrame(tick)
@@ -2132,8 +2132,8 @@ function GridViewInner({
       const el = e.currentTarget as HTMLDivElement
       const sl = el.scrollLeft
       const st = el.scrollTop
-      if (sidebarRowsRef.current) {
-        sidebarRowsRef.current.style.transform = `translateY(-${st}px)`
+      if (sidebarScrollRef.current) {
+        sidebarScrollRef.current.scrollTop = st
       }
     }
     el.addEventListener("scroll", handler, { passive: true })
@@ -2364,7 +2364,17 @@ function GridViewInner({
               const refLabel = refDate.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" })
             }
             return (
-              <div ref={sidebarRowsRef} style={{ position: "relative", height: totalHVirtual, willChange: "transform" }}>
+              <div
+                ref={sidebarScrollRef}
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  overflowX: "hidden",
+                  scrollbarWidth: "none",
+                  minHeight: 0,
+                } as React.CSSProperties}
+              >
+              <div style={{ position: "relative", height: totalHVirtual }}>
                 {rowVirtualizer.getVirtualItems().map((vr) => {
                   const row = flatRows[vr.index]
                   if (!row) return null
@@ -2386,11 +2396,12 @@ function GridViewInner({
                       <div
                         key={rowKey}
                         style={{
-                          position: "absolute",
-                          top: vr.start,
+                          position: "sticky",
+                          top: 0,
                           left: 0,
                           right: 0,
                           height: vr.size,
+                          zIndex: 4,
                           borderBottom: `1px solid ${c.bg}25`,
                           background: hoveredCategoryId === cat.id ? `${c.bg}14` : `${c.bg}07`,
                           display: "flex",
@@ -2526,6 +2537,7 @@ function GridViewInner({
                     </div>
                   )
                 })}
+              </div>
               </div>
             )
           })()}
