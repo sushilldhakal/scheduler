@@ -2662,15 +2662,24 @@ function GridViewInner({
                                   : "var(--background)",
                             cursor: onDateDoubleClick ? "pointer" : "default",
                             position: "relative",
-                            overflow: "hidden",
+                            // overflow must not be hidden — sticky children need it visible
                           }}
                         >
                           {/* Today accent bar at top */}
                           {today && (
                             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "var(--primary)", borderRadius: "0 0 2px 2px", zIndex: 1 }} />
                           )}
-                          {/* Compact date row: Mon 23 Mar · 9 shifts */}
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px 4px", minWidth: 0 }}>
+                          {/* Compact date row: Mon 23 Mar · 9 shifts — sticky left within column */}
+                          <div style={{
+                            display: "flex", alignItems: "center", gap: 6,
+                            padding: "6px 10px 4px", minWidth: 0,
+                            position: "sticky", left: 0, zIndex: 1,
+                            background: today
+                              ? "color-mix(in srgb, var(--primary) 8%, var(--background))"
+                              : closed ? "var(--muted)"
+                              : isWeekend ? "color-mix(in srgb, var(--muted) 40%, var(--background))"
+                              : "var(--background)",
+                          }}>
                             <div style={{
                               display: "flex", alignItems: "center", justifyContent: "center",
                               width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
