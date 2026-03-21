@@ -43,7 +43,7 @@ import { RoleWarningModal } from "./modals/RoleWarningModal"
 import { AddShiftModal } from "./modals/AddShiftModal"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuLabel, ContextMenuTrigger } from "./ui/context-menu"
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "./ui/resizable"
-import { Plus, Copy, ClipboardPaste, Trash2, AlertTriangle, Pencil, Scissors, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { Plus, Copy, ClipboardPaste, Trash2, AlertTriangle, Pencil, Scissors, ChevronsLeft, ChevronsRight, MapPin, ZoomIn, ZoomOut, Link2 } from "lucide-react"
 import { cn } from "../lib/utils"
 
 interface DragState {
@@ -252,6 +252,7 @@ function GridViewInner({
   /** Rubber-band drag selection rect — null when not active */
   const [selRect, setSelRect] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
   const [pendingMarker, setPendingMarker] = useState<{ id: string; clientX: number; clientY: number } | null>(null)
+  const [headerPopover, setHeaderPopover] = useState<{ clientX: number; clientY: number; date: string; hour: number } | null>(null)
   const selRectStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null)
 
   const [staffPanel, setStaffPanel] = useState<StaffPanelState | null>(null)
@@ -2303,7 +2304,7 @@ function GridViewInner({
         <div
           ref={headerRef}
           style={{ flex: 1, overflowX: "hidden" }}
-          onContextMenu={onMarkersChange ? (e) => {
+          onContextMenu={(e) => {
             e.preventDefault()
             const el = headerRef.current
             const scrollEl = scrollRef.current
@@ -2322,17 +2323,8 @@ function GridViewInner({
             ))
             const markerDate = dates[clampedDi]
             if (!markerDate) return
-            const newId = `marker-${Date.now()}`
-            onMarkersChange([...markers, {
-              id: newId,
-              date: toDateISO(markerDate),
-              hour: Math.round(hour * 4) / 4,
-              label: "",
-              color: "var(--primary)",
-              draggable: true,
-            }])
-            setPendingMarker({ id: newId, clientX: e.clientX, clientY: e.clientY })
-          } : undefined}
+            setHeaderPopover({ clientX: e.clientX, clientY: e.clientY, date: toDateISO(markerDate), hour: Math.round(hour * 4) / 4 })
+          }}
         >
           <div
             style={{
@@ -3143,6 +3135,8 @@ function GridViewInner({
                           height: rowH,
                           background: dashed ? DASHED_BG : hourBg(h, settings, date.getDay()),
                           borderRight: "1px solid var(--sch-b-60)",
+                          // Day boundary: stronger border at the start of each new day
+                          borderLeft: h === settings.visibleFrom && di > 0 ? "2px solid var(--border)" : undefined,
                         }}
                         onPointerEnter={() => {
                           if (!dragEmpId) return
@@ -3174,7 +3168,7 @@ function GridViewInner({
                             : isWeekend
                               ? "color-mix(in srgb, var(--muted) 35%, var(--background))"
                               : "var(--background)",
-                        borderRight: "1px solid var(--border)",
+                        borderRight: di < dates.length - 1 ? "2px solid var(--border)" : "1px solid var(--border)",
                         borderBottom: "1px solid color-mix(in srgb, var(--border) 50%, transparent)",
                       }}
                       onPointerEnter={() => {
@@ -3341,7 +3335,7 @@ function GridViewInner({
                     style={{
                       position: "absolute",
                       left: 8,
-                      top: -9,
+                      top: 0,
                       background: "var(--destructive)",
                       color: "var(--destructive-foreground)",
                       fontSize: 9,
@@ -4467,6 +4461,115 @@ function GridViewInner({
             Press Enter to confirm · Esc or click away to skip
           </span>
         </div>,
+        document.body
+      )}
+
+      {/* Header right-click popover — Add Marker / Zoom / Dependencies */}
+      {headerPopover && createPortal(
+        <>
+          {/* Backdrop to close */}
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 999998 }}
+            onPointerDown={() => setHeaderPopover(null)}
+          />
+          <div
+            style={{
+              position: "fixed",
+              top: headerPopover.clientY + 4,
+              left: headerPopover.clientX,
+              zIndex: 999999,
+              background: "var(--popover)",
+              border: "1px solid var(--border)",
+              borderRadius: 10,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              minWidth: 200,
+              padding: "4px 0",
+              overflow: "hidden",
+            }}
+          >
+            {/* Add Marker */}
+            {onMarkersChange && (
+              <button
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  width: "100%", padding: "8px 14px", border: "none",
+                  background: "none", cursor: "pointer", fontSize: 13,
+                  color: "var(--foreground)", textAlign: "left",
+                }}
+                onPointerEnter={(e) => (e.currentTarget.style.background = "var(--accent)")}
+                onPointerLeave={(e) => (e.currentTarget.style.background = "none")}
+                onClick={() => {
+                  const newId = `marker-${Date.now()}`
+                  onMarkersChange([...markers, {
+                    id: newId,
+                    date: headerPopover.date,
+                    hour: headerPopover.hour,
+                    label: "",
+                    color: "var(--primary)",
+                    draggable: true,
+                  }])
+                  setPendingMarker({ id: newId, clientX: headerPopover.clientX, clientY: headerPopover.clientY })
+                  setHeaderPopover(null)
+                }}
+              >
+                <MapPin size={14} style={{ color: "var(--primary)", flexShrink: 0 }} />
+                Add marker here
+              </button>
+            )}
+
+            {/* Divider */}
+            <div style={{ height: 1, background: "var(--border)", margin: "2px 0" }} />
+
+            {/* Zoom controls */}
+            <div style={{ padding: "6px 14px 4px", fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+              Zoom
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 14px 8px" }}>
+              <button
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border)", background: "var(--background)", cursor: zoom <= 0.5 ? "not-allowed" : "pointer", opacity: zoom <= 0.5 ? 0.4 : 1 }}
+                onClick={() => { if (zoom > 0.5) { setZoom(zoom - 0.25); } }}
+              >
+                <ZoomOut size={13} />
+              </button>
+              <div style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: 600, color: "var(--foreground)" }}>
+                {Math.round(zoom * 100)}%
+              </div>
+              <button
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 6, border: "1px solid var(--border)", background: "var(--background)", cursor: zoom >= 3 ? "not-allowed" : "pointer", opacity: zoom >= 3 ? 0.4 : 1 }}
+                onClick={() => { if (zoom < 3) { setZoom(zoom + 0.25); } }}
+              >
+                <ZoomIn size={13} />
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: 1, background: "var(--border)", margin: "2px 0" }} />
+
+            {/* Dependencies toggle */}
+            {onDependenciesChange && (
+              <button
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  width: "100%", padding: "8px 14px", border: "none",
+                  background: "none", cursor: "pointer", fontSize: 13,
+                  color: "var(--foreground)", textAlign: "left",
+                }}
+                onPointerEnter={(e) => (e.currentTarget.style.background = "var(--accent)")}
+                onPointerLeave={(e) => (e.currentTarget.style.background = "none")}
+                onClick={() => {
+                  // Toggle: clear all deps or restore — for now just close (deps are always on)
+                  setHeaderPopover(null)
+                }}
+              >
+                <Link2 size={14} style={{ color: dependencies.length > 0 ? "var(--primary)" : "var(--muted-foreground)", flexShrink: 0 }} />
+                Dependencies
+                <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--muted-foreground)" }}>
+                  {dependencies.length} link{dependencies.length !== 1 ? "s" : ""}
+                </span>
+              </button>
+            )}
+          </div>
+        </>,
         document.body
       )}
       {selectedBlockIds.size > 0 && (
