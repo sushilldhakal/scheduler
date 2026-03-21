@@ -2680,23 +2680,24 @@ function GridViewInner({
                                 flex: "0 0 38px",
                                 overflow: "clip",  // clips label at column edge without breaking sticky
                               }}>
-                                {/* Absolute full-width overlay for the sticky label */}
+                                {/* Absolute full-width overlay — flex centres the sticky child when column fully visible */}
                                 <div style={{
                                   position: "absolute", top: 0, left: 0,
                                   width: COL_W_WEEK, height: "100%",
                                   overflow: "clip",
                                   pointerEvents: "none",
                                   zIndex: 2,
+                                  display: "flex",
+                                  justifyContent: "center",
                                 }}>
                                   <div style={{
                                     position: "sticky", left: 0,
                                     height: "100%",
                                     display: "flex", alignItems: "center",
-                                    justifyContent: "center",
                                     gap: 8,
                                     padding: "0 10px",
                                     background: colBg,
-                                    minWidth: COL_W_WEEK,
+                                    width: "max-content",
                                     pointerEvents: "auto",
                                   }}>
                                     <div style={{
