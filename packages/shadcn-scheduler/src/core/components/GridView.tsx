@@ -2661,6 +2661,7 @@ function GridViewInner({
                             position: "relative",
                             display: "flex",
                             flexDirection: "column",
+                            borderRight: i < dates.length - 1 ? "2px solid var(--sch-day-line)" : "1px solid var(--sch-day-line)",
                           }}
                         >
                           {/* Today accent bar at top */}
@@ -2690,10 +2691,12 @@ function GridViewInner({
                                   <div style={{
                                     position: "sticky", left: 0,
                                     height: "100%",
-                                    display: "flex", alignItems: "center", gap: 8,
+                                    display: "flex", alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 8,
                                     padding: "0 10px",
                                     background: colBg,
-                                    width: "max-content",
+                                    minWidth: COL_W_WEEK,
                                     pointerEvents: "auto",
                                   }}>
                                     <div style={{
