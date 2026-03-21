@@ -2240,7 +2240,7 @@ function GridViewInner({
         </div>
       )}
 
-      <div className="flex-1 overflow-hidden relative" style={{ display: "flex" }}>
+      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden", position: "relative" }}>
         <div
           style={{
             width: sidebarCollapsed ? 0 : sidebarWidth,
