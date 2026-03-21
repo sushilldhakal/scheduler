@@ -2274,6 +2274,61 @@ function GridViewInner({
             position: "relative",
           }}
         >
+          {/* Sticky sidebar header — aligns with the date+time header in the grid */}
+          <div style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 21,
+            background: "var(--muted)",
+            borderBottom: "2px solid var(--border)",
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+            padding: "0 0 0 0",
+          }}>
+            {/* Sort column buttons */}
+            <div style={{ display: "flex", alignItems: "center", padding: "0 10px 4px", gap: 2, minHeight: 38 }}>
+              {(["name", "hours", "scheduled"] as const).map((col) => {
+                const colLabel = col === "name" ? labels.category ?? "Category" : col === "hours" ? "Hours" : "Shifts"
+                const isActive = sortBy === col
+                return (
+                  <button
+                    key={col}
+                    type="button"
+                    title={`Sort by ${colLabel} (${isActive ? (sortDir === "asc" ? "low→high, click for high→low" : "high→low, click for low→high") : "click to sort"})`}
+                    onClick={() => toggleSort(col)}
+                    style={{
+                      fontSize: 9,
+                      fontWeight: isActive ? 700 : 600,
+                      color: isActive ? "var(--foreground)" : "var(--muted-foreground)",
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                      background: isActive ? "var(--accent)" : "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      padding: "2px 4px",
+                      borderRadius: 3,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 2,
+                      flexShrink: col === "name" ? 1 : 0,
+                      minWidth: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      transition: "background 100ms, color 100ms",
+                    }}
+                  >
+                    {colLabel}
+                    <span style={{ fontSize: 8, opacity: isActive ? 1 : 0.4 }}>
+                      {isActive ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
           {(() => {
             const refDate = focusedDate ?? dates[0]
             let baseShifts: Block[]
@@ -2551,6 +2606,26 @@ function GridViewInner({
                   flexShrink: 0,
                   width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
                 }}
+                onContextMenu={(e) => {
+                  e.preventDefault()
+                  const scrollEl = scrollRef.current
+                  if (!scrollEl) return
+                  const rect = scrollEl.getBoundingClientRect()
+                  const x = scrollEl.scrollLeft + e.clientX - rect.left
+                  const di = isWeekView
+                    ? Math.floor(x / COL_W_WEEK)
+                    : isDayViewMultiDay ? Math.floor(x / DAY_WIDTH) : 0
+                  const clampedDi = Math.max(0, Math.min(dates.length - 1, di))
+                  const offsetX = isWeekView
+                    ? x - clampedDi * COL_W_WEEK
+                    : isDayViewMultiDay ? x - clampedDi * DAY_WIDTH : x
+                  const hour = Math.max(settings.visibleFrom, Math.min(settings.visibleTo,
+                    settings.visibleFrom + offsetX / (isWeekView ? PX_WEEK : HOUR_W)
+                  ))
+                  const markerDate = dates[clampedDi]
+                  if (!markerDate) return
+                  setHeaderPopover({ clientX: e.clientX, clientY: e.clientY, date: toDateISO(markerDate), hour: Math.round(hour * 4) / 4 })
+                }}
               >
               <div
                 style={{
@@ -2596,47 +2671,28 @@ function GridViewInner({
                           {today && (
                             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "var(--primary)", borderRadius: "0 0 2px 2px", zIndex: 1 }} />
                           )}
-                          {/* Sticky date label — translateX pins it within this column as header scrolls */}
-                          <div
-                            style={{
-                              transform: `translateX(clamp(0px, calc(var(--sx, 0px) - ${colLeft}px), ${Math.max(0, COL_W_WEEK - 90)}px))`,
-                              textAlign: "center",
-                              padding: "8px 4px 5px",
-                              willChange: "transform",
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 700,
-                                color: today ? "var(--primary)" : "var(--muted-foreground)",
-                                textTransform: "uppercase",
-                                letterSpacing: 0.8,
-                                marginBottom: 2,
-                              }}
-                            >
-                              {DOW_MON_FIRST[(d.getDay() + 6) % 7]}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: 18,
-                                fontWeight: 700,
-                                color: today ? "var(--background)" : closed ? "var(--muted-foreground)" : "var(--foreground)",
-                                background: today ? "var(--primary)" : "transparent",
-                                width: 32,
-                                height: 32,
-                                borderRadius: "50%",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                margin: "0 auto 3px",
-                              }}
-                            >
+                          {/* Compact date row: Mon 23 Mar · 9 shifts */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 10px 4px", minWidth: 0 }}>
+                            <div style={{
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+                              background: today ? "var(--primary)" : "transparent",
+                              fontWeight: 700, fontSize: 14,
+                              color: today ? "var(--background)" : closed ? "var(--muted-foreground)" : "var(--foreground)",
+                            }}>
                               {d.getDate()}
                             </div>
-                            {/* Shift count badge */}
-                            <div style={{ fontSize: 9, fontWeight: 600, color: today ? "var(--primary)" : "var(--muted-foreground)", marginBottom: 3 }}>
-                              {closed ? "Closed" : dayShiftCount > 0 ? `${dayShiftCount} shift${dayShiftCount !== 1 ? "s" : ""}` : "No shifts"}
+                            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                              <span style={{
+                                fontSize: 11, fontWeight: 700, lineHeight: 1.2,
+                                color: today ? "var(--primary)" : closed ? "var(--muted-foreground)" : "var(--foreground)",
+                                whiteSpace: "nowrap",
+                              }}>
+                                {DOW_MON_FIRST[(d.getDay() + 6) % 7]} · {MONTHS_SHORT[d.getMonth()]}
+                              </span>
+                              <span style={{ fontSize: 9, fontWeight: 500, color: today ? "var(--primary)" : "var(--muted-foreground)", lineHeight: 1.2, whiteSpace: "nowrap" }}>
+                                {closed ? "Closed" : dayShiftCount > 0 ? `${dayShiftCount} shift${dayShiftCount !== 1 ? "s" : ""}` : "No shifts"}
+                              </span>
                             </div>
                           </div>
                           {/* Time labels — scroll normally (not sticky) */}
