@@ -419,10 +419,6 @@ function GridViewInner({
         } else {
           scrollRef.current.scrollLeft = 0
         }
-        if (headerRef.current) {
-          if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${scrollRef.current.scrollLeft}px)`
-          headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px')
-        }
         if (sidebarRef.current) {
           sidebarRef.current.scrollTop = scrollRef.current.scrollTop
         }
@@ -454,7 +450,7 @@ function GridViewInner({
             } else if (isWeekView) {
               scrollRef.current.scrollLeft -= diffDays * COL_W_WEEK
             }
-            if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${scrollRef.current.scrollLeft}px)`; headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px') }
+            
             if (sidebarRef.current) sidebarRef.current.scrollTop = scrollRef.current.scrollTop
           }
           scrollTriggeredUpdateRef.current = false
@@ -468,7 +464,7 @@ function GridViewInner({
             const vw = scrollRef.current.clientWidth
             scrollRef.current.scrollLeft = Math.max(0, centerDayIdx * DAY_WIDTH + DAY_WIDTH / 2 - vw / 2)
           }
-          if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${scrollRef.current.scrollLeft}px)`; headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px') }
+          
           if (sidebarRef.current) sidebarRef.current.scrollTop = scrollRef.current.scrollTop
         }
       }
@@ -489,10 +485,6 @@ function GridViewInner({
     const newScrollLeft = Math.max(0, centerX * ratio - el.clientWidth / 2)
     el.scrollLeft = newScrollLeft
     // Sync header
-    if (headerRef.current) {
-      if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${newScrollLeft}px)`
-      headerRef.current.style.setProperty("--sx", newScrollLeft + "px")
-    }
   }, [zoom])
 
   const focusedDateTime = focusedDate?.getTime()
@@ -507,10 +499,6 @@ function GridViewInner({
     const vw = scrollRef.current.clientWidth
     const targetScroll = Math.max(0, idx * DAY_WIDTH + DAY_WIDTH / 2 - vw / 2)
     scrollRef.current.scrollLeft = targetScroll
-    if (headerRef.current) {
-      if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${scrollRef.current.scrollLeft}px)`
-      headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px')
-    }
     lastReportedDayIdxRef.current = idx
   }, [isDayViewMultiDay, focusedDateTime, dates, DAY_WIDTH])
 
@@ -603,7 +591,7 @@ function GridViewInner({
         }
       }
 
-      if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${el.scrollLeft}px)`; headerRef.current.style.setProperty('--sx', el.scrollLeft + 'px') }
+      
       if (sidebarRef.current) sidebarRef.current.scrollTop = el.scrollTop
       reportVisibleRange(el)
     },
@@ -615,7 +603,7 @@ function GridViewInner({
       if (isWeekView) return
       const el = e.currentTarget
       if (sidebarRef.current) sidebarRef.current.scrollTop = el.scrollTop
-      if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${el.scrollLeft}px)`; headerRef.current.style.setProperty('--sx', el.scrollLeft + 'px') }
+      
       if (isDayViewMultiDay && setDate) {
         const sl = el.scrollLeft
         const vw = el.clientWidth
@@ -660,7 +648,7 @@ function GridViewInner({
           })
           requestAnimationFrame(() => {
             if (scrollRef.current) scrollRef.current.scrollLeft = DAY_SCROLL_BUFFER
-            if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${DAY_SCROLL_BUFFER}px)`; headerRef.current.style.setProperty('--sx', DAY_SCROLL_BUFFER + 'px') }
+            
           })
         } else if (sl > DAY_SCROLL_BUFFER + DAY_WIDTH - DAY_SCROLL_BUFFER / 2) {
           setDate((d) => {
@@ -670,7 +658,7 @@ function GridViewInner({
           })
           requestAnimationFrame(() => {
             if (scrollRef.current) scrollRef.current.scrollLeft = DAY_SCROLL_BUFFER
-            if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${DAY_SCROLL_BUFFER}px)`; headerRef.current.style.setProperty('--sx', DAY_SCROLL_BUFFER + 'px') }
+            
           })
         }
       }
@@ -1584,7 +1572,7 @@ function GridViewInner({
       }
       if (state.dirX !== 0) {
         scrollRef.current.scrollLeft += state.dirX * state.speedX * EDGE_SCROLL_MAX
-        if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${scrollRef.current.scrollLeft}px)`; headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px') }
+        
       }
       if (state.dirY !== 0) {
         scrollRef.current.scrollTop += state.dirY * state.speedY * EDGE_SCROLL_MAX
@@ -2148,7 +2136,7 @@ function GridViewInner({
     const handler = (e: Event) => {
       // Immediately sync header — no React batching delay
       const sl = (e.currentTarget as HTMLDivElement).scrollLeft
-      if (headerRef.current) { if (headerInnerRef.current) headerInnerRef.current.style.transform = `translateX(-${sl}px)`; headerRef.current.style.setProperty('--sx', sl + 'px') }
+      
       if (sidebarRef.current) sidebarRef.current.scrollTop = (e.currentTarget as HTMLDivElement).scrollTop
     }
     el.addEventListener("scroll", handler, { passive: true })
@@ -2196,7 +2184,7 @@ function GridViewInner({
           ? todayIdx * DAY_WIDTH + (nowH - settings.visibleFrom) * HOUR_W
           : (nowH - settings.visibleFrom) * HOUR_W
       : 0
-  const scrollToNow = useScrollToNow(scrollRef, nowPositionPx, headerRef, headerInnerRef)
+  const scrollToNow = useScrollToNow(scrollRef, nowPositionPx)
   useEffect(() => {
     if (scrollToNowRef) scrollToNowRef.current = scrollToNow
     return () => {
@@ -2263,412 +2251,6 @@ function GridViewInner({
           </button>
         </div>
       )}
-      <div
-        style={{
-          display: "flex",
-          flexShrink: 0,
-          borderBottom: "2px solid var(--border)",
-          background: "var(--muted)",
-        }}
-      >
-        <div
-          style={{
-            width: sidebarWidth,
-            flexShrink: 0,
-            borderRight: "1px solid var(--border)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-end",
-            padding: "0 0 0 0",
-            overflow: "hidden",
-          }}
-        >
-          {/* Column headers row */}
-          <div style={{ display: "flex", alignItems: "center", padding: "0 10px 4px", gap: 2 }}>
-            {(["name", "hours", "scheduled"] as const).map((col) => {
-              const colLabel = col === "name" ? labels.category ?? "Name" : col === "hours" ? "Hours" : "Shifts"
-              const isActive = sortBy === col
-              return (
-                <button
-                  key={col}
-                  type="button"
-                  title={`Sort by ${colLabel} (${isActive ? (sortDir === "asc" ? "low→high, click for high→low" : "high→low, click for low→high") : "click to sort"})`}
-                  onClick={() => toggleSort(col)}
-                  style={{
-                    fontSize: 9,
-                    fontWeight: isActive ? 700 : 600,
-                    color: isActive ? "var(--foreground)" : "var(--muted-foreground)",
-                    textTransform: "uppercase",
-                    letterSpacing: 0.5,
-                    background: isActive ? "var(--accent)" : "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    padding: "2px 4px",
-                    borderRadius: 3,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 2,
-                    flexShrink: col === "name" ? 1 : 0,
-                    minWidth: 0,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    transition: "background 100ms, color 100ms",
-                  }}
-                >
-                  {colLabel}
-                  <span style={{ fontSize: 8, opacity: isActive ? 1 : 0.4 }}>
-                    {isActive ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-        <div
-          ref={headerRef}
-          style={{ flex: 1, overflowX: "hidden" }}
-          onContextMenu={(e) => {
-            e.preventDefault()
-            const el = headerRef.current
-            const scrollEl = scrollRef.current
-            if (!el || !scrollEl) return
-            const rect = el.getBoundingClientRect()
-            const x = scrollEl.scrollLeft + e.clientX - rect.left
-            const di = isWeekView
-              ? Math.floor(x / COL_W_WEEK)
-              : isDayViewMultiDay ? Math.floor(x / DAY_WIDTH) : 0
-            const clampedDi = Math.max(0, Math.min(dates.length - 1, di))
-            const offsetX = isWeekView
-              ? x - clampedDi * COL_W_WEEK
-              : isDayViewMultiDay ? x - clampedDi * DAY_WIDTH : x
-            const hour = Math.max(settings.visibleFrom, Math.min(settings.visibleTo,
-              settings.visibleFrom + offsetX / (isWeekView ? PX_WEEK : HOUR_W)
-            ))
-            const markerDate = dates[clampedDi]
-            if (!markerDate) return
-            setHeaderPopover({ clientX: e.clientX, clientY: e.clientY, date: toDateISO(markerDate), hour: Math.round(hour * 4) / 4 })
-          }}
-        >
-          <div
-            ref={headerInnerRef}
-            style={{
-              display: "flex",
-              width: isWeekView || isDayViewMultiDay ? TOTAL_W : hasDayScrollNav ? TOTAL_W : DAY_WIDTH,
-              minWidth: isWeekView || isDayViewMultiDay ? TOTAL_W : hasDayScrollNav ? TOTAL_W : DAY_WIDTH,
-              willChange: "transform",
-            }}
-          >
-            {hasDayScrollNav && (
-              <div style={{ width: DAY_SCROLL_BUFFER, flexShrink: 0, minWidth: DAY_SCROLL_BUFFER }} />
-            )}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
-                flexShrink: 0,
-              }}
-            >
-              {isWeekView && (
-                <div style={{ display: "flex", width: TOTAL_W }}>
-                  {dates.map((d, i) => {
-                    const today = isToday(d)
-                    const closed = settings.workingHours[d.getDay()] === null
-                    const dow = d.getDay()
-                    const isWeekend = dow === 0 || dow === 6
-                    const dateISO = toDateISO(d)
-                    const dayShiftCount = shifts.filter((s) => s.date === dateISO).length
-                    const colLeft = i * COL_W_WEEK
-                    return (
-                      <div
-                        key={i}
-                        onDoubleClick={() => onDateDoubleClick?.(d)}
-                        title={onDateDoubleClick ? "Double-click to open day view" : undefined}
-                        style={{
-                          width: COL_W_WEEK,
-                          flexShrink: 0,
-                          borderLeft: "1px solid var(--sch-day-line)",
-                          borderRight: i === dates.length - 1 ? "1px solid var(--sch-day-line)" : "none",
-                          background: today
-                            ? "color-mix(in srgb, var(--primary) 8%, var(--background))"
-                            : closed
-                              ? "var(--muted)"
-                              : isWeekend
-                                ? "color-mix(in srgb, var(--muted) 40%, var(--background))"
-                                : "var(--background)",
-                          cursor: onDateDoubleClick ? "pointer" : "default",
-                          position: "relative",
-                          overflow: "hidden",
-                        }}
-                      >
-                        {/* Today accent bar at top */}
-                        {today && (
-                          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "var(--primary)", borderRadius: "0 0 2px 2px", zIndex: 1 }} />
-                        )}
-                        {/* Sticky date label — translateX pins it within this column as header scrolls */}
-                        <div
-                          style={{
-                            transform: `translateX(clamp(0px, calc(var(--sx, 0px) - ${colLeft}px), ${Math.max(0, COL_W_WEEK - 90)}px))`,
-                            textAlign: "center",
-                            padding: "8px 4px 5px",
-                            willChange: "transform",
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: today ? "var(--primary)" : "var(--muted-foreground)",
-                              textTransform: "uppercase",
-                              letterSpacing: 0.8,
-                              marginBottom: 2,
-                            }}
-                          >
-                            {DOW_MON_FIRST[(d.getDay() + 6) % 7]}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 18,
-                              fontWeight: 700,
-                              color: today ? "var(--background)" : closed ? "var(--muted-foreground)" : "var(--foreground)",
-                              background: today ? "var(--primary)" : "transparent",
-                              width: 32,
-                              height: 32,
-                              borderRadius: "50%",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              margin: "0 auto 3px",
-                            }}
-                          >
-                            {d.getDate()}
-                          </div>
-                          {/* Shift count badge */}
-                          <div style={{ fontSize: 9, fontWeight: 600, color: today ? "var(--primary)" : "var(--muted-foreground)", marginBottom: 3 }}>
-                            {closed ? "Closed" : dayShiftCount > 0 ? `${dayShiftCount} shift${dayShiftCount !== 1 ? "s" : ""}` : "No shifts"}
-                          </div>
-                        </div>
-                        {/* Time labels — scroll normally (not sticky) */}
-                        {!closed && (
-                          <div
-                            style={{
-                              display: "flex",
-                              width: "100%",
-                              borderTop: `1px solid ${today ? "color-mix(in srgb, var(--primary) 30%, transparent)" : "var(--border)"}`,
-                              paddingTop: 3,
-                              overflow: "hidden",
-                            }}
-                          >
-                            {Array.from(
-                              { length: Math.floor((settings.visibleTo - settings.visibleFrom) / weekTimeLabelGap) + 1 },
-                              (_, k) => {
-                                const h = Math.min(settings.visibleFrom + k * weekTimeLabelGap, settings.visibleTo - 0.01)
-                                const isNowHour = today && Math.floor(nowH) === Math.floor(h)
-                                return (
-                                  <span
-                                    key={h}
-                                    title={getTimeLabel(toDateISO(d), h)}
-                                    style={{
-                                      fontSize: 8,
-                                      fontWeight: isNowHour ? 700 : 500,
-                                      color: isNowHour ? "var(--primary)" : "var(--muted-foreground)",
-                                      flex: 1,
-                                      textAlign: "center",
-                                      minWidth: 0,
-                                    }}
-                                  >
-                                    {getTimeLabel(toDateISO(d), h)}
-                                  </span>
-                                )
-                              }
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-              {isDayViewMultiDay && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    width: TOTAL_W,
-                    background: "var(--muted)",
-                    flexShrink: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      width: TOTAL_W,
-                      padding: "4px 0 2px",
-                    }}
-                  >
-                    {dates.map((d, i) => {
-                      const colLeft = i * DAY_WIDTH
-                      return (
-                        <div
-                          key={i}
-                          style={{
-                            width: DAY_WIDTH,
-                            flexShrink: 0,
-                            borderLeft: i === 0 ? "1px solid var(--border)" : "2px solid var(--border)",
-                            borderRight: "1px solid var(--border)",
-                            padding: "4px 0",
-                            background: "var(--background)",
-                            overflow: "hidden",
-                            position: "relative",
-                          }}
-                        >
-                          {/* Sticky date label — translateX keeps it visible while scrolling through hour slots */}
-                          <span
-                            style={{
-                              display: "inline-block",
-                              transform: `translateX(clamp(0px, calc(var(--sx, 0px) - ${colLeft}px), ${Math.max(0, DAY_WIDTH - 120)}px))`,
-                              willChange: "transform",
-                              fontSize: 9,
-                              fontWeight: 700,
-                              paddingLeft: 6,
-                              color: isToday(d) ? "var(--primary)" : "var(--muted-foreground)",
-                            }}
-                          >
-                            {MONTHS_SHORT[d.getMonth()]} {DOW_MON_FIRST[(d.getDay() + 6) % 7]} {d.getDate()}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      width: TOTAL_W,
-                      minHeight: 32,
-                    }}
-                  >
-                    {dates.map((d, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          display: "flex",
-                          width: DAY_WIDTH,
-                          flexShrink: 0,
-                          borderLeft: i === 0 ? "1px solid var(--border)" : "2px solid var(--border)",
-                          borderRight: "1px solid var(--border)",
-                          background: isToday(d) ? "var(--accent)" : "transparent",
-                        }}
-                      >
-                        {DAY_VISIBLE_SLOTS.map((h) => {
-                          const dashed = isOutsideWorkingHours(h, settings, d.getDay())
-                          return (
-                            <div
-                              key={String(h)}
-                              title={getTimeLabel(toDateISO(d), h)}
-                              style={{
-                                width: SLOT_W,
-                                flexShrink: 0,
-                                display: "flex",
-                                alignItems: "flex-end",
-                                padding: "0 0 4px 6px",
-                                fontSize: dayTimeStep < 1 ? 9 : 10,
-                                fontWeight: 600,
-                                borderRight: "1px solid var(--border)",
-                                background: dashed ? DASHED_BG : hourBg(h, settings, d.getDay()),
-                                color: (dayTimeStep < 1 ? Math.abs(h - nowH) < 0.3 : h === Math.floor(nowH)) && isToday(d) ? "var(--primary)" : "var(--muted-foreground)",
-                              }}
-                            >
-                              {getTimeLabel(toDateISO(d), h)}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {!isWeekView && !isDayViewMultiDay && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    width: DAY_WIDTH,
-                    height: HOUR_HDR_H,
-                    background: "var(--background)",
-                    borderBottom: "1px solid var(--border)",
-                  }}
-                >
-                  {/* Major hour labels row */}
-                  <div style={{ display: "flex", flex: 1 }}>
-                    {DAY_VISIBLE_SLOTS.filter((h) => Number.isInteger(h)).map((h) => {
-                      const isNowHour = Math.floor(nowH) === h
-                      const isWorking = !isOutsideWorkingHours(h, settings, dates[0]?.getDay() ?? 1)
-                      return (
-                        <div
-                          key={String(h)}
-                          title={getTimeLabel(toDateISO(dates[0]!), h)}
-                          style={{
-                            width: HOUR_W,
-                            flexShrink: 0,
-                            height: "100%",
-                            display: "flex",
-                            alignItems: "flex-end",
-                            padding: "0 0 4px 8px",
-                            fontSize: 11,
-                            fontWeight: isNowHour ? 700 : 600,
-                            borderRight: "1px solid var(--border)",
-                            color: isNowHour ? "var(--primary)" : isWorking ? "var(--foreground)" : "var(--muted-foreground)",
-                            background: isWorking ? "transparent" : "var(--muted)",
-                            position: "relative",
-                          }}
-                        >
-                          {/* Now-hour accent */}
-                          {isNowHour && (
-                            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "var(--primary)", opacity: 0.4 }} />
-                          )}
-                          {getTimeLabel(toDateISO(dates[0]!), h)}
-                        </div>
-                      )
-                    })}
-                  </div>
-                  {/* Minor 30-min tick marks row */}
-                  {zoom >= 1 && (
-                    <div style={{ display: "flex", height: 8, borderTop: "1px solid var(--border)" }}>
-                      {DAY_VISIBLE_SLOTS.map((h) => {
-                        const isHalf = !Number.isInteger(h)
-                        return (
-                          <div
-                            key={String(h)}
-                            style={{
-                              width: SLOT_W,
-                              flexShrink: 0,
-                              height: "100%",
-                              display: "flex",
-                              alignItems: "flex-end",
-                              justifyContent: "flex-start",
-                              paddingBottom: 1,
-                              paddingLeft: isHalf ? 0 : 0,
-                              borderRight: "1px solid color-mix(in srgb, var(--border) 60%, transparent)",
-                            }}
-                          >
-                            {isHalf && (
-                              <div style={{ width: 1, height: 4, background: "var(--muted-foreground)", opacity: 0.4, marginLeft: SLOT_W / 2 - 0.5 }} />
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            {hasDayScrollNav && (
-              <div style={{ width: DAY_SCROLL_BUFFER, flexShrink: 0, minWidth: DAY_SCROLL_BUFFER }} />
-            )}
-          </div>
-        </div>
-      </div>
 
       <ResizablePanelGroup orientation="horizontal" className="flex-1 overflow-hidden relative">
         <ResizablePanel
@@ -2958,6 +2540,320 @@ function GridViewInner({
                 flexShrink: 0,
               }}
             >
+              {/* ── Date/hour header — sticky top:0, scrolls natively with grid ── */}
+              <div
+                style={{
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 20,
+                  background: "var(--muted)",
+                  borderBottom: "2px solid var(--border)",
+                  flexShrink: 0,
+                  width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
+                }}
+              >
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
+                  flexShrink: 0,
+                }}
+              >
+                {isWeekView && (
+                  <div style={{ display: "flex", width: TOTAL_W }}>
+                    {dates.map((d, i) => {
+                      const today = isToday(d)
+                      const closed = settings.workingHours[d.getDay()] === null
+                      const dow = d.getDay()
+                      const isWeekend = dow === 0 || dow === 6
+                      const dateISO = toDateISO(d)
+                      const dayShiftCount = shifts.filter((s) => s.date === dateISO).length
+                      const colLeft = i * COL_W_WEEK
+                      return (
+                        <div
+                          key={i}
+                          onDoubleClick={() => onDateDoubleClick?.(d)}
+                          title={onDateDoubleClick ? "Double-click to open day view" : undefined}
+                          style={{
+                            width: COL_W_WEEK,
+                            flexShrink: 0,
+                            borderLeft: "1px solid var(--sch-day-line)",
+                            borderRight: i === dates.length - 1 ? "1px solid var(--sch-day-line)" : "none",
+                            background: today
+                              ? "color-mix(in srgb, var(--primary) 8%, var(--background))"
+                              : closed
+                                ? "var(--muted)"
+                                : isWeekend
+                                  ? "color-mix(in srgb, var(--muted) 40%, var(--background))"
+                                  : "var(--background)",
+                            cursor: onDateDoubleClick ? "pointer" : "default",
+                            position: "relative",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {/* Today accent bar at top */}
+                          {today && (
+                            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "var(--primary)", borderRadius: "0 0 2px 2px", zIndex: 1 }} />
+                          )}
+                          {/* Sticky date label — translateX pins it within this column as header scrolls */}
+                          <div
+                            style={{
+                              transform: `translateX(clamp(0px, calc(var(--sx, 0px) - ${colLeft}px), ${Math.max(0, COL_W_WEEK - 90)}px))`,
+                              textAlign: "center",
+                              padding: "8px 4px 5px",
+                              willChange: "transform",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                color: today ? "var(--primary)" : "var(--muted-foreground)",
+                                textTransform: "uppercase",
+                                letterSpacing: 0.8,
+                                marginBottom: 2,
+                              }}
+                            >
+                              {DOW_MON_FIRST[(d.getDay() + 6) % 7]}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 18,
+                                fontWeight: 700,
+                                color: today ? "var(--background)" : closed ? "var(--muted-foreground)" : "var(--foreground)",
+                                background: today ? "var(--primary)" : "transparent",
+                                width: 32,
+                                height: 32,
+                                borderRadius: "50%",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                margin: "0 auto 3px",
+                              }}
+                            >
+                              {d.getDate()}
+                            </div>
+                            {/* Shift count badge */}
+                            <div style={{ fontSize: 9, fontWeight: 600, color: today ? "var(--primary)" : "var(--muted-foreground)", marginBottom: 3 }}>
+                              {closed ? "Closed" : dayShiftCount > 0 ? `${dayShiftCount} shift${dayShiftCount !== 1 ? "s" : ""}` : "No shifts"}
+                            </div>
+                          </div>
+                          {/* Time labels — scroll normally (not sticky) */}
+                          {!closed && (
+                            <div
+                              style={{
+                                display: "flex",
+                                width: "100%",
+                                borderTop: `1px solid ${today ? "color-mix(in srgb, var(--primary) 30%, transparent)" : "var(--border)"}`,
+                                paddingTop: 3,
+                                overflow: "hidden",
+                              }}
+                            >
+                              {Array.from(
+                                { length: Math.floor((settings.visibleTo - settings.visibleFrom) / weekTimeLabelGap) + 1 },
+                                (_, k) => {
+                                  const h = Math.min(settings.visibleFrom + k * weekTimeLabelGap, settings.visibleTo - 0.01)
+                                  const isNowHour = today && Math.floor(nowH) === Math.floor(h)
+                                  return (
+                                    <span
+                                      key={h}
+                                      title={getTimeLabel(toDateISO(d), h)}
+                                      style={{
+                                        fontSize: 8,
+                                        fontWeight: isNowHour ? 700 : 500,
+                                        color: isNowHour ? "var(--primary)" : "var(--muted-foreground)",
+                                        flex: 1,
+                                        textAlign: "center",
+                                        minWidth: 0,
+                                      }}
+                                    >
+                                      {getTimeLabel(toDateISO(d), h)}
+                                    </span>
+                                  )
+                                }
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                {isDayViewMultiDay && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      width: TOTAL_W,
+                      background: "var(--muted)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        width: TOTAL_W,
+                        padding: "4px 0 2px",
+                      }}
+                    >
+                      {dates.map((d, i) => {
+                        const colLeft = i * DAY_WIDTH
+                        return (
+                          <div
+                            key={i}
+                            style={{
+                              width: DAY_WIDTH,
+                              flexShrink: 0,
+                              borderLeft: i === 0 ? "1px solid var(--border)" : "2px solid var(--border)",
+                              borderRight: "1px solid var(--border)",
+                              padding: "4px 0",
+                              background: "var(--background)",
+                              overflow: "hidden",
+                              position: "relative",
+                            }}
+                          >
+                            {/* Sticky date label — translateX keeps it visible while scrolling through hour slots */}
+                            <span
+                              style={{
+                                display: "inline-block",
+                                transform: `translateX(clamp(0px, calc(var(--sx, 0px) - ${colLeft}px), ${Math.max(0, DAY_WIDTH - 120)}px))`,
+                                willChange: "transform",
+                                fontSize: 9,
+                                fontWeight: 700,
+                                paddingLeft: 6,
+                                color: isToday(d) ? "var(--primary)" : "var(--muted-foreground)",
+                              }}
+                            >
+                              {MONTHS_SHORT[d.getMonth()]} {DOW_MON_FIRST[(d.getDay() + 6) % 7]} {d.getDate()}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        width: TOTAL_W,
+                        minHeight: 32,
+                      }}
+                    >
+                      {dates.map((d, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            display: "flex",
+                            width: DAY_WIDTH,
+                            flexShrink: 0,
+                            borderLeft: i === 0 ? "1px solid var(--border)" : "2px solid var(--border)",
+                            borderRight: "1px solid var(--border)",
+                            background: isToday(d) ? "var(--accent)" : "transparent",
+                          }}
+                        >
+                          {DAY_VISIBLE_SLOTS.map((h) => {
+                            const dashed = isOutsideWorkingHours(h, settings, d.getDay())
+                            return (
+                              <div
+                                key={String(h)}
+                                title={getTimeLabel(toDateISO(d), h)}
+                                style={{
+                                  width: SLOT_W,
+                                  flexShrink: 0,
+                                  display: "flex",
+                                  alignItems: "flex-end",
+                                  padding: "0 0 4px 6px",
+                                  fontSize: dayTimeStep < 1 ? 9 : 10,
+                                  fontWeight: 600,
+                                  borderRight: "1px solid var(--border)",
+                                  background: dashed ? DASHED_BG : hourBg(h, settings, d.getDay()),
+                                  color: (dayTimeStep < 1 ? Math.abs(h - nowH) < 0.3 : h === Math.floor(nowH)) && isToday(d) ? "var(--primary)" : "var(--muted-foreground)",
+                                }}
+                              >
+                                {getTimeLabel(toDateISO(d), h)}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {!isWeekView && !isDayViewMultiDay && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      width: DAY_WIDTH,
+                      height: HOUR_HDR_H,
+                      background: "var(--background)",
+                      borderBottom: "1px solid var(--border)",
+                    }}
+                  >
+                    {/* Major hour labels row */}
+                    <div style={{ display: "flex", flex: 1 }}>
+                      {DAY_VISIBLE_SLOTS.filter((h) => Number.isInteger(h)).map((h) => {
+                        const isNowHour = Math.floor(nowH) === h
+                        const isWorking = !isOutsideWorkingHours(h, settings, dates[0]?.getDay() ?? 1)
+                        return (
+                          <div
+                            key={String(h)}
+                            title={getTimeLabel(toDateISO(dates[0]!), h)}
+                            style={{
+                              width: HOUR_W,
+                              flexShrink: 0,
+                              height: "100%",
+                              display: "flex",
+                              alignItems: "flex-end",
+                              padding: "0 0 4px 8px",
+                              fontSize: 11,
+                              fontWeight: isNowHour ? 700 : 600,
+                              borderRight: "1px solid var(--border)",
+                              color: isNowHour ? "var(--primary)" : isWorking ? "var(--foreground)" : "var(--muted-foreground)",
+                              background: isWorking ? "transparent" : "var(--muted)",
+                              position: "relative",
+                            }}
+                          >
+                            {/* Now-hour accent */}
+                            {isNowHour && (
+                              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "var(--primary)", opacity: 0.4 }} />
+                            )}
+                            {getTimeLabel(toDateISO(dates[0]!), h)}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {/* Minor 30-min tick marks row */}
+                    {zoom >= 1 && (
+                      <div style={{ display: "flex", height: 8, borderTop: "1px solid var(--border)" }}>
+                        {DAY_VISIBLE_SLOTS.map((h) => {
+                          const isHalf = !Number.isInteger(h)
+                          return (
+                            <div
+                              key={String(h)}
+                              style={{
+                                width: SLOT_W,
+                                flexShrink: 0,
+                                height: "100%",
+                                display: "flex",
+                                alignItems: "flex-end",
+                                justifyContent: "flex-start",
+                                paddingBottom: 1,
+                                paddingLeft: isHalf ? 0 : 0,
+                                borderRight: "1px solid color-mix(in srgb, var(--border) 60%, transparent)",
+                              }}
+                            >
+                              {isHalf && (
+                                <div style={{ width: 1, height: 4, background: "var(--muted-foreground)", opacity: 0.4, marginLeft: SLOT_W / 2 - 0.5 }} />
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              </div>
               <div
                 ref={gridRef}
                 className="transition-all duration-200"
