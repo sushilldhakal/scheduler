@@ -418,6 +418,7 @@ function GridViewInner({
         }
         if (headerRef.current) {
           headerRef.current.scrollLeft = scrollRef.current.scrollLeft
+          headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px')
         }
         if (sidebarRef.current) {
           sidebarRef.current.scrollTop = scrollRef.current.scrollTop
@@ -448,7 +449,7 @@ function GridViewInner({
             } else if (isWeekView) {
               scrollRef.current.scrollLeft -= diffDays * COL_W_WEEK
             }
-            if (headerRef.current) headerRef.current.scrollLeft = scrollRef.current.scrollLeft
+            if (headerRef.current) { headerRef.current.scrollLeft = scrollRef.current.scrollLeft; headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px') }
             if (sidebarRef.current) sidebarRef.current.scrollTop = scrollRef.current.scrollTop
           }
           scrollTriggeredUpdateRef.current = false
@@ -462,7 +463,7 @@ function GridViewInner({
             const vw = scrollRef.current.clientWidth
             scrollRef.current.scrollLeft = Math.max(0, centerDayIdx * DAY_WIDTH + DAY_WIDTH / 2 - vw / 2)
           }
-          if (headerRef.current) headerRef.current.scrollLeft = scrollRef.current.scrollLeft
+          if (headerRef.current) { headerRef.current.scrollLeft = scrollRef.current.scrollLeft; headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px') }
           if (sidebarRef.current) sidebarRef.current.scrollTop = scrollRef.current.scrollTop
         }
       }
@@ -483,6 +484,7 @@ function GridViewInner({
     scrollRef.current.scrollLeft = targetScroll
     if (headerRef.current) {
       headerRef.current.scrollLeft = scrollRef.current.scrollLeft
+      headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px')
     }
     lastReportedDayIdxRef.current = idx
   }, [isDayViewMultiDay, focusedDateTime, dates, DAY_WIDTH])
@@ -576,7 +578,7 @@ function GridViewInner({
         }
       }
 
-      if (headerRef.current) headerRef.current.scrollLeft = el.scrollLeft
+      if (headerRef.current) { headerRef.current.scrollLeft = el.scrollLeft; headerRef.current.style.setProperty('--sx', el.scrollLeft + 'px') }
       if (sidebarRef.current) sidebarRef.current.scrollTop = el.scrollTop
       reportVisibleRange(el)
     },
@@ -588,7 +590,7 @@ function GridViewInner({
       if (isWeekView) return
       const el = e.currentTarget
       if (sidebarRef.current) sidebarRef.current.scrollTop = el.scrollTop
-      if (headerRef.current) headerRef.current.scrollLeft = el.scrollLeft
+      if (headerRef.current) { headerRef.current.scrollLeft = el.scrollLeft; headerRef.current.style.setProperty('--sx', el.scrollLeft + 'px') }
       if (isDayViewMultiDay && setDate) {
         const sl = el.scrollLeft
         const vw = el.clientWidth
@@ -633,7 +635,7 @@ function GridViewInner({
           })
           requestAnimationFrame(() => {
             if (scrollRef.current) scrollRef.current.scrollLeft = DAY_SCROLL_BUFFER
-            if (headerRef.current) headerRef.current.scrollLeft = DAY_SCROLL_BUFFER
+            if (headerRef.current) { headerRef.current.scrollLeft = DAY_SCROLL_BUFFER; headerRef.current.style.setProperty('--sx', DAY_SCROLL_BUFFER + 'px') }
           })
         } else if (sl > DAY_SCROLL_BUFFER + DAY_WIDTH - DAY_SCROLL_BUFFER / 2) {
           setDate((d) => {
@@ -643,7 +645,7 @@ function GridViewInner({
           })
           requestAnimationFrame(() => {
             if (scrollRef.current) scrollRef.current.scrollLeft = DAY_SCROLL_BUFFER
-            if (headerRef.current) headerRef.current.scrollLeft = DAY_SCROLL_BUFFER
+            if (headerRef.current) { headerRef.current.scrollLeft = DAY_SCROLL_BUFFER; headerRef.current.style.setProperty('--sx', DAY_SCROLL_BUFFER + 'px') }
           })
         }
       }
@@ -1557,7 +1559,7 @@ function GridViewInner({
       }
       if (state.dirX !== 0) {
         scrollRef.current.scrollLeft += state.dirX * state.speedX * EDGE_SCROLL_MAX
-        if (headerRef.current) headerRef.current.scrollLeft = scrollRef.current.scrollLeft
+        if (headerRef.current) { headerRef.current.scrollLeft = scrollRef.current.scrollLeft; headerRef.current.style.setProperty('--sx', scrollRef.current.scrollLeft + 'px') }
       }
       if (state.dirY !== 0) {
         scrollRef.current.scrollTop += state.dirY * state.speedY * EDGE_SCROLL_MAX
@@ -2120,7 +2122,8 @@ function GridViewInner({
     if (!el) return
     const handler = (e: Event) => {
       // Immediately sync header — no React batching delay
-      if (headerRef.current) headerRef.current.scrollLeft = (e.currentTarget as HTMLDivElement).scrollLeft
+      const sl = (e.currentTarget as HTMLDivElement).scrollLeft
+      if (headerRef.current) { headerRef.current.scrollLeft = sl; headerRef.current.style.setProperty('--sx', sl + 'px') }
       if (sidebarRef.current) sidebarRef.current.scrollTop = (e.currentTarget as HTMLDivElement).scrollTop
     }
     el.addEventListener("scroll", handler, { passive: true })
@@ -2358,6 +2361,7 @@ function GridViewInner({
                     const isWeekend = dow === 0 || dow === 6
                     const dateISO = toDateISO(d)
                     const dayShiftCount = shifts.filter((s) => s.date === dateISO).length
+                    const colLeft = i * COL_W_WEEK
                     return (
                       <div
                         key={i}
@@ -2366,8 +2370,6 @@ function GridViewInner({
                         style={{
                           width: COL_W_WEEK,
                           flexShrink: 0,
-                          textAlign: "center",
-                          padding: "8px 4px 5px",
                           borderLeft: "1px solid var(--border)",
                           borderRight: i === dates.length - 1 ? "1px solid var(--border)" : "none",
                           background: today
@@ -2379,45 +2381,57 @@ function GridViewInner({
                                 : "var(--background)",
                           cursor: onDateDoubleClick ? "pointer" : "default",
                           position: "relative",
+                          overflow: "hidden",
                         }}
                       >
                         {/* Today accent bar at top */}
                         {today && (
-                          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "var(--primary)", borderRadius: "0 0 2px 2px" }} />
+                          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "var(--primary)", borderRadius: "0 0 2px 2px", zIndex: 1 }} />
                         )}
+                        {/* Sticky date label — translateX pins it within this column as header scrolls */}
                         <div
                           style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: today ? "var(--primary)" : "var(--muted-foreground)",
-                            textTransform: "uppercase",
-                            letterSpacing: 0.8,
-                            marginBottom: 2,
+                            transform: `translateX(clamp(0px, calc(var(--sx, 0px) - ${colLeft}px), ${Math.max(0, COL_W_WEEK - 90)}px))`,
+                            textAlign: "center",
+                            padding: "8px 4px 5px",
+                            willChange: "transform",
                           }}
                         >
-                          {DOW_MON_FIRST[(d.getDay() + 6) % 7]}
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: today ? "var(--primary)" : "var(--muted-foreground)",
+                              textTransform: "uppercase",
+                              letterSpacing: 0.8,
+                              marginBottom: 2,
+                            }}
+                          >
+                            {DOW_MON_FIRST[(d.getDay() + 6) % 7]}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 18,
+                              fontWeight: 700,
+                              color: today ? "var(--background)" : closed ? "var(--muted-foreground)" : "var(--foreground)",
+                              background: today ? "var(--primary)" : "transparent",
+                              width: 32,
+                              height: 32,
+                              borderRadius: "50%",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              margin: "0 auto 3px",
+                            }}
+                          >
+                            {d.getDate()}
+                          </div>
+                          {/* Shift count badge */}
+                          <div style={{ fontSize: 9, fontWeight: 600, color: today ? "var(--primary)" : "var(--muted-foreground)", marginBottom: 3 }}>
+                            {closed ? "Closed" : dayShiftCount > 0 ? `${dayShiftCount} shift${dayShiftCount !== 1 ? "s" : ""}` : "No shifts"}
+                          </div>
                         </div>
-                        <div
-                          style={{
-                            fontSize: 18,
-                            fontWeight: 700,
-                            color: today ? "var(--background)" : closed ? "var(--muted-foreground)" : "var(--foreground)",
-                            background: today ? "var(--primary)" : "transparent",
-                            width: 32,
-                            height: 32,
-                            borderRadius: "50%",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            margin: "0 auto 3px",
-                          }}
-                        >
-                          {d.getDate()}
-                        </div>
-                        {/* Shift count badge */}
-                        <div style={{ fontSize: 9, fontWeight: 600, color: today ? "var(--primary)" : "var(--muted-foreground)", marginBottom: 3 }}>
-                          {closed ? "Closed" : dayShiftCount > 0 ? `${dayShiftCount} shift${dayShiftCount !== 1 ? "s" : ""}` : "No shifts"}
-                        </div>
+                        {/* Time labels — scroll normally (not sticky) */}
                         {!closed && (
                           <div
                             style={{
@@ -2475,30 +2489,39 @@ function GridViewInner({
                       padding: "4px 0 2px",
                     }}
                   >
-                    {dates.map((d, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          width: DAY_WIDTH,
-                          flexShrink: 0,
-                          textAlign: "center",
-                          borderLeft: i === 0 ? "1px solid var(--border)" : "2px solid var(--border)",
-                          borderRight: "1px solid var(--border)",
-                          padding: "0 4px",
-                          background: "var(--background)",
-                        }}
-                      >
-                        <span
+                    {dates.map((d, i) => {
+                      const colLeft = i * DAY_WIDTH
+                      return (
+                        <div
+                          key={i}
                           style={{
-                            fontSize: 9,
-                            fontWeight: 700,
-                            color: isToday(d) ? "var(--primary)" : "var(--muted-foreground)",
+                            width: DAY_WIDTH,
+                            flexShrink: 0,
+                            borderLeft: i === 0 ? "1px solid var(--border)" : "2px solid var(--border)",
+                            borderRight: "1px solid var(--border)",
+                            padding: "4px 0",
+                            background: "var(--background)",
+                            overflow: "hidden",
+                            position: "relative",
                           }}
                         >
-                          {MONTHS_SHORT[d.getMonth()]} {DOW_MON_FIRST[(d.getDay() + 6) % 7]} {d.getDate()}
-                        </span>
-                      </div>
-                    ))}
+                          {/* Sticky date label — translateX keeps it visible while scrolling through hour slots */}
+                          <span
+                            style={{
+                              display: "inline-block",
+                              transform: `translateX(clamp(0px, calc(var(--sx, 0px) - ${colLeft}px), ${Math.max(0, DAY_WIDTH - 120)}px))`,
+                              willChange: "transform",
+                              fontSize: 9,
+                              fontWeight: 700,
+                              paddingLeft: 6,
+                              color: isToday(d) ? "var(--primary)" : "var(--muted-foreground)",
+                            }}
+                          >
+                            {MONTHS_SHORT[d.getMonth()]} {DOW_MON_FIRST[(d.getDay() + 6) % 7]} {d.getDate()}
+                          </span>
+                        </div>
+                      )
+                    })}
                   </div>
                   <div
                     style={{
