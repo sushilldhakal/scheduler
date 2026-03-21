@@ -224,8 +224,13 @@ function GridViewInner({
   const scrollRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
-  /** Sidebar body scroll container — scrollTop synced to grid for sticky category headers */
+  /** Sidebar rows container — translated vertically to sync with grid scrollTop */
   const sidebarScrollRef = useRef<HTMLDivElement>(null)
+  /** Current grid scrollTop — read synchronously during render for sticky sidebar headers */
+  const gridScrollTopRef = useRef(0)
+  /** Re-render trigger for sidebar sticky headers — updated on scroll via rAF */
+  const [sidebarScrollTop, setSidebarScrollTop] = useState(0)
+  const sidebarRafRef = useRef<number | null>(null)
   /** Inner wide div inside headerRef — translateX'd instead of scrollLeft to avoid layout recalc lag */
   const headerInnerRef = useRef<HTMLDivElement>(null)
   const initRef = useRef<boolean>(false)
@@ -1569,15 +1574,14 @@ function GridViewInner({
         scrollRef.current.scrollTop += state.dirY * state.speedY * EDGE_SCROLL_MAX
         if (sidebarScrollRef.current) {
           const edgeSt = scrollRef.current.scrollTop
+          gridScrollTopRef.current = edgeSt
           sidebarScrollRef.current.style.transform = `translateY(-${edgeSt}px)`
-          const catHeaders = sidebarScrollRef.current.querySelectorAll<HTMLDivElement>("[data-sidebar-cat]")
-          catHeaders.forEach((header) => {
-            const catStart = parseFloat(header.dataset.catStart ?? "0")
-            const catSize  = parseFloat(header.dataset.catSize ?? "0")
-            const headerH  = parseFloat(header.dataset.headerH ?? "50")
-            const clampedOffset = Math.min(Math.max(edgeSt - catStart, 0), Math.max(catSize - headerH, 0))
-            header.style.top = `${catStart + clampedOffset}px`
-          })
+          if (sidebarRafRef.current === null) {
+            sidebarRafRef.current = requestAnimationFrame(() => {
+              sidebarRafRef.current = null
+              setSidebarScrollTop(gridScrollTopRef.current)
+            })
+          }
         }
       }
       edgeRafRef.current = requestAnimationFrame(tick)
@@ -2142,17 +2146,15 @@ function GridViewInner({
       const sl = el.scrollLeft
       const st = el.scrollTop
       if (sidebarScrollRef.current) {
-        // Translate the rows container to sync with grid scroll
+        gridScrollTopRef.current = st
         sidebarScrollRef.current.style.transform = `translateY(-${st}px)`
-        // Sticky category headers: override top within the translated container
-        const catHeaders = sidebarScrollRef.current.querySelectorAll<HTMLDivElement>("[data-sidebar-cat]")
-        catHeaders.forEach((header) => {
-          const catStart = parseFloat(header.dataset.catStart ?? "0")
-          const catSize  = parseFloat(header.dataset.catSize ?? "0")
-          const headerH  = parseFloat(header.dataset.headerH ?? "50")
-          const clampedOffset = Math.min(Math.max(st - catStart, 0), Math.max(catSize - headerH, 0))
-          header.style.top = `${catStart + clampedOffset}px`
-        })
+        // Throttled setState so sidebar category headers re-render with updated sticky top
+        if (sidebarRafRef.current === null) {
+          sidebarRafRef.current = requestAnimationFrame(() => {
+            sidebarRafRef.current = null
+            setSidebarScrollTop(gridScrollTopRef.current)
+          })
+        }
       }
     }
     el.addEventListener("scroll", handler, { passive: true })
@@ -2404,13 +2406,12 @@ function GridViewInner({
                     return (
                       <div
                         key={rowKey}
-                        data-sidebar-cat={cat.id}
-                        data-cat-start={vr.start}
-                        data-cat-size={vr.size}
-                        data-header-h={ROLE_HDR}
                         style={{
                           position: "absolute",
-                          top: vr.start,
+                          top: (() => {
+                            const clampedOffset = Math.min(Math.max(sidebarScrollTop - vr.start, 0), Math.max(vr.size - ROLE_HDR, 0))
+                            return vr.start + clampedOffset
+                          })(),
                           left: 0,
                           right: 0,
                           height: vr.size,
