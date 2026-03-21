@@ -42,7 +42,6 @@ import { StaffPanel } from "./StaffPanel"
 import { RoleWarningModal } from "./modals/RoleWarningModal"
 import { AddShiftModal } from "./modals/AddShiftModal"
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuLabel, ContextMenuTrigger } from "./ui/context-menu"
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "./ui/resizable"
 import { Plus, Copy, ClipboardPaste, Trash2, AlertTriangle, Pencil, Scissors, ChevronsLeft, ChevronsRight, MapPin, ZoomIn, ZoomOut, Link2 } from "lucide-react"
 import { cn } from "../lib/utils"
 
@@ -223,7 +222,6 @@ function GridViewInner({
   const HOUR_W = 96 * zoom
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  const sidebarRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
   /** Inner wide div inside headerRef — translateX'd instead of scrollLeft to avoid layout recalc lag */
@@ -237,15 +235,11 @@ function GridViewInner({
   const [hoveredCategoryId, setHoveredCategoryId] = useState<string | null>(null)
   /** Resizable sidebar width */
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const sidebarPanelRef = useRef<import("./ui/resizable").PanelImperativeHandle | null>(null)
   // sidebarWidth mirrors the panel pixel size for the header stub alignment
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_W)
   const toggleSidebar = useCallback(() => {
-    const panel = sidebarPanelRef.current
-    if (!panel) return
-    if (sidebarCollapsed) { panel.expand(); setSidebarCollapsed(false) }
-    else { panel.collapse(); setSidebarCollapsed(true) }
-  }, [sidebarCollapsed])
+    setSidebarCollapsed((c) => !c)
+  }, [])
   /** Sort: "name" | "hours" | "scheduled" | null */
   const [sortBy, setSortBy] = useState<"name" | "hours" | "scheduled" | null>(null)
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc")
@@ -419,9 +413,6 @@ function GridViewInner({
         } else {
           scrollRef.current.scrollLeft = 0
         }
-        if (sidebarRef.current) {
-          sidebarRef.current.scrollTop = scrollRef.current.scrollTop
-        }
         initRef.current = true
         lastReportedDayIdxRef.current = centerDayIdx
       }
@@ -451,7 +442,7 @@ function GridViewInner({
               scrollRef.current.scrollLeft -= diffDays * COL_W_WEEK
             }
             
-            if (sidebarRef.current) sidebarRef.current.scrollTop = scrollRef.current.scrollTop
+          
           }
           scrollTriggeredUpdateRef.current = false
         } else {
@@ -465,7 +456,7 @@ function GridViewInner({
             scrollRef.current.scrollLeft = Math.max(0, centerDayIdx * DAY_WIDTH + DAY_WIDTH / 2 - vw / 2)
           }
           
-          if (sidebarRef.current) sidebarRef.current.scrollTop = scrollRef.current.scrollTop
+        
         }
       }
     }
@@ -592,7 +583,6 @@ function GridViewInner({
       }
 
       
-      if (sidebarRef.current) sidebarRef.current.scrollTop = el.scrollTop
       reportVisibleRange(el)
     },
     [isWeekView, setDate, onVisibleCenterChange, COL_W_WEEK, isDayViewNav, scrollNavDelta, reportVisibleRange, dates]
@@ -602,7 +592,6 @@ function GridViewInner({
     (e: React.UIEvent<HTMLDivElement>): void => {
       if (isWeekView) return
       const el = e.currentTarget
-      if (sidebarRef.current) sidebarRef.current.scrollTop = el.scrollTop
       
       if (isDayViewMultiDay && setDate) {
         const sl = el.scrollLeft
@@ -2137,7 +2126,6 @@ function GridViewInner({
       // Immediately sync header — no React batching delay
       const sl = (e.currentTarget as HTMLDivElement).scrollLeft
       
-      if (sidebarRef.current) sidebarRef.current.scrollTop = (e.currentTarget as HTMLDivElement).scrollTop
     }
     el.addEventListener("scroll", handler, { passive: true })
     return () => el.removeEventListener("scroll", handler)
@@ -2252,26 +2240,26 @@ function GridViewInner({
         </div>
       )}
 
-      <ResizablePanelGroup orientation="horizontal" className="flex-1 overflow-hidden relative">
-        <ResizablePanel
-          panelRef={sidebarPanelRef}
-          defaultSize="20%"
-          minSize="8%"
-          maxSize="35%"
-          collapsible
-          collapsedSize="0%"
-          onResize={(size) => { if (size.inPixels !== undefined) setSidebarWidth(size.inPixels) }}
-          className="overflow-hidden"
+      <div className="flex-1 overflow-hidden relative" style={{ display: "flex" }}>
+        <div
+          style={{
+            width: sidebarCollapsed ? 0 : sidebarWidth,
+            minWidth: sidebarCollapsed ? 0 : sidebarWidth,
+            flexShrink: 0,
+            overflow: "hidden",
+            transition: "width 150ms ease, min-width 150ms ease",
+            position: "relative",
+          }}
         >
         <div
-          ref={sidebarRef}
           style={{
             width: "100%",
             height: "100%",
             borderRight: "1px solid var(--border)",
-            overflowY: "hidden",
             background: "var(--muted)",
             position: "relative",
+            overflowY: "hidden",
+            pointerEvents: "none",
           }}
         >
           {/* Sticky sidebar header — aligns with the date+time header in the grid */}
@@ -2534,10 +2522,31 @@ function GridViewInner({
             )
           })()}
         </div>
-        </ResizablePanel>
-
-        {/* ResizableHandle — shadcn standard, no children so nothing gets clipped */}
-        <ResizableHandle withHandle className="w-2" />
+        {/* Custom resize handle */}
+        <div
+          style={{
+            width: 4, flexShrink: 0, cursor: "col-resize",
+            background: "transparent",
+            position: "relative", zIndex: 30,
+          }}
+          onPointerDown={(e) => {
+            e.preventDefault()
+            const startX = e.clientX
+            const startW = sidebarWidth
+            const onMove = (mv: PointerEvent) => {
+              const newW = Math.max(120, Math.min(400, startW + mv.clientX - startX))
+              setSidebarWidth(newW)
+            }
+            const onUp = () => {
+              document.removeEventListener("pointermove", onMove)
+              document.removeEventListener("pointerup", onUp)
+            }
+            document.addEventListener("pointermove", onMove)
+            document.addEventListener("pointerup", onUp)
+          }}
+        >
+          <div style={{ position: "absolute", top: 0, bottom: 0, left: 1, width: 2, background: "var(--border)" }} />
+        </div>
 
         {/* Collapse toggle — centred vertically on the handle edge, outside the handle div
             (library clips overflow on Separator). Shows < > pair so intent is obvious. */}
@@ -2579,11 +2588,10 @@ function GridViewInner({
           </button>
         </div>
 
-        <ResizablePanel defaultSize="80%" className="overflow-hidden flex flex-col">
         <div
           ref={scrollRef}
           onScroll={isWeekView ? onWeekScroll : onDayScroll}
-          style={{ flex: 1, overflowX: "auto", overflowY: "auto", scrollbarGutter: "stable" } as React.CSSProperties}
+          style={{ flex: 1, overflowX: "auto", overflowY: "auto", scrollbarGutter: "stable", minWidth: 0 } as React.CSSProperties}
         >
           <div
             style={{
@@ -4350,8 +4358,8 @@ function GridViewInner({
             )}
           </div>
         </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        </div>
+      </div>
 
       {/* Hover popover — rendered via portal so it escapes all scroll/overflow/contain clipping */}
       {tooltipBlockId && (() => {
