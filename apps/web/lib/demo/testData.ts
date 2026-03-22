@@ -165,6 +165,14 @@ export const demoAvailability: EmployeeAvailability[] = [
   { employeeId:"e15", windows:[{ day:5,from:9,to:18 },{ day:6,from:9,to:18 },{ day:0,from:9,to:18 }] },
 ]
 
+export const demoDependencies: ShiftDependency[] = [
+  { id:"dep1", type:"precedence", sourceId:"e01", targetId:"e02", status:"published" as const },
+  { id:"dep2", type:"precedence", sourceId:"e02", targetId:"e03", status:"published" as const },
+  { id:"dep3", type:"precedence", sourceId:"e03", targetId:"e04", status:"published" as const },
+  { id:"dep4", type:"precedence", sourceId:"e04", targetId:"e05", status:"published" as const },
+  { id:"dep5", type:"precedence", sourceId:"e05", targetId:"e06", status:"published" as const },
+]    
+
 // ── Small dataset (used elsewhere) ───────────────────────────────────────────
 export const smallCategories: Resource[] = [
   { id:"sc1", name:"Service", colorIdx:0, kind:"category" },

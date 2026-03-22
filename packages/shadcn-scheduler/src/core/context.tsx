@@ -39,6 +39,8 @@ export interface SchedulerContextValue {
   isRTL?: boolean
   /** When true, resize handles allow endH > 24 for overnight shifts. */
   allowOvernight?: boolean
+  /** When true, the timeline sidebar renders flat list rows instead of category-group headers. */
+  timelineSidebarFlat?: boolean
   /** Format time for display. When timezone is set uses Intl in that zone; else fmt12(h). */
   getTimeLabel: (isoDate: string, hour: number) => string
   /** Format date for display. Uses locale when set. */
@@ -160,10 +162,11 @@ export function SchedulerProvider({
       locale: config?.locale,
       isRTL: config?.isRTL,
       allowOvernight: config?.allowOvernight,
+      timelineSidebarFlat: config?.timelineSidebarFlat,
       getTimeLabel,
       getDateLabel,
     }),
-    [categories, employees, labels, getColor, settings, nextUidFn, slots, config?.snapMinutes, config?.timezone, config?.locale, config?.isRTL, config?.allowOvernight, getTimeLabel, getDateLabel]
+    [categories, employees, labels, getColor, settings, nextUidFn, slots, config?.snapMinutes, config?.timezone, config?.locale, config?.isRTL, config?.allowOvernight, config?.timelineSidebarFlat, getTimeLabel, getDateLabel]
   )
 
   return (

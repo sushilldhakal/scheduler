@@ -50,6 +50,7 @@ export function GridViewSidebar({
   ALL_EMPLOYEES,
   baseShifts,
   isWeekView,
+  isDayViewMultiDay,
   focusedDate,
   dates,
   selEmps,
@@ -61,7 +62,9 @@ export function GridViewSidebar({
   slots,
   categoryHeights,
 }: GridViewSidebarProps): React.ReactElement {
-  const { labels, getColor } = useSchedulerContext();
+  const { labels, getColor, timelineSidebarFlat } = useSchedulerContext();
+  // Flat sidebar: active when config requests it AND we are in timeline (multiday) mode
+  const flatSidebar = !!(timelineSidebarFlat && isDayViewMultiDay)
 
   // Shifts for the visible date window
   const visibleShifts = React.useMemo(() => {
@@ -146,67 +149,69 @@ export function GridViewSidebar({
         >
           {labels.category ?? "Resources"}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
-          {(["name", "hours", "scheduled"] as const).map((col) => {
-            const colLabel =
-              col === "name"
-                ? (labels.category ?? "Category")
-                : col === "hours"
-                  ? "Hours"
-                  : "Shifts";
-            const isActive = sortBy === col;
-            return (
-              <button
-                key={col}
-                type="button"
-                onClick={() => toggleSort(col)}
-                style={{
-                  fontSize: 9,
-                  fontWeight: isActive ? 700 : 500,
-                  color: isActive
-                    ? "var(--foreground)"
-                    : "var(--muted-foreground)",
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                  background: isActive ? "var(--background)" : "transparent",
-                  border: isActive
-                    ? "1px solid var(--border)"
-                    : "1px solid transparent",
-                  cursor: "pointer",
-                  padding: "2px 6px",
-                  borderRadius: 4,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2,
-                  flexShrink: col === "name" ? 1 : 0,
-                  minWidth: 0,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-                onPointerEnter={(e) => {
-                  if (!isActive)
-                    e.currentTarget.style.background = "var(--accent)";
-                }}
-                onPointerLeave={(e) => {
-                  if (!isActive)
-                    e.currentTarget.style.background = "transparent";
-                }}
-              >
-                {colLabel}
-                <span
+        {!flatSidebar && (
+          <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+            {(["name", "hours", "scheduled"] as const).map((col) => {
+              const colLabel =
+                col === "name"
+                  ? (labels.category ?? "Category")
+                  : col === "hours"
+                    ? "Hours"
+                    : "Shifts";
+              const isActive = sortBy === col;
+              return (
+                <button
+                  key={col}
+                  type="button"
+                  onClick={() => toggleSort(col)}
                   style={{
-                    fontSize: 8,
-                    opacity: isActive ? 1 : 0.5,
-                    marginLeft: 1,
+                    fontSize: 9,
+                    fontWeight: isActive ? 700 : 500,
+                    color: isActive
+                      ? "var(--foreground)"
+                      : "var(--muted-foreground)",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    background: isActive ? "var(--background)" : "transparent",
+                    border: isActive
+                      ? "1px solid var(--border)"
+                      : "1px solid transparent",
+                    cursor: "pointer",
+                    padding: "2px 6px",
+                    borderRadius: 4,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
+                    flexShrink: col === "name" ? 1 : 0,
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                  onPointerEnter={(e) => {
+                    if (!isActive)
+                      e.currentTarget.style.background = "var(--accent)";
+                  }}
+                  onPointerLeave={(e) => {
+                    if (!isActive)
+                      e.currentTarget.style.background = "transparent";
                   }}
                 >
-                  {isActive ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                  {colLabel}
+                  <span
+                    style={{
+                      fontSize: 8,
+                      opacity: isActive ? 1 : 0.5,
+                      marginLeft: 1,
+                    }}
+                  >
+                    {isActive ? (sortDir === "asc" ? "↑" : "↓") : "↕"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/*
@@ -227,6 +232,117 @@ export function GridViewSidebar({
 
           // ── Category header ──
           if (row.kind === "category") {
+            // In timeline mode: render a simple flat list row — just the name and
+            // a color accent. No group chrome (progress bar, staff button, collapse).
+            if (flatSidebar) {
+              const catShiftsFlat = visibleShifts.filter(
+                (s) => s.categoryId === cat.id,
+              )
+              const catHoursFlat = catShiftsFlat.reduce(
+                (sum, s) => sum + (s.endH - s.startH),
+                0,
+              )
+              const initials = cat.name
+                .split(" ")
+                .map((n) => n[0])
+                .filter(Boolean)
+                .slice(0, 2)
+                .join("")
+                .toUpperCase()
+              return (
+                <div
+                  key={row.key}
+                  style={{
+                    position: "absolute",
+                    top: vr.start,
+                    left: 0,
+                    right: 0,
+                    height: vr.size,
+                    borderBottom: "1px solid color-mix(in srgb, var(--border) 60%, transparent)",
+                    background:
+                      hoveredCategoryId === cat.id
+                        ? `${c.bg}0d`
+                        : "var(--background)",
+                    display: "flex",
+                    alignItems: "center",
+                    paddingLeft: 14,
+                    paddingRight: 8,
+                    gap: 8,
+                    overflow: "hidden",
+                    transition: "background 80ms ease",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: "50%",
+                      background: `${c.bg}20`,
+                      border: `1.5px solid ${c.bg}40`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: c.bg,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {cat.avatar && !cat.avatar.match(/^[A-Z]{1,2}$/) ? (
+                      <img
+                        src={cat.avatar}
+                        alt={cat.name}
+                        style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+                        onError={(e) => { e.currentTarget.style.display = "none" }}
+                      />
+                    ) : (
+                      initials
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "var(--foreground)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {cat.name}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 10,
+                        color: "var(--muted-foreground)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {catShiftsFlat.length} {labels.shift ?? "shift"}{catShiftsFlat.length !== 1 ? "s" : ""}
+                    </div>
+                  </div>
+                  {catHoursFlat > 0 && (
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        flexShrink: 0,
+                        color: c.text,
+                        background: c.light,
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                      }}
+                    >
+                      {catHoursFlat.toFixed(0)}h
+                    </div>
+                  )}
+                </div>
+              )
+            }
+
             const catShifts = visibleShifts.filter(
               (s) => s.categoryId === cat.id,
             );
@@ -304,7 +420,7 @@ export function GridViewSidebar({
                         isCollapsed: collapsed.has(cat.id),
                         onToggleCollapse: () => toggleCollapse(cat.id),
                       })
-                    ) : isDayViewMultiDay ? (
+                    ) : flatSidebar ? (
                       // Timeline / event mode — just the name, no staff stats or Staff button
                       <>
                         <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6 }}>

@@ -74,6 +74,7 @@ const PRESETS: Record<SchedulerPresetName, Partial<SchedulerConfig>> = {
     showLiveIndicator: true,
     views: { year: false, list: false },
     snapMinutes: 15,
+    timelineSidebarFlat: true,
   },
   conference: {
     labels: {
@@ -87,6 +88,7 @@ const PRESETS: Record<SchedulerPresetName, Partial<SchedulerConfig>> = {
     },
     defaultSettings: { ...DEFAULT_SETTINGS, visibleFrom: 7, visibleTo: 22 },
     views: { gantt: false, now: false },
+    timelineSidebarFlat: true,
   },
   festival: {
     labels: {
@@ -100,6 +102,7 @@ const PRESETS: Record<SchedulerPresetName, Partial<SchedulerConfig>> = {
     },
     defaultSettings: { ...DEFAULT_SETTINGS, visibleFrom: 10, visibleTo: 24 },
     views: { gantt: false, now: false },
+    timelineSidebarFlat: true,
   },
   healthcare: {
     labels: {
@@ -140,6 +143,7 @@ const PRESETS: Record<SchedulerPresetName, Partial<SchedulerConfig>> = {
     },
     defaultSettings: { ...DEFAULT_SETTINGS },
     views: { gantt: false, now: false },
+    timelineSidebarFlat: true,
   },
 }
 
@@ -167,6 +171,7 @@ export function createSchedulerConfig(
     showLiveIndicator: overrides.showLiveIndicator ?? presetConfig.showLiveIndicator,
     snapMinutes: overrides.snapMinutes ?? presetConfig.snapMinutes,
     allowOvernight: overrides.allowOvernight ?? presetConfig.allowOvernight,
+    timelineSidebarFlat: overrides.timelineSidebarFlat ?? presetConfig.timelineSidebarFlat,
   }
 }
 
@@ -188,9 +193,10 @@ export function extendConfig(
     defaultSettings:     mergeSettings(base.defaultSettings, overrides.defaultSettings),
     initialScrollToNow:  overrides.initialScrollToNow ?? base.initialScrollToNow ?? false,
     views:               mergeViews(base.views, overrides.views),
-    showLiveIndicator:   overrides.showLiveIndicator ?? base.showLiveIndicator,
-    snapMinutes:         overrides.snapMinutes       ?? base.snapMinutes,
-    allowOvernight:      overrides.allowOvernight    ?? base.allowOvernight,
+    showLiveIndicator:    overrides.showLiveIndicator    ?? base.showLiveIndicator,
+    snapMinutes:          overrides.snapMinutes           ?? base.snapMinutes,
+    allowOvernight:       overrides.allowOvernight        ?? base.allowOvernight,
+    timelineSidebarFlat:  overrides.timelineSidebarFlat  ?? base.timelineSidebarFlat,
   }
 }
 

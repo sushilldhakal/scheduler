@@ -210,6 +210,18 @@ export interface SchedulerConfig {
    * Use for healthcare rotas, overnight shifts, 24h TV schedules.
    */
   allowOvernight?: boolean
+  /**
+   * When true, the timeline sidebar renders one flat row per resource
+   * (name + colour accent only) with no category-group chrome
+   * (no progress bar, no staff button, no collapse chevron).
+   *
+   * Set to true for EPG/TV, conference, venue, and any domain where
+   * each resource is its own top-level entity rather than a member of
+   * a staffing group. Leave false (default) for workforce scheduling
+   * (rostering, healthcare, etc.) where the sidebar groups employees
+   * under their department/ward header.
+   */
+  timelineSidebarFlat?: boolean
 }
 
 export interface SchedulerSettingsContext {
