@@ -3388,70 +3388,87 @@ function GridViewInner({
                   })()}
 
                   {/* Edit dialog */}
-                  {editingDep && onDependenciesChange && (() => {
-                    const from = blockPos[editingDep.fromId]
-                    const to   = blockPos[editingDep.toId]
-                    const TYPE_OPTIONS: { value: ShiftDependency["type"]; label: string }[] = [
+                  {editingDep && onDependenciesChange && createPortal((() => {
+                    const TYPE_OPTIONS: { value: NonNullable<ShiftDependency["type"]>; label: string }[] = [
                       { value: "finish-to-start",  label: "Finish → Start"  },
                       { value: "start-to-start",   label: "Start → Start"   },
                       { value: "finish-to-finish", label: "Finish → Finish" },
                       { value: "start-to-finish",  label: "Start → Finish"  },
                     ]
+                    const selectStyle: React.CSSProperties = {
+                      width: "100%", padding: "7px 10px", borderRadius: 8,
+                      border: "1px solid var(--border)", background: "var(--background)",
+                      color: "var(--foreground)", fontSize: 12, cursor: "pointer",
+                      outline: "none", appearance: "auto",
+                    }
                     return (
                       <div
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={() => setEditingDep(null)}
                         style={{
                           position: "fixed", inset: 0, zIndex: 9999,
                           display: "flex", alignItems: "center", justifyContent: "center",
                           background: "rgba(0,0,0,0.4)", backdropFilter: "blur(3px)",
                         }}
-                        onPointerDown={() => setEditingDep(null)}
                       >
                         <div
-                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
                           style={{
                             background: "var(--background)", borderRadius: 12,
-                            padding: "20px 24px", minWidth: 320,
+                            padding: "22px 24px", width: 360,
                             boxShadow: "0 24px 64px rgba(0,0,0,0.22)",
                             border: "1px solid var(--border)",
-                            display: "flex", flexDirection: "column", gap: 14,
+                            display: "flex", flexDirection: "column", gap: 16,
                           }}
                         >
                           <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>Edit Dependency</div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                              <span style={{ fontSize: 11, color: "var(--muted-foreground)", width: 36 }}>From</span>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", background: "var(--muted)", borderRadius: 6, padding: "4px 10px" }}>
-                                {from?.label ?? editingDep.fromId}
-                              </span>
-                            </div>
-                            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                              <span style={{ fontSize: 11, color: "var(--muted-foreground)", width: 36 }}>To</span>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", background: "var(--muted)", borderRadius: 6, padding: "4px 10px" }}>
-                                {to?.label ?? editingDep.toId}
-                              </span>
-                            </div>
-                          </div>
-                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5 }}>Type</span>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                              {TYPE_OPTIONS.map(opt => (
-                                <button
-                                  key={opt.value}
-                                  onClick={() => setEditingDep(prev => prev ? { ...prev, type: opt.value } : null)}
-                                  style={{
-                                    padding: "8px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600,
-                                    cursor: "pointer", textAlign: "center",
-                                    background: editingDep.type === opt.value ? "var(--primary)" : "var(--muted)",
-                                    color: editingDep.type === opt.value ? "var(--primary-foreground)" : "var(--foreground)",
-                                    border: editingDep.type === opt.value ? "2px solid var(--primary)" : "2px solid transparent",
-                                    transition: "all 120ms",
-                                  }}
-                                >{opt.label}</button>
+
+                          {/* From shift */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5 }}>From</label>
+                            <select
+                              value={editingDep.fromId}
+                              onChange={(e) => setEditingDep(prev => prev ? { ...prev, fromId: e.target.value } : null)}
+                              style={selectStyle}
+                            >
+                              {shifts.map(s => (
+                                <option key={s.id} value={s.id} disabled={s.id === editingDep.toId}>
+                                  {s.employee} — {s.date} {s.startH}:00–{s.endH}:00
+                                </option>
                               ))}
-                            </div>
+                            </select>
                           </div>
-                          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+
+                          {/* To shift */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5 }}>To</label>
+                            <select
+                              value={editingDep.toId}
+                              onChange={(e) => setEditingDep(prev => prev ? { ...prev, toId: e.target.value } : null)}
+                              style={selectStyle}
+                            >
+                              {shifts.map(s => (
+                                <option key={s.id} value={s.id} disabled={s.id === editingDep.fromId}>
+                                  {s.employee} — {s.date} {s.startH}:00–{s.endH}:00
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Type */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                            <label style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5 }}>Type</label>
+                            <select
+                              value={editingDep.type ?? "finish-to-start"}
+                              onChange={(e) => setEditingDep(prev => prev ? { ...prev, type: e.target.value as NonNullable<ShiftDependency["type"]> } : null)}
+                              style={selectStyle}
+                            >
+                              {TYPE_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
                             <button
                               onClick={() => setEditingDep(null)}
                               style={{ padding: "7px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--background)", cursor: "pointer", fontSize: 12, color: "var(--foreground)" }}
@@ -3461,6 +3478,7 @@ function GridViewInner({
                                 if (!editingDep) return
                                 onDependenciesChange(dependencies.map(d => d.id === editingDep.id ? editingDep : d))
                                 setEditingDep(null)
+                                setSelectedDepId(null)
                               }}
                               style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "var(--primary)", cursor: "pointer", fontSize: 12, color: "var(--primary-foreground)", fontWeight: 600 }}
                             >Save</button>
@@ -3468,7 +3486,7 @@ function GridViewInner({
                         </div>
                       </div>
                     )
-                  })()}
+                  })(), document.body)}
                 </>
               )
             })()}
