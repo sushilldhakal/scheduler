@@ -1260,33 +1260,47 @@ function GridViewInner({
     document.addEventListener("pointerup",   onUp)
   }, [])
 
-  /** Render the 4 connection dots — shown on block hover to create dependencies */
+  /** Render dependency connection handles — clearly outside the block like Bryntum */
   const renderDepDots = useCallback((shift: Block, isVisible: boolean) => {
     if (!isVisible || !onDependenciesChange) return null
-    const DOT = 9, HALF = DOT / 2
-    const dots: { side: "top"|"right"|"bottom"|"left"; style: React.CSSProperties }[] = [
-      { side: "top",    style: { top: -HALF, left: "50%", transform: "translateX(-50%)" } },
-      { side: "right",  style: { right: -HALF, top: "50%", transform: "translateY(-50%)" } },
-      { side: "bottom", style: { bottom: -HALF, left: "50%", transform: "translateX(-50%)" } },
-      { side: "left",   style: { left: -HALF, top: "50%", transform: "translateY(-50%)" } },
+    // Only left and right handles — finish-to-start is the primary dependency type
+    const handles: { side: "right"|"left"; label: string; style: React.CSSProperties }[] = [
+      {
+        side: "left",
+        label: "S",
+        style: { left: -22, top: "50%", transform: "translateY(-50%)" },
+      },
+      {
+        side: "right",
+        label: "F",
+        style: { right: -22, top: "50%", transform: "translateY(-50%)" },
+      },
     ]
-    return dots.map(({ side, style }) => (
+    return handles.map(({ side, label, style }) => (
       <div
         key={side}
         data-dep-dot={side}
         onPointerDown={(e) => startDepDraw(e, shift, side)}
+        title={side === "right" ? "Drag to create dependency from end" : "Drag to create dependency from start"}
         style={{
           position: "absolute",
-          width: DOT, height: DOT,
+          width: 16, height: 16,
           borderRadius: "50%",
-          background: "var(--primary)",
-          border: "2px solid var(--background)",
-          boxShadow: "0 0 0 1.5px var(--primary)",
+          background: "var(--background)",
+          border: "2px solid var(--primary)",
+          color: "var(--primary)",
+          fontSize: 8,
+          fontWeight: 800,
+          display: "flex", alignItems: "center", justifyContent: "center",
           cursor: "crosshair",
           zIndex: 30,
+          boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+          userSelect: "none",
           ...style,
         }}
-      />
+      >
+        {label}
+      </div>
     ))
   }, [onDependenciesChange, startDepDraw])
 
@@ -3264,21 +3278,12 @@ function GridViewInner({
                               {dep.label}
                             </text>
                           )}
-                          {/* Delete × button at midpoint on hover */}
-                          {isHovered && onDependenciesChange && (
-                            <g
-                              style={{ cursor: "pointer" }}
-                              onClick={() => { onDependenciesChange(dependencies.filter(dd => dd.id !== dep.id)); setHoveredDepId(null) }}
-                            >
-                              <circle cx={p.mx} cy={p.my} r={9} fill="var(--destructive)" />
-                              <text x={p.mx} y={p.my + 4} fontSize={12} fontWeight={700} fill="white" textAnchor="middle" pointerEvents="none">×</text>
-                            </g>
-                          )}
+
                         </g>
                       )
                     })}
                   </svg>
-                  {/* Invisible hit-area paths — wide stroke for easy hover/click */}
+                  {/* Hit-area paths — wide invisible stroke for hover detection */}
                   {dependencies.length > 0 && (
                     <svg
                       style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, overflow: "visible", zIndex: 18, pointerEvents: "none" }}
@@ -3294,14 +3299,58 @@ function GridViewInner({
                             stroke="transparent"
                             strokeWidth={20}
                             pointerEvents="visibleStroke"
-                            style={{ cursor: hoveredDepId === dep.id ? "pointer" : "default" }}
+                            style={{ cursor: "pointer" }}
                             onMouseEnter={() => setHoveredDepId(dep.id)}
-                            onMouseLeave={() => setHoveredDepId(null)}
+                            onMouseLeave={(e) => {
+                              // Don't clear if moving to the delete button
+                              const rel = e.relatedTarget as Element | null
+                              if (rel?.closest?.(`[data-dep-delete="${dep.id}"]`)) return
+                              setHoveredDepId(null)
+                            }}
                           />
                         )
                       })}
                     </svg>
                   )}
+                  {/* Delete button — separate layer so pointer events work independently */}
+                  {hoveredDepId && onDependenciesChange && (() => {
+                    const dep = dependencies.find(d => d.id === hoveredDepId)
+                    if (!dep) return null
+                    const p = depPath(dep)
+                    if (!p) return null
+                    return (
+                      <div
+                        data-dep-delete={dep.id}
+                        onMouseEnter={() => setHoveredDepId(dep.id)}
+                        onMouseLeave={() => setHoveredDepId(null)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onDependenciesChange(dependencies.filter(dd => dd.id !== dep.id))
+                          setHoveredDepId(null)
+                        }}
+                        style={{
+                          position: "absolute",
+                          left: p.mx - 10,
+                          top: p.my - 10,
+                          width: 20, height: 20,
+                          borderRadius: "50%",
+                          background: "var(--destructive)",
+                          color: "white",
+                          fontSize: 14,
+                          fontWeight: 700,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          cursor: "pointer",
+                          zIndex: 19,
+                          boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                          userSelect: "none",
+                          lineHeight: 1,
+                        }}
+                        title="Delete dependency"
+                      >
+                        ×
+                      </div>
+                    )
+                  })()}
                 </>
               )
             })()}
