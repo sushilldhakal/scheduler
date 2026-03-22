@@ -281,6 +281,7 @@ function GridViewInner({
   const depSvgRef = useRef<SVGSVGElement | null>(null)
   /** Block currently hovered for dep-draw targeting highlight */
   const [depHoveredBlockId, setDepHoveredBlockId] = useState<string | null>(null)
+  const [hoveredDepId, setHoveredDepId] = useState<string | null>(null)
   /** P12-01: IDs of blocks just added (one-frame scale-in animation). */
   const [newlyAddedIds, setNewlyAddedIds] = useState<Set<string>>(new Set())
   /** P12-02: IDs of blocks being deleted (fade-out then remove). */
@@ -1178,7 +1179,7 @@ function GridViewInner({
       side === "top"    ? br.top    - scrollRect.top :
       side === "bottom" ? br.bottom - scrollRect.top :
       br.top + br.height / 2 - scrollRect.top
-    )
+    ) - HOUR_HDR_H
     depDragRef.current = { fromId: shift.id, fromSide: side, startX: dotX, startY: dotY, curX: dotX, curY: dotY }
 
     // Create live preview path in the dep SVG layer
@@ -1202,7 +1203,7 @@ function GridViewInner({
       const sEl = scrollRef.current
       const r = sEl.getBoundingClientRect()
       drag.curX = sEl.scrollLeft + ev.clientX - r.left
-      drag.curY = sEl.scrollTop  + ev.clientY - r.top
+      drag.curY = sEl.scrollTop  + ev.clientY - r.top - HOUR_HDR_H
       const p = depPreviewPathRef.current
       if (p) {
         const cp = Math.max(Math.abs(drag.curX - drag.startX) * 0.5, 40)
@@ -3176,8 +3177,9 @@ function GridViewInner({
             })}
 
 
-            {/* SVG dependency arrows — always rendered so dep-draw preview has a container */}
+            {/* SVG dependency arrows */}
             {(() => {
+              // Build blockPos in content-space coordinates (same as categoryTops)
               const blockPos: Record<string, { startX: number; endX: number; centerY: number }> = {}
               for (const s of shifts) {
                 const di = isWeekView || isDayViewMultiDay ? dates.findIndex((d) => sameDay(d, s.date)) : 0
@@ -3193,86 +3195,108 @@ function GridViewInner({
                   ? di * COL_W_WEEK + (s.endH - settings.visibleFrom) * PX_WEEK
                   : isDayViewMultiDay ? di * DAY_WIDTH + (s.endH - settings.visibleFrom) * HOUR_W
                   : (s.endH - settings.visibleFrom) * HOUR_W
+                // centerY: rowTop (vr.start) + half of row height, offset by HOUR_HDR_H for header
                 blockPos[s.id] = { startX, endX, centerY: rowTop + rowH / 2 }
               }
+
+              // Compute path for a dependency
+              const depPath = (dep: ShiftDependency) => {
+                const from = blockPos[dep.fromId]
+                const to   = blockPos[dep.toId]
+                if (!from || !to) return null
+                const type = dep.type ?? "finish-to-start"
+                const x1 = type === "start-to-start" ? from.startX : from.endX
+                const x2 = type === "finish-to-finish" ? to.endX   : to.startX
+                const y1 = from.centerY
+                const y2 = to.centerY
+                const cp = Math.max(Math.abs(x2 - x1) * 0.5, 60)
+                return { d: `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`, x1, y1, x2, y2, mx: (x1 + x2) / 2, my: (y1 + y2) / 2 }
+              }
+
+              const colors = Array.from(new Set(dependencies.map(d => d.color ?? "var(--primary)")))
+
               return (
                 <>
-                  {/* Visual layer — pointerEvents none so it doesn't block block interactions */}
+                  {/* Visual SVG — pointerEvents:none, hover handled by hit layer */}
                   <svg
                     ref={depSvgRef}
                     style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, pointerEvents: "none", zIndex: 17, overflow: "visible" }}
                     aria-hidden
                   >
                     <defs>
-                      {/* Preview arrowhead for dep-draw */}
                       <marker id="dep-preview-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
                         <polygon points="0 0, 8 4, 0 8" fill="var(--primary)" opacity="0.8" />
                       </marker>
-                      {Array.from(new Set(dependencies.map(d => d.color ?? "var(--primary)"))).map((col, ci) => (
-                        <marker key={ci} id={`dep-arr-${ci}`} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                      {colors.map((col, ci) => (
+                        <marker key={`a-${ci}`} id={`dep-arr-${ci}`} markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
                           <polygon points="0 0, 8 4, 0 8" fill={col} />
                         </marker>
                       ))}
+                      <marker id="dep-arr-hover" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                        <polygon points="0 0, 8 4, 0 8" fill="var(--destructive)" />
+                      </marker>
                     </defs>
-                    {(() => {
-                      const colors = Array.from(new Set(dependencies.map(d => d.color ?? "var(--primary)")))
-                      return dependencies.map((dep) => {
-                        const from = blockPos[dep.fromId]
-                        const to   = blockPos[dep.toId]
-                        if (!from || !to) return null
-                        const type  = dep.type ?? "finish-to-start"
-                        const color = dep.color ?? "var(--primary)"
-                        const ci    = colors.indexOf(color)
-                        const x1 = type === "start-to-start" ? from.startX : from.endX
-                        const x2 = type === "finish-to-finish" ? to.endX   : to.startX
-                        const y1 = from.centerY
-                        const y2 = to.centerY
-                        const cp = Math.max(Math.abs(x2 - x1) * 0.5, 60)
-                        const d  = `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`
-                        return (
-                          <g key={dep.id}>
-                            <path d={d} fill="none" stroke={color} strokeWidth={2.5} strokeDasharray={type !== "finish-to-start" ? "5 3" : undefined} markerEnd={`url(#dep-arr-${ci})`} opacity={0.9} />
-                            {dep.label && (
-                              <text x={(x1 + x2) / 2} y={Math.min(y1, y2) - 6} fontSize={10} fill={color} textAnchor="middle" fontWeight={700}
-                                style={{ filter: "drop-shadow(0 0 3px var(--background))" }}>
-                                {dep.label}
-                              </text>
-                            )}
-                          </g>
-                        )
-                      })
-                    })()}
+                    {dependencies.map((dep) => {
+                      const p = depPath(dep)
+                      if (!p) return null
+                      const isHovered = hoveredDepId === dep.id
+                      const type  = dep.type ?? "finish-to-start"
+                      const color = isHovered ? "var(--destructive)" : (dep.color ?? "var(--primary)")
+                      const ci    = colors.indexOf(dep.color ?? "var(--primary)")
+                      return (
+                        <g key={dep.id}>
+                          {/* Glow on hover */}
+                          {isHovered && (
+                            <path d={p.d} fill="none" stroke="var(--destructive)" strokeWidth={6} opacity={0.2} />
+                          )}
+                          <path
+                            d={p.d} fill="none"
+                            stroke={color}
+                            strokeWidth={isHovered ? 3 : 2.5}
+                            strokeDasharray={type !== "finish-to-start" ? "5 3" : undefined}
+                            markerEnd={isHovered ? "url(#dep-arr-hover)" : `url(#dep-arr-${ci})`}
+                            opacity={isHovered ? 1 : 0.9}
+                            style={{ transition: "stroke 120ms, stroke-width 120ms" }}
+                          />
+                          {dep.label && !isHovered && (
+                            <text x={p.mx} y={Math.min(p.y1, p.y2) - 6} fontSize={10} fill={color} textAnchor="middle" fontWeight={700}
+                              style={{ filter: "drop-shadow(0 0 3px var(--background))" }}>
+                              {dep.label}
+                            </text>
+                          )}
+                          {/* Delete × button at midpoint on hover */}
+                          {isHovered && onDependenciesChange && (
+                            <g
+                              style={{ cursor: "pointer" }}
+                              onClick={() => { onDependenciesChange(dependencies.filter(dd => dd.id !== dep.id)); setHoveredDepId(null) }}
+                            >
+                              <circle cx={p.mx} cy={p.my} r={9} fill="var(--destructive)" />
+                              <text x={p.mx} y={p.my + 4} fontSize={12} fontWeight={700} fill="white" textAnchor="middle" pointerEvents="none">×</text>
+                            </g>
+                          )}
+                        </g>
+                      )
+                    })}
                   </svg>
-                  {/* Hit-area layer — SVG must have pointerEvents:none so only the
-                      individual path elements (with pointerEvents="stroke") intercept
-                      clicks. Without this the full TOTAL_W × totalHVirtual SVG rect
-                      at zIndex:18 absorbs every click, making all blocks unclickable. */}
-                  {onDependenciesChange && dependencies.length > 0 && (
+                  {/* Invisible hit-area paths — wide stroke for easy hover/click */}
+                  {dependencies.length > 0 && (
                     <svg
                       style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, overflow: "visible", zIndex: 18, pointerEvents: "none" }}
-                      aria-hidden
                     >
                       {dependencies.map((dep) => {
-                        const from = blockPos[dep.fromId]
-                        const to   = blockPos[dep.toId]
-                        if (!from || !to) return null
-                        const type = dep.type ?? "finish-to-start"
-                        const x1 = type === "start-to-start" ? from.startX : from.endX
-                        const x2 = type === "finish-to-finish" ? to.endX   : to.startX
-                        const y1 = from.centerY
-                        const y2 = to.centerY
-                        const cp = Math.max(Math.abs(x2 - x1) * 0.5, 60)
-                        const d  = `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`
+                        const p = depPath(dep)
+                        if (!p) return null
                         return (
                           <path
                             key={`hit-${dep.id}`}
-                            d={d}
+                            d={p.d}
                             fill="none"
-                            stroke="rgba(0,0,0,0.001)"
-                            strokeWidth={16}
+                            stroke="transparent"
+                            strokeWidth={20}
                             pointerEvents="visibleStroke"
-                            style={{ cursor: "pointer" }}
-                            onClick={() => onDependenciesChange(dependencies.filter(dd => dd.id !== dep.id))}
+                            style={{ cursor: hoveredDepId === dep.id ? "pointer" : "default" }}
+                            onMouseEnter={() => setHoveredDepId(dep.id)}
+                            onMouseLeave={() => setHoveredDepId(null)}
                           />
                         )
                       })}
