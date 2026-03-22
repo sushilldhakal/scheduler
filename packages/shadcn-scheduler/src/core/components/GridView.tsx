@@ -2409,7 +2409,7 @@ function GridViewInner({
                                   justifyContent: "center",
                                 }}>
                                   <div style={{
-                                    position: "sticky", left: 0,
+                                    position: "sticky", left: sidebarCollapsed ? 0 : sidebarWidth,
                                     height: "100%",
                                     display: "flex", alignItems: "center",
                                     gap: 8,
