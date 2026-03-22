@@ -226,7 +226,6 @@ function GridViewInner({
   const gridRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
   /** Sidebar rows container — translated vertically to sync with grid scrollTop */
-  const sidebarScrollRef = useRef<HTMLDivElement>(null)
   /** Current grid scrollTop — read synchronously during render for sticky sidebar headers */
   /** Inner wide div inside headerRef — translateX'd instead of scrollLeft to avoid layout recalc lag */
   const headerInnerRef = useRef<HTMLDivElement>(null)
@@ -1569,9 +1568,6 @@ function GridViewInner({
       }
       if (state.dirY !== 0) {
         scrollRef.current.scrollTop += state.dirY * state.speedY * EDGE_SCROLL_MAX
-        if (sidebarScrollRef.current) {
-          const edgeSt = scrollRef.current.scrollTop
-        }
       }
       edgeRafRef.current = requestAnimationFrame(tick)
     }
@@ -2134,7 +2130,8 @@ function GridViewInner({
       const el = e.currentTarget as HTMLDivElement
       const sl = el.scrollLeft
       const st = el.scrollTop
-
+      // Set --sx CSS var for day-view sticky date label translateX
+      el.style.setProperty("--sx", `${sl}px`)
     }
     el.addEventListener("scroll", handler, { passive: true })
     return () => el.removeEventListener("scroll", handler)
@@ -2260,6 +2257,7 @@ function GridViewInner({
           left: 0,
           zIndex: 22,
           flexShrink: 0,
+          alignSelf: "flex-start",
           width: sidebarCollapsed ? 0 : sidebarWidth,
           minWidth: sidebarCollapsed ? 0 : sidebarWidth,
           transition: "width 150ms ease, min-width 150ms ease",
@@ -2267,7 +2265,6 @@ function GridViewInner({
           borderRight: "1px solid var(--border)",
           display: "flex",
           flexDirection: "column",
-          overflow: "visible",
         }}>
           <GridViewSidebar
             sidebarCollapsed={sidebarCollapsed}
@@ -2281,6 +2278,7 @@ function GridViewInner({
             toggleSort={toggleSort}
             flatRows={flatRows}
             rowVirtualizer={rowVirtualizer}
+            totalHVirtual={totalHVirtual}
             ALL_EMPLOYEES={ALL_EMPLOYEES}
             baseShifts={shifts}
             isWeekView={!!isWeekView}
@@ -2294,6 +2292,7 @@ function GridViewInner({
             setStaffPanel={setStaffPanel}
             setAddPrompt={setAddPrompt}
             slots={slots}
+            categoryHeights={categoryHeights}
           />
         </div>
 
@@ -2385,6 +2384,7 @@ function GridViewInner({
                             display: "flex",
                             flexDirection: "column",
                             borderRight: i < dates.length - 1 ? "2px solid var(--sch-day-line)" : "1px solid var(--sch-day-line)",
+                            borderBottom: "1px solid var(--sch-day-line)",
                           }}
                         >
                           {/* ── Sticky date label: overflow:clip container + sticky left:0 inner ── */}
@@ -2453,7 +2453,6 @@ function GridViewInner({
                                 flex: 1,
                                 alignItems: "flex-end",
                                 width: "100%",
-                                borderTop: `1px solid ${today ? "color-mix(in srgb, var(--primary) 30%, transparent)" : "var(--border)"}`,
                                 paddingBottom: 3,
                                 overflow: "hidden",
                               }}
