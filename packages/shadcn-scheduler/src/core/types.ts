@@ -29,7 +29,7 @@ export interface RecurrenceRule {
  * A directed relationship between two blocks.
  * Rendered as an SVG arrow from the end of `fromId` to the start of `toId`.
  */
-export type DependencyType = "finish-to-start" | "start-to-start" | "finish-to-finish"
+export type DependencyType = "finish-to-start" | "start-to-start" | "finish-to-finish" | "start-to-finish"
 
 export interface ShiftDependency {
   id: string

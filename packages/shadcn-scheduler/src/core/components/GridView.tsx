@@ -282,6 +282,8 @@ function GridViewInner({
   /** Block currently hovered for dep-draw targeting highlight */
   const [depHoveredBlockId, setDepHoveredBlockId] = useState<string | null>(null)
   const [hoveredDepId, setHoveredDepId] = useState<string | null>(null)
+  const [selectedDepId, setSelectedDepId] = useState<string | null>(null)
+  const [editingDep, setEditingDep] = useState<ShiftDependency | null>(null)
   /** P12-01: IDs of blocks just added (one-frame scale-in animation). */
   const [newlyAddedIds, setNewlyAddedIds] = useState<Set<string>>(new Set())
   /** P12-02: IDs of blocks being deleted (fade-out then remove). */
@@ -1263,45 +1265,40 @@ function GridViewInner({
   /** Render dependency connection handles — clearly outside the block like Bryntum */
   const renderDepDots = useCallback((shift: Block, isVisible: boolean) => {
     if (!isVisible || !onDependenciesChange) return null
-    // Only left and right handles — finish-to-start is the primary dependency type
-    const handles: { side: "right"|"left"; label: string; style: React.CSSProperties }[] = [
-      {
-        side: "left",
-        label: "S",
-        style: { left: -22, top: "50%", transform: "translateY(-50%)" },
-      },
-      {
-        side: "right",
-        label: "F",
-        style: { right: -22, top: "50%", transform: "translateY(-50%)" },
-      },
-    ]
-    return handles.map(({ side, label, style }) => (
-      <div
-        key={side}
-        data-dep-dot={side}
-        onPointerDown={(e) => startDepDraw(e, shift, side)}
-        title={side === "right" ? "Drag to create dependency from end" : "Drag to create dependency from start"}
-        style={{
-          position: "absolute",
-          width: 16, height: 16,
-          borderRadius: "50%",
-          background: "var(--background)",
-          border: "2px solid var(--primary)",
-          color: "var(--primary)",
-          fontSize: 8,
-          fontWeight: 800,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          cursor: "crosshair",
-          zIndex: 30,
-          boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
-          userSelect: "none",
-          ...style,
-        }}
-      >
-        {label}
-      </div>
-    ))
+    return (
+      <>
+        {/* Start port — left edge */}
+        <div
+          data-dep-dot="left"
+          onPointerDown={(e) => startDepDraw(e, shift, "left")}
+          title="Drag to create start dependency"
+          style={{
+            position: "absolute",
+            left: -14, top: "50%", transform: "translateY(-50%)",
+            width: 12, height: 12, borderRadius: "50%",
+            background: "var(--primary)",
+            border: "2px solid var(--background)",
+            cursor: "crosshair", zIndex: 30,
+            boxShadow: "0 0 0 2px var(--primary)",
+          }}
+        />
+        {/* Finish port — right edge */}
+        <div
+          data-dep-dot="right"
+          onPointerDown={(e) => startDepDraw(e, shift, "right")}
+          title="Drag to create finish dependency"
+          style={{
+            position: "absolute",
+            right: -14, top: "50%", transform: "translateY(-50%)",
+            width: 12, height: 12, borderRadius: "50%",
+            background: "var(--primary)",
+            border: "2px solid var(--background)",
+            cursor: "crosshair", zIndex: 30,
+            boxShadow: "0 0 0 2px var(--primary)",
+          }}
+        />
+      </>
+    )
   }, [onDependenciesChange, startDepDraw])
 
   const onBD = useCallback(
@@ -2685,6 +2682,7 @@ function GridViewInner({
                 }}
                 tabIndex={0}
                 onKeyDown={onGridKeyDown}
+                onClick={() => { if (selectedDepId) setSelectedDepId(null) }}
                 onPointerDown={(e) => { onRubberBandPointerDown(e); onGridPointerDown(e) }}
                 onPointerMove={(e) => { onRubberBandPointerMove(e); onPM(e) }}
                 onPointerUp={(e) => { onRubberBandPointerUp(); onGridPointerUp(e) }}
@@ -3193,8 +3191,8 @@ function GridViewInner({
 
             {/* SVG dependency arrows */}
             {(() => {
-              // Build blockPos in content-space coordinates (same as categoryTops)
-              const blockPos: Record<string, { startX: number; endX: number; centerY: number }> = {}
+              // Content-space coordinates for each shift block
+              const blockPos: Record<string, { startX: number; endX: number; centerY: number; label: string }> = {}
               for (const s of shifts) {
                 const di = isWeekView || isDayViewMultiDay ? dates.findIndex((d) => sameDay(d, s.date)) : 0
                 if (di < 0) continue
@@ -3209,33 +3207,32 @@ function GridViewInner({
                   ? di * COL_W_WEEK + (s.endH - settings.visibleFrom) * PX_WEEK
                   : isDayViewMultiDay ? di * DAY_WIDTH + (s.endH - settings.visibleFrom) * HOUR_W
                   : (s.endH - settings.visibleFrom) * HOUR_W
-                // centerY: rowTop (vr.start) + half of row height, offset by HOUR_HDR_H for header
-                blockPos[s.id] = { startX, endX, centerY: rowTop + rowH / 2 }
+                blockPos[s.id] = { startX, endX, centerY: rowTop + rowH / 2, label: s.employee }
               }
 
-              // Compute path for a dependency
               const depPath = (dep: ShiftDependency) => {
                 const from = blockPos[dep.fromId]
                 const to   = blockPos[dep.toId]
                 if (!from || !to) return null
                 const type = dep.type ?? "finish-to-start"
-                const x1 = type === "start-to-start" ? from.startX : from.endX
-                const x2 = type === "finish-to-finish" ? to.endX   : to.startX
+                const x1 = type === "start-to-start" || type === "start-to-finish" ? from.startX : from.endX
+                const x2 = type === "finish-to-finish" || type === "start-to-finish" ? to.endX : to.startX
                 const y1 = from.centerY
                 const y2 = to.centerY
                 const cp = Math.max(Math.abs(x2 - x1) * 0.5, 60)
-                return { d: `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`, x1, y1, x2, y2, mx: (x1 + x2) / 2, my: (y1 + y2) / 2 }
+                const mx = x1 + (x2 - x1) * 0.5
+                const my = y1 + (y2 - y1) * 0.5
+                return { d: `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`, x1, y1, x2, y2, mx, my }
               }
 
               const colors = Array.from(new Set(dependencies.map(d => d.color ?? "var(--primary)")))
 
               return (
                 <>
-                  {/* Visual SVG — pointerEvents:none, hover handled by hit layer */}
+                  {/* Visual SVG layer — pointerEvents none, colors driven by state */}
                   <svg
                     ref={depSvgRef}
                     style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, pointerEvents: "none", zIndex: 17, overflow: "visible" }}
-                    aria-hidden
                   >
                     <defs>
                       <marker id="dep-preview-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
@@ -3246,48 +3243,41 @@ function GridViewInner({
                           <polygon points="0 0, 8 4, 0 8" fill={col} />
                         </marker>
                       ))}
-                      <marker id="dep-arr-hover" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                      <marker id="dep-arr-selected" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
                         <polygon points="0 0, 8 4, 0 8" fill="var(--destructive)" />
                       </marker>
                     </defs>
                     {dependencies.map((dep) => {
                       const p = depPath(dep)
                       if (!p) return null
-                      const isHovered = hoveredDepId === dep.id
+                      const isHovered  = hoveredDepId  === dep.id
+                      const isSelected = selectedDepId === dep.id
                       const type  = dep.type ?? "finish-to-start"
-                      const color = isHovered ? "var(--destructive)" : (dep.color ?? "var(--primary)")
+                      const color = isSelected ? "var(--destructive)" : (dep.color ?? "var(--primary)")
                       const ci    = colors.indexOf(dep.color ?? "var(--primary)")
+                      const opacity = isHovered || isSelected ? 1 : 0.4
                       return (
                         <g key={dep.id}>
-                          {/* Glow on hover */}
-                          {isHovered && (
-                            <path d={p.d} fill="none" stroke="var(--destructive)" strokeWidth={6} opacity={0.2} />
+                          {(isHovered || isSelected) && (
+                            <path d={p.d} fill="none" stroke={color} strokeWidth={8} opacity={0.15} />
                           )}
                           <path
                             d={p.d} fill="none"
                             stroke={color}
-                            strokeWidth={isHovered ? 3 : 2.5}
+                            strokeWidth={isSelected ? 2.5 : isHovered ? 2 : 1.5}
                             strokeDasharray={type !== "finish-to-start" ? "5 3" : undefined}
-                            markerEnd={isHovered ? "url(#dep-arr-hover)" : `url(#dep-arr-${ci})`}
-                            opacity={isHovered ? 1 : 0.9}
-                            style={{ transition: "stroke 120ms, stroke-width 120ms" }}
+                            markerEnd={isSelected ? "url(#dep-arr-selected)" : `url(#dep-arr-${ci})`}
+                            opacity={opacity}
+                            style={{ transition: "opacity 120ms, stroke-width 120ms" }}
                           />
-                          {dep.label && !isHovered && (
-                            <text x={p.mx} y={Math.min(p.y1, p.y2) - 6} fontSize={10} fill={color} textAnchor="middle" fontWeight={700}
-                              style={{ filter: "drop-shadow(0 0 3px var(--background))" }}>
-                              {dep.label}
-                            </text>
-                          )}
-
                         </g>
                       )
                     })}
                   </svg>
-                  {/* Hit-area paths — wide invisible stroke for hover detection */}
+
+                  {/* Hit-area layer — wide transparent stroke for hover/click/dblclick */}
                   {dependencies.length > 0 && (
-                    <svg
-                      style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, overflow: "visible", zIndex: 18, pointerEvents: "none" }}
-                    >
+                    <svg style={{ position: "absolute", top: 0, left: 0, width: TOTAL_W, height: totalHVirtual, overflow: "visible", zIndex: 18, pointerEvents: "none" }}>
                       {dependencies.map((dep) => {
                         const p = depPath(dep)
                         if (!p) return null
@@ -3302,52 +3292,180 @@ function GridViewInner({
                             style={{ cursor: "pointer" }}
                             onMouseEnter={() => setHoveredDepId(dep.id)}
                             onMouseLeave={(e) => {
-                              // Don't clear if moving to the delete button
                               const rel = e.relatedTarget as Element | null
-                              if (rel?.closest?.(`[data-dep-delete="${dep.id}"]`)) return
+                              if (rel?.closest?.(`[data-dep-ui="${dep.id}"]`)) return
                               setHoveredDepId(null)
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedDepId(prev => prev === dep.id ? null : dep.id)
+                            }}
+                            onDoubleClick={(e) => {
+                              e.stopPropagation()
+                              setEditingDep(dep)
+                              setSelectedDepId(dep.id)
                             }}
                           />
                         )
                       })}
                     </svg>
                   )}
-                  {/* Delete button — separate layer so pointer events work independently */}
-                  {hoveredDepId && onDependenciesChange && (() => {
+
+                  {/* Tooltip on hover */}
+                  {hoveredDepId && !selectedDepId && (() => {
                     const dep = dependencies.find(d => d.id === hoveredDepId)
+                    if (!dep) return null
+                    const p = depPath(dep)
+                    if (!p) return null
+                    const from = blockPos[dep.fromId]
+                    const to   = blockPos[dep.toId]
+                    if (!from || !to) return null
+                    const typeLabel: Record<string, string> = {
+                      "finish-to-start": "Finish → Start",
+                      "start-to-start": "Start → Start",
+                      "finish-to-finish": "Finish → Finish",
+                      "start-to-finish": "Start → Finish",
+                    }
+                    return (
+                      <div
+                        data-dep-ui={dep.id}
+                        onMouseEnter={() => setHoveredDepId(dep.id)}
+                        onMouseLeave={() => setHoveredDepId(null)}
+                        style={{
+                          position: "absolute",
+                          left: p.mx + 10,
+                          top: p.my - 12,
+                          background: "var(--popover)",
+                          border: "1px solid var(--border)",
+                          borderRadius: 6,
+                          padding: "5px 9px",
+                          fontSize: 11,
+                          color: "var(--foreground)",
+                          pointerEvents: "none",
+                          zIndex: 50,
+                          whiteSpace: "nowrap",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                        }}
+                      >
+                        <div style={{ fontWeight: 600 }}>{from.label} → {to.label}</div>
+                        <div style={{ color: "var(--muted-foreground)", marginTop: 1 }}>{typeLabel[dep.type ?? "finish-to-start"]}</div>
+                        <div style={{ color: "var(--muted-foreground)", marginTop: 1, fontSize: 10 }}>Click to select · Double-click to edit</div>
+                      </div>
+                    )
+                  })()}
+
+                  {/* Selected dep: × delete button */}
+                  {selectedDepId && onDependenciesChange && (() => {
+                    const dep = dependencies.find(d => d.id === selectedDepId)
                     if (!dep) return null
                     const p = depPath(dep)
                     if (!p) return null
                     return (
                       <div
-                        data-dep-delete={dep.id}
+                        data-dep-ui={dep.id}
+                        style={{ position: "absolute", left: p.mx - 10, top: p.my - 10, zIndex: 50, display: "flex", gap: 4 }}
                         onMouseEnter={() => setHoveredDepId(dep.id)}
-                        onMouseLeave={() => setHoveredDepId(null)}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onDependenciesChange(dependencies.filter(dd => dd.id !== dep.id))
-                          setHoveredDepId(null)
-                        }}
-                        style={{
-                          position: "absolute",
-                          left: p.mx - 10,
-                          top: p.my - 10,
-                          width: 20, height: 20,
-                          borderRadius: "50%",
-                          background: "var(--destructive)",
-                          color: "white",
-                          fontSize: 14,
-                          fontWeight: 700,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          cursor: "pointer",
-                          zIndex: 19,
-                          boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-                          userSelect: "none",
-                          lineHeight: 1,
-                        }}
-                        title="Delete dependency"
                       >
-                        ×
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDependenciesChange(dependencies.filter(dd => dd.id !== dep.id))
+                            setSelectedDepId(null)
+                            setHoveredDepId(null)
+                          }}
+                          style={{
+                            width: 22, height: 22, borderRadius: "50%",
+                            background: "var(--destructive)", border: "none",
+                            color: "white", fontSize: 15, fontWeight: 700,
+                            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
+                            lineHeight: 1,
+                          }}
+                          title="Delete dependency"
+                        >×</button>
+                      </div>
+                    )
+                  })()}
+
+                  {/* Edit dialog */}
+                  {editingDep && onDependenciesChange && (() => {
+                    const from = blockPos[editingDep.fromId]
+                    const to   = blockPos[editingDep.toId]
+                    const TYPE_OPTIONS: { value: ShiftDependency["type"]; label: string }[] = [
+                      { value: "finish-to-start",  label: "Finish → Start"  },
+                      { value: "start-to-start",   label: "Start → Start"   },
+                      { value: "finish-to-finish", label: "Finish → Finish" },
+                      { value: "start-to-finish",  label: "Start → Finish"  },
+                    ]
+                    return (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          position: "fixed", inset: 0, zIndex: 9999,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          background: "rgba(0,0,0,0.4)", backdropFilter: "blur(3px)",
+                        }}
+                        onPointerDown={() => setEditingDep(null)}
+                      >
+                        <div
+                          onPointerDown={(e) => e.stopPropagation()}
+                          style={{
+                            background: "var(--background)", borderRadius: 12,
+                            padding: "20px 24px", minWidth: 320,
+                            boxShadow: "0 24px 64px rgba(0,0,0,0.22)",
+                            border: "1px solid var(--border)",
+                            display: "flex", flexDirection: "column", gap: 14,
+                          }}
+                        >
+                          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--foreground)" }}>Edit Dependency</div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                              <span style={{ fontSize: 11, color: "var(--muted-foreground)", width: 36 }}>From</span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", background: "var(--muted)", borderRadius: 6, padding: "4px 10px" }}>
+                                {from?.label ?? editingDep.fromId}
+                              </span>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                              <span style={{ fontSize: 11, color: "var(--muted-foreground)", width: 36 }}>To</span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--foreground)", background: "var(--muted)", borderRadius: 6, padding: "4px 10px" }}>
+                                {to?.label ?? editingDep.toId}
+                              </span>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted-foreground)", textTransform: "uppercase", letterSpacing: 0.5 }}>Type</span>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                              {TYPE_OPTIONS.map(opt => (
+                                <button
+                                  key={opt.value}
+                                  onClick={() => setEditingDep(prev => prev ? { ...prev, type: opt.value } : null)}
+                                  style={{
+                                    padding: "8px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600,
+                                    cursor: "pointer", textAlign: "center",
+                                    background: editingDep.type === opt.value ? "var(--primary)" : "var(--muted)",
+                                    color: editingDep.type === opt.value ? "var(--primary-foreground)" : "var(--foreground)",
+                                    border: editingDep.type === opt.value ? "2px solid var(--primary)" : "2px solid transparent",
+                                    transition: "all 120ms",
+                                  }}
+                                >{opt.label}</button>
+                              ))}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                            <button
+                              onClick={() => setEditingDep(null)}
+                              style={{ padding: "7px 16px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--background)", cursor: "pointer", fontSize: 12, color: "var(--foreground)" }}
+                            >Cancel</button>
+                            <button
+                              onClick={() => {
+                                if (!editingDep) return
+                                onDependenciesChange(dependencies.map(d => d.id === editingDep.id ? editingDep : d))
+                                setEditingDep(null)
+                              }}
+                              style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: "var(--primary)", cursor: "pointer", fontSize: 12, color: "var(--primary-foreground)", fontWeight: 600 }}
+                            >Save</button>
+                          </div>
+                        </div>
                       </div>
                     )
                   })()}
