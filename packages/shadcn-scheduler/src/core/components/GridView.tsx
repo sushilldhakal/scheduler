@@ -778,9 +778,9 @@ function GridViewInner({
         }
         return
       }
-      // Individual/flat mode: use packed track height for employee rows too
+      // Flat EPG mode: each row is exactly one block tall — no header, no add-button space
       result[key] = effectiveRowMode === "flat"
-        ? Math.max(maxTracksPerCat.get(row.category.id) ?? 0, ROLE_HDR + SHIFT_H)
+        ? SHIFT_H
         : 50
     })
     return result
