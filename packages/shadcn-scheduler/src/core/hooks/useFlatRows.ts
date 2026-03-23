@@ -6,16 +6,31 @@ import type { Resource, FlatRow } from "../types"
  *
  * mode="individual" — category header + one row per employee (tree model)
  * mode="category"  — category header rows only (classic stacked view)
+ * mode="flat"      — employee rows only, no category headers (EPG/timeline mode)
  */
 export function useFlatRows(
   categories: Resource[],
   employees: Resource[],
   collapsed: Set<string>,
-  mode: "category" | "individual" = "individual",
+  mode: "category" | "individual" | "flat" = "individual",
 ): FlatRow[] {
   return useMemo(() => {
     const rows: FlatRow[] = []
     for (const cat of categories) {
+      // flat mode: skip category header entirely — one row per employee only
+      if (mode === "flat") {
+        const catEmployees = employees.filter((e) => e.categoryId === cat.id)
+        for (const emp of catEmployees) {
+          rows.push({
+            key: `emp:${cat.id}:${emp.id}`,
+            kind: "employee",
+            category: cat,
+            employee: emp,
+            depth: 0,
+          })
+        }
+        continue
+      }
       rows.push({
         key: `cat:${cat.id}`,
         kind: "category",

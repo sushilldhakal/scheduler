@@ -209,7 +209,7 @@ function GridViewInner({
   availability = [],
   hideFloatingButtons = false,
 }: GridViewProps): React.ReactElement {
-  const { categories, employees, nextUid, getColor, labels, settings, slots, snapMinutes, allowOvernight, getTimeLabel } = useSchedulerContext()
+  const { categories, employees, nextUid, getColor, labels, settings, slots, snapMinutes, allowOvernight, getTimeLabel, timelineSidebarFlat } = useSchedulerContext()
   const CATEGORIES =
     mobileResourceIndex !== undefined && onMobileResourceChange
       ? [categories[mobileResourceIndex]].filter(Boolean)
@@ -744,7 +744,10 @@ function GridViewInner({
    * In "category" mode: category header rows only (shifts stack inside like the original model).
    */
   const rowMode = settings.rowMode ?? "category"
-  const flatRows = useFlatRows(SORTED_CATEGORIES, ALL_EMPLOYEES, collapsed, rowMode)
+  // In flat EPG/timeline mode: skip category headers, one row per resource
+  const effectiveRowMode: "category" | "individual" | "flat" =
+    (timelineSidebarFlat && isDayViewMultiDay) ? "flat" : rowMode
+  const flatRows = useFlatRows(SORTED_CATEGORIES, ALL_EMPLOYEES, collapsed, effectiveRowMode)
 
   // Pre-compute max packed tracks per category across all dates — O(dates × categories × shifts)
   // Separated so virtualizer estimateSize can use it without re-running flatRows loop
@@ -767,7 +770,7 @@ function GridViewInner({
         ? `emp:${row.employee.id}`
         : `cat:${row.category.id}`
       if (row.kind === "category") {
-        if (rowMode === "category" && !collapsed.has(row.category.id)) {
+        if ((effectiveRowMode === "category" || effectiveRowMode === "flat") && (effectiveRowMode === "flat" || !collapsed.has(row.category.id))) {
           // Use pre-computed max height — no inner dates.forEach loop
           result[key] = Math.max(maxTracksPerCat.get(row.category.id) ?? 0, ROLE_HDR + SHIFT_H)
         } else {
@@ -775,11 +778,13 @@ function GridViewInner({
         }
         return
       }
-      // Individual mode: fixed 50px per employee row
-      result[key] = 50
+      // Individual/flat mode: use packed track height for employee rows too
+      result[key] = effectiveRowMode === "flat"
+        ? Math.max(maxTracksPerCat.get(row.category.id) ?? 0, ROLE_HDR + SHIFT_H)
+        : 50
     })
     return result
-  }, [maxTracksPerCat, flatRows, rowMode, collapsed])
+  }, [maxTracksPerCat, flatRows, effectiveRowMode, collapsed])
 
   // NOTE: vrTopsRef is updated from virtualizer vr.start values every render
   const vrTopsRef = useRef<Record<string, number>>({})
@@ -1138,13 +1143,13 @@ function GridViewInner({
   /** Compute the lane (track) a block occupies in its row at the moment of drag start.
    *  Used so the ghost renders at the correct vertical slot instead of always at lane 0. */
   const getSrcTrack = useCallback((shift: Block): { srcTrack: number; srcCategoryKey: string } => {
-    const rowKey = rowMode === "individual"
+    const rowKey = (effectiveRowMode === "individual" || effectiveRowMode === "flat")
       ? `emp:${shift.employeeId}`
       : `cat:${shift.categoryId}`
     // Find the day's shifts for this block's row — same logic as render path
     const dayKey = `${shift.categoryId}:${shift.date}`
     const dayShifts = shiftIndex.get(dayKey) ?? []
-    const filtered = rowMode === "individual"
+    const filtered = (effectiveRowMode === "individual" || effectiveRowMode === "flat")
       ? dayShifts.filter((s) => s.employeeId === shift.employeeId)
       : dayShifts
     const sorted = [...filtered].sort((a, b) => a.startH - b.startH)
@@ -1152,7 +1157,7 @@ function GridViewInner({
     const idx = sorted.findIndex((s) => s.id === shift.id)
     const srcTrack = idx >= 0 ? (trackNums[idx] ?? 0) : 0
     return { srcTrack, srcCategoryKey: rowKey }
-  }, [shiftIndex, rowMode])
+  }, [shiftIndex, effectiveRowMode])
 
   // ── Dependency draw handlers ──────────────────────────────────────────────
   // ── Dep-draw: stable handler refs so addEventListener/removeEventListener identity is constant ──
@@ -2838,7 +2843,7 @@ function GridViewInner({
               const top = vr.start
               const rowH = vr.size
               // Individual mode: category header rows — solid tinted background, no hour cells
-              if (row.kind === "category" && rowMode === "individual") {
+              if (row.kind === "category" && (effectiveRowMode === "individual" || effectiveRowMode === "flat")) {
                 const c = getColor(cat.colorIdx)
                 return (
                   <div
@@ -2996,7 +3001,7 @@ function GridViewInner({
               if (!row) return null
               // Category mode: separator after each category row
               // Individual mode: separator after each employee row (not category headers)
-              const drawSep = rowMode === "category"
+              const drawSep = effectiveRowMode === "category"
                 ? row.kind === "category" && !collapsed.has(row.category.id)
                 : row.kind === "employee"
               if (!drawSep) return null
@@ -3217,7 +3222,7 @@ function GridViewInner({
               for (const s of shifts) {
                 const di = isWeekView || isDayViewMultiDay ? dates.findIndex((d) => sameDay(d, s.date)) : 0
                 if (di < 0) continue
-                const rowKey = rowMode === "individual" ? `emp:${s.employeeId}` : `cat:${s.categoryId}`
+                const rowKey = (effectiveRowMode === "individual" || effectiveRowMode === "flat") ? `emp:${s.employeeId}` : `cat:${s.categoryId}`
                 const rowTop = categoryTops[rowKey] ?? 0
                 const rowH   = categoryHeights[rowKey] ?? ROLE_HDR
                 const startX = isWeekView
@@ -3516,7 +3521,7 @@ function GridViewInner({
               const row = flatRows[vr.index]
               if (!row) return null
               // Individual mode: skip category headers (no blocks, no add buttons)
-              if (row.kind === "category" && rowMode === "individual") return null
+              if (row.kind === "category" && (effectiveRowMode === "individual" || effectiveRowMode === "flat")) return null
               // Category mode: skip collapsed category rows
               if (row.kind === "category" && collapsed.has(row.category.id)) return null
               // Individual mode: skip collapsed employee rows
@@ -3675,7 +3680,7 @@ function GridViewInner({
 
               // ── Category mode: render all shifts for this category in the row ──
               if (row.kind === "category") {
-                if (rowMode !== "category" || collapsed.has(cat.id)) return null
+                if (effectiveRowMode !== "category" || collapsed.has(cat.id)) return null
                 const catTop = vr.start
                 return dates.map((date, di) => {
                   const dayShifts = shiftIndex.get(`${cat.id}:${toDateISO(date)}`) ?? []
