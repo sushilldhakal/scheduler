@@ -254,6 +254,25 @@ export interface EmptyStateSlotProps {
 }
 
 /** Optional render slots. When provided, the engine uses these instead of built-in UI. */
+export interface SchedulerToolbarContext {
+  /** Navigate to a date programmatically */
+  goToDate: (date: Date) => void
+  /** Scroll the grid so the current time is centred */
+  goToNow: () => void
+  /** Open the Add Shift modal */
+  openAddShift: () => void
+  /** Copy last week's shifts to this week */
+  copyLastWeek: () => void
+  /** Publish all draft shifts */
+  publishAllDrafts: () => void
+  /** Number of currently-drafted shifts */
+  draftCount: number
+  /** Current view key ("week" | "day" | "timeline" | ...) */
+  view: string
+  /** Change the active view */
+  setView: (view: string) => void
+}
+
 export interface SchedulerSlots {
   block?: (props: BlockSlotProps) => ReactNode
   resourceHeader?: (props: ResourceHeaderSlotProps) => ReactNode
@@ -263,6 +282,14 @@ export interface SchedulerSlots {
   /** Custom tooltip rendered on block hover. Receives the hovered block and its category resource.
    *  When provided, replaces the default tooltip entirely — position/portal handling is unchanged. */
   tooltip?: (block: Block, resource: Resource) => ReactNode
+  /**
+   * Power-user slot: replaces the entire right side of the header toolbar.
+   * When provided, the default Add Shift button, Now button, and headerActions
+   * are NOT rendered — you own the full toolbar area.
+   * Use simple DX props (addShiftLabel, showAddShiftButton, showNowButton) for
+   * common customisations without needing this slot.
+   */
+  toolbar?: (ctx: SchedulerToolbarContext) => ReactNode
 }
 
 // ─── Resource utilisation histogram ──────────────────────────────────────────

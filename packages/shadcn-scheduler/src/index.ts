@@ -45,6 +45,7 @@ export type {
   TimeSlotLabelSlotProps,
   EmptyCellSlotProps,
   EmptyStateSlotProps,
+  SchedulerToolbarContext,
   RecurrenceRule, RecurrenceFreq, ShiftDependency, DependencyType, EmployeeAvailability, AvailabilityWindow , HistogramConfig, HistogramCapacity , SchedulerMarker } from "./core/types"
 export {
   createSchedulerConfig,

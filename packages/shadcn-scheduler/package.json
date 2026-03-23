@@ -69,6 +69,36 @@
     },
     "./tokens": {
       "default": "./dist/scheduler-tokens.css"
+    },
+    "./views/timeline": {
+      "types": "./dist/views/timeline.d.ts",
+      "import": "./dist/views/timeline.js",
+      "require": "./dist/views/timeline.cjs"
+    },
+    "./views/week": {
+      "types": "./dist/views/week.d.ts",
+      "import": "./dist/views/week.js",
+      "require": "./dist/views/week.cjs"
+    },
+    "./views/day": {
+      "types": "./dist/views/day.d.ts",
+      "import": "./dist/views/day.js",
+      "require": "./dist/views/day.cjs"
+    },
+    "./views/month": {
+      "types": "./dist/views/month.d.ts",
+      "import": "./dist/views/month.js",
+      "require": "./dist/views/month.cjs"
+    },
+    "./views/year": {
+      "types": "./dist/views/year.d.ts",
+      "import": "./dist/views/year.js",
+      "require": "./dist/views/year.cjs"
+    },
+    "./views/list": {
+      "types": "./dist/views/list.d.ts",
+      "import": "./dist/views/list.js",
+      "require": "./dist/views/list.cjs"
     }
   },
   "scripts": {

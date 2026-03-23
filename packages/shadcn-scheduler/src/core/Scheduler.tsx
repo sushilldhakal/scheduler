@@ -96,6 +96,28 @@ export interface SchedulerProps {
   histogramHeight?: number
   /** Configuration for the histogram (capacity limits per resource). */
   histogramConfig?: HistogramConfig
+
+  // ── DX simplicity props (cover 80% of customisation needs without slots) ──────
+
+  /**
+   * Label for the Add Shift button. Default: "Add Shift".
+   * Use to rename for your domain: "Add Channel", "Add Event", "Book Slot" etc.
+   */
+  addShiftLabel?: string
+  /**
+   * When false, hides the Add Shift button entirely. Default: true.
+   * Use when shift creation is handled elsewhere (e.g. external form, drag-from-sidebar).
+   */
+  showAddShiftButton?: boolean
+  /**
+   * When false, hides the Now button in day/week/timeline views. Default: true.
+   */
+  showNowButton?: boolean
+  /**
+   * When false, hides the view tabs (Week / Day / Month / ...). Default: true.
+   * Useful when you lock users to a single view via initialView.
+   */
+  showViewTabs?: boolean
 }
 
 export interface SchedulerHeaderActions {
@@ -136,6 +158,10 @@ export function Scheduler({
   showHistogram = false,
   histogramHeight = 120,
   histogramConfig,
+  addShiftLabel = "Add Shift",
+  showAddShiftButton = true,
+  showNowButton = true,
+  showViewTabs = true,
 }: SchedulerProps): React.ReactElement {
   const parentCtx = useContext(SchedulerContext)
   const slots = slotsProp ?? {}
@@ -675,11 +701,13 @@ export function Scheduler({
               className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center gap-2 border-t border-border bg-background p-2"
               style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
             >
-              <ViewTabs view={view} setView={handleViewChange} views={mergedConfig.views} />
-              <Button onClick={handleAddShiftButton} size="sm">
-                <Plus size={16} />
-                Add
-              </Button>
+              {showViewTabs && <ViewTabs view={view} setView={handleViewChange} views={mergedConfig.views} />}
+              {showAddShiftButton && (
+                <Button onClick={handleAddShiftButton} size="sm">
+                  <Plus size={16} />
+                  Add
+                </Button>
+              )}
             </div>
           </>
         ) : (
@@ -697,7 +725,7 @@ export function Scheduler({
             </div>
 
             <div className="flex flex-col items-center gap-1.5 sm:flex-row sm:justify-between">
-            {(view === "day" || view === "week" || view === "timeline") && (
+            {(view === "day" || view === "week" || view === "timeline") && showNowButton && (
                   <div className="flex items-center gap-1 mr-2">
                     <Button
                       variant="outline"
@@ -712,7 +740,7 @@ export function Scheduler({
                   </div>
                 )}
               <div className="flex w-full items-center gap-2">
-                <ViewTabs view={view} setView={handleViewChange} views={mergedConfig.views} />
+                {showViewTabs && <ViewTabs view={view} setView={handleViewChange} views={mergedConfig.views} />}
                 <UserSelect
                   selEmps={selEmps}
                   onToggle={toggleEmp}
@@ -723,18 +751,33 @@ export function Scheduler({
 
               <div className="flex w-full items-center gap-2 sm:w-auto">
                 {footerSlot && footerSlot({ onSettingsChange: handleSettingsChange, containerRef: schedulerContainerRef, shifts })}
-                {typeof headerActions === "function"
-                  ? headerActions({
+                {/* slots.toolbar: power-user slot that replaces the entire right toolbar area.
+                    When provided, headerActions and Add Shift button are NOT rendered. */}
+                {slots.toolbar
+                  ? slots.toolbar({
+                      goToDate: handleSetDate,
+                      goToNow: () => { handleTodayClick(); requestAnimationFrame(() => scrollToNowRef.current?.()) },
+                      openAddShift: handleAddShiftButton,
                       copyLastWeek,
                       publishAllDrafts: handlePublishAllDrafts,
                       draftCount,
+                      view,
+                      setView: handleViewChange,
                     })
-                  : headerActions}
-               
-                <Button onClick={handleAddShiftButton} className="w-full sm:w-auto">
-                  <Plus size={16} />
-                  Add Shift
-                </Button>
+                  : (
+                    <>
+                      {typeof headerActions === "function"
+                        ? headerActions({ copyLastWeek, publishAllDrafts: handlePublishAllDrafts, draftCount })
+                        : headerActions}
+                      {showAddShiftButton && (
+                        <Button onClick={handleAddShiftButton} className="w-full sm:w-auto">
+                          <Plus size={16} />
+                          {addShiftLabel}
+                        </Button>
+                      )}
+                    </>
+                  )
+                }
               </div>
             </div>
           </div>
