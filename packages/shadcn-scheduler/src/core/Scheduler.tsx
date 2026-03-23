@@ -811,8 +811,20 @@ export function Scheduler({
                 onShiftClick={onShiftClick}
                 onAddShift={onAddShift}
                 zoom={zoom}
+                setZoom={setZoom}
                 markers={markers}
                 onMarkersChange={onMarkersChange}
+                dependencies={dependencies}
+                onDependenciesChange={onDependenciesChange}
+                availability={availability}
+                copiedShift={copiedShift}
+                setCopiedShift={setCopiedShift}
+                onDeleteShift={handleDeleteShift}
+                scrollToNowRef={scrollToNowRef}
+                onBlockCreate={onBlockCreate}
+                onBlockDelete={onBlockDelete}
+                onBlockMove={onBlockMove}
+                readOnly={readOnly}
               />
             )
           })()}

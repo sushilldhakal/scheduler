@@ -131,6 +131,9 @@ interface GridViewProps {
   dependencies?: ShiftDependency[]
   onDependenciesChange?: (deps: ShiftDependency[]) => void
   availability?: EmployeeAvailability[]
+  /** When true, hides the floating + add and paste buttons on each row.
+   *  Use for Timeline view where double-click / right-click replaces them. */
+  hideFloatingButtons?: boolean
 }
 
 export interface StaffPanelState {
@@ -204,6 +207,7 @@ function GridViewInner({
   dependencies = [],
   onDependenciesChange,
   availability = [],
+  hideFloatingButtons = false,
 }: GridViewProps): React.ReactElement {
   const { categories, employees, nextUid, getColor, labels, settings, slots, snapMinutes, allowOvernight, getTimeLabel } = useSchedulerContext()
   const CATEGORIES =
@@ -252,6 +256,7 @@ function GridViewInner({
   const [selRect, setSelRect] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null)
   const [pendingMarker, setPendingMarker] = useState<{ id: string; clientX: number; clientY: number } | null>(null)
   const [headerPopover, setHeaderPopover] = useState<{ clientX: number; clientY: number; date: string; hour: number } | null>(null)
+  const [gridContextMenu, setGridContextMenu] = useState<{ clientX: number; clientY: number; date: Date; hour: number; categoryId: string; employeeId?: string } | null>(null)
   const selRectStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null)
 
   const [staffPanel, setStaffPanel] = useState<StaffPanelState | null>(null)
@@ -2880,6 +2885,11 @@ function GridViewInner({
                           if (!dragEmpId) return
                           setDropHover({ categoryId: cat.id, di, hour: h })
                         }}
+                        onContextMenu={hideFloatingButtons ? (e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setGridContextMenu({ clientX: e.clientX, clientY: e.clientY, date, hour: h, categoryId: cat.id, employeeId: emp?.id })
+                        } : undefined}
                       />
                     )
                   })
@@ -2913,6 +2923,17 @@ function GridViewInner({
                         if (!dragEmpId) return
                         setDropHover({ categoryId: cat.id, di })
                       }}
+                      onContextMenu={hideFloatingButtons ? (e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        const r = scrollRef.current?.getBoundingClientRect()
+                        if (!r) return
+                        const x = (scrollRef.current?.scrollLeft ?? 0) + e.clientX - r.left
+                        const localX = x - di * COL_W_WEEK
+                        const hour = Math.max(settings.visibleFrom, Math.min(settings.visibleTo - 0.5,
+                          settings.visibleFrom + localX / PX_WEEK))
+                        setGridContextMenu({ clientX: e.clientX, clientY: e.clientY, date, hour: Math.round(hour * 4) / 4, categoryId: cat.id, employeeId: emp?.id })
+                      } : undefined}
                     >
                       {Array.from(
                         { length: settings.visibleTo - settings.visibleFrom + 1 },
@@ -3491,7 +3512,7 @@ function GridViewInner({
               )
             })()}
             {/* Rows */}
-            {rowVirtualizer.getVirtualItems().map((vr) => {
+            {!hideFloatingButtons && rowVirtualizer.getVirtualItems().map((vr) => {
               const row = flatRows[vr.index]
               if (!row) return null
               // Individual mode: skip category headers (no blocks, no add buttons)
@@ -4400,7 +4421,67 @@ function GridViewInner({
         document.body
       )}
 
-      {/* Header right-click popover — Add Marker / Zoom / Dependencies */}
+      {/* Grid right-click context menu — shown when hideFloatingButtons=true (Timeline mode) */}
+      {gridContextMenu && createPortal(
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 999998 }} onPointerDown={() => setGridContextMenu(null)} />
+          <div style={{
+            position: "fixed",
+            top: gridContextMenu.clientY + 4,
+            left: gridContextMenu.clientX,
+            zIndex: 999999,
+            background: "var(--popover)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+            minWidth: 180,
+            padding: "4px 0",
+            overflow: "hidden",
+          }}>
+            <button
+              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "8px 14px", border: "none", background: "none", cursor: "pointer", fontSize: 13, color: "var(--foreground)", textAlign: "left" }}
+              onPointerEnter={(e) => (e.currentTarget.style.background = "var(--accent)")}
+              onPointerLeave={(e) => (e.currentTarget.style.background = "none")}
+              onClick={() => {
+                setAddPrompt({ date: gridContextMenu.date, categoryId: gridContextMenu.categoryId, hour: gridContextMenu.hour, employeeId: gridContextMenu.employeeId })
+                setGridContextMenu(null)
+              }}
+            >
+              <Plus size={14} style={{ flexShrink: 0, color: "var(--muted-foreground)" }} />
+              Add shift here
+            </button>
+            {copiedShift && (
+              <button
+                style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "8px 14px", border: "none", background: "none", cursor: "pointer", fontSize: 13, color: "var(--foreground)", textAlign: "left" }}
+                onPointerEnter={(e) => (e.currentTarget.style.background = "var(--accent)")}
+                onPointerLeave={(e) => (e.currentTarget.style.background = "none")}
+                onClick={() => {
+                  const newShift: Block = {
+                    ...copiedShift,
+                    id: nextUid(),
+                    date: toDateISO(gridContextMenu.date),
+                    categoryId: gridContextMenu.categoryId,
+                    employeeId: gridContextMenu.employeeId ?? copiedShift.employeeId,
+                    employee: (() => {
+                      const e = employees.find(e => e.id === (gridContextMenu.employeeId ?? copiedShift.employeeId))
+                      return e?.name ?? copiedShift.employee
+                    })(),
+                    startH: gridContextMenu.hour,
+                    endH: gridContextMenu.hour + (copiedShift.endH - copiedShift.startH),
+                  }
+                  setShifts((prev) => [...prev, newShift])
+                  setCopiedShift?.(null)
+                  setGridContextMenu(null)
+                }}
+              >
+                <ClipboardPaste size={14} style={{ flexShrink: 0, color: "var(--primary)" }} />
+                Paste shift here
+              </button>
+            )}
+          </div>
+        </>,
+        document.body
+      )}
       {headerPopover && createPortal(
         <>
           {/* Backdrop to close */}
