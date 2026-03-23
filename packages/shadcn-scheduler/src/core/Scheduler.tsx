@@ -864,6 +864,7 @@ export function Scheduler({
                 setCopiedShift={setCopiedShift}
                 onDeleteShift={handleDeleteShift}
                 scrollToNowRef={scrollToNowRef}
+                initialScrollToNow={mergedConfig.initialScrollToNow ?? false}
                 onBlockCreate={onBlockCreate}
                 onBlockDelete={onBlockDelete}
                 onBlockMove={onBlockMove}

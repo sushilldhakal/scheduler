@@ -89,6 +89,9 @@ export function DateNavigator({
       const lastDay = new Date(y, m + 1, 0).getDate()
       return `${getDateLabel(currentDate, { month: "short" })} 1 - ${getDateLabel(currentDate, { month: "short" })} ${lastDay}, ${y}`
     }
+    if (base === "timeline") {
+      return getDateLabel(currentDate, { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+    }
     return `${getDateLabel(new Date(y, 0, 1), { month: "short" })} 1, ${y} - ${getDateLabel(new Date(y, 11, 31), { month: "short" })} 31, ${y}`
   }, [base, currentDate, getDateLabel])
 

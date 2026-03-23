@@ -770,7 +770,10 @@ function GridViewInner({
         ? `emp:${row.employee.id}`
         : `cat:${row.category.id}`
       if (row.kind === "category") {
-        if ((effectiveRowMode === "category" || effectiveRowMode === "flat") && (effectiveRowMode === "flat" || !collapsed.has(row.category.id))) {
+        if (effectiveRowMode === "flat") {
+          // Compact fixed height for EPG/TV-style flat timeline rows
+          result[key] = ROLE_HDR
+        } else if (effectiveRowMode === "category" && !collapsed.has(row.category.id)) {
           // Use pre-computed max height — no inner dates.forEach loop
           result[key] = Math.max(maxTracksPerCat.get(row.category.id) ?? 0, ROLE_HDR + SHIFT_H)
         } else {
@@ -778,10 +781,7 @@ function GridViewInner({
         }
         return
       }
-      // Flat EPG mode: each row is exactly one block tall — no header, no add-button space
-      result[key] = effectiveRowMode === "flat"
-        ? SHIFT_H
-        : 50
+      result[key] = 50
     })
     return result
   }, [maxTracksPerCat, flatRows, effectiveRowMode, collapsed])
@@ -2209,10 +2209,14 @@ function GridViewInner({
   }, [scrollToNow, scrollToNowRef])
   useEffect(() => {
     if (!initialScrollToNow || !scrollRef.current) return
-    const t = requestAnimationFrame(() => {
-      scrollToNow()
+    // Double-RAF: first frame commits layout, second frame has correct scrollWidth/clientWidth
+    let id1: number, id2: number
+    id1 = requestAnimationFrame(() => {
+      id2 = requestAnimationFrame(() => {
+        scrollToNow()
+      })
     })
-    return () => cancelAnimationFrame(t)
+    return () => { cancelAnimationFrame(id1); cancelAnimationFrame(id2) }
   }, [initialScrollToNow])
 
   const currentCategory = isMobileSingleResource && categories[mobileResourceIndex!]
@@ -2349,6 +2353,10 @@ function GridViewInner({
                   borderBottom: "2px solid var(--border)",
                   flexShrink: 0,
                   width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
+                  // Lock the sticky header to exactly HOUR_HDR_H so it matches the sidebar header height.
+                  // Without this, the timeline (multiday) header is content-sized and drifts by a few px.
+                  height: HOUR_HDR_H,
+                  overflow: "hidden",
                 }}
                 onContextMenu={(e) => {
                   e.preventDefault()
@@ -3710,7 +3718,9 @@ function GridViewInner({
                       left = (cs - settings.visibleFrom) * HOUR_W + 2
                       width = Math.max((ce - cs) * HOUR_W - 4, 18)
                     }
-                    const top = catTop + ROLE_HDR + track * SHIFT_H + 4
+                    const top = effectiveRowMode === "flat"
+                      ? catTop + 4 + track * (ROLE_HDR - 4)
+                      : catTop + ROLE_HDR + track * SHIFT_H + 4
                     const variant = settings.badgeVariant ?? "both"
                     const canDrag = (variant === "drag" || variant === "both") && shift.draggable !== false
                     const showResize = !readOnly && (variant === "resize" || variant === "both") && width >= 48 && shift.resizable !== false
@@ -3722,7 +3732,7 @@ function GridViewInner({
                     const hasConflict = conflictIds.has(shift.id)
                     const isPast = shift.date < toDateISO(new Date()) || (sameDay(shift.date, new Date()) && shift.endH < nowH)
                     const isLive = sameDay(shift.date, new Date()) && nowH >= shift.startH && nowH < shift.endH
-                    const blockH = SHIFT_H - 8
+                    const blockH = effectiveRowMode === "flat" ? ROLE_HDR - 8 : SHIFT_H - 8
                     const blockStyle: React.CSSProperties = {
                       position: "absolute", left, top, width,
                       height: blockH, borderRadius: 8,
@@ -3858,28 +3868,20 @@ function GridViewInner({
                           <div
                             data-resize="left"
                             onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
-                            className="absolute left-0 top-0 h-full cursor-ew-resize flex items-center justify-center"
-                            style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 12, background: "rgba(0,0,0,0.25)", borderRadius: "8px 0 0 8px", zIndex: 3 }}
+                            className="absolute left-0 top-0 h-full cursor-ew-resize flex items-center justify-start"
+                            style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 14, paddingLeft: 8, zIndex: 3 }}
                           >
-                            <div style={{ display: "flex", flexDirection: "column", gap: 3, pointerEvents: "none" }}>
-                              <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
-                              <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
-                              <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
-                            </div>
+                            <div style={{ width: 2, height: "55%", minHeight: 10, borderRadius: 2, background: "rgba(255,255,255,0.65)", pointerEvents: "none" }} />
                           </div>
                         )}
                         {showResize && (
                           <div
                             data-resize="right"
                             onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
-                            className="absolute right-0 top-0 h-full cursor-ew-resize flex items-center justify-center"
-                            style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 12, background: "rgba(0,0,0,0.25)", borderRadius: "0 8px 8px 0", zIndex: 3 }}
+                            className="absolute right-0 top-0 h-full cursor-ew-resize flex items-center justify-end"
+                            style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 14, paddingRight: 8, zIndex: 3 }}
                           >
-                            <div style={{ display: "flex", flexDirection: "column", gap: 3, pointerEvents: "none" }}>
-                              <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
-                              <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
-                              <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
-                            </div>
+                            <div style={{ width: 2, height: "55%", minHeight: 10, borderRadius: 2, background: "rgba(255,255,255,0.65)", pointerEvents: "none" }} />
                           </div>
                         )}
                         {/* Dep-draw dots — 4 connection points, visible on hover */}
@@ -4170,28 +4172,20 @@ function GridViewInner({
                             <div
                               data-resize="left"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
-                              className="absolute left-0 top-0 flex h-full cursor-ew-resize items-center justify-center"
-                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 12, background: "rgba(0,0,0,0.25)", borderRadius: "8px 0 0 8px", zIndex: 3 }}
+                              className="absolute left-0 top-0 flex h-full cursor-ew-resize items-center justify-start"
+                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 14, paddingLeft: 8, zIndex: 3 }}
                             >
-                              <div style={{ display: "flex", flexDirection: "column", gap: 3, pointerEvents: "none" }}>
-                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
-                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
-                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
-                              </div>
+                              <div style={{ width: 2, height: "55%", minHeight: 10, borderRadius: 2, background: "rgba(255,255,255,0.65)", pointerEvents: "none" }} />
                             </div>
                           )}
                           {showResize && (
                             <div
                               data-resize="right"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
-                              className="absolute right-0 top-0 flex h-full cursor-ew-resize items-center justify-center"
-                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 12, background: "rgba(0,0,0,0.25)", borderRadius: "0 8px 8px 0", zIndex: 3 }}
+                              className="absolute right-0 top-0 flex h-full cursor-ew-resize items-center justify-end"
+                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 14, paddingRight: 8, zIndex: 3 }}
                             >
-                              <div style={{ display: "flex", flexDirection: "column", gap: 3, pointerEvents: "none" }}>
-                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
-                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
-                                <div style={{ width: 2, height: 2, borderRadius: "50%", background: "rgba(255,255,255,0.8)" }} />
-                              </div>
+                              <div style={{ width: 2, height: "55%", minHeight: 10, borderRadius: 2, background: "rgba(255,255,255,0.65)", pointerEvents: "none" }} />
                             </div>
                           )}
                           {/* Dep-draw dots — 4 connection points, visible on hover */}

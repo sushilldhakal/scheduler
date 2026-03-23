@@ -29,6 +29,7 @@ export interface TimelineViewProps {
   availability?: EmployeeAvailability[]
   onDeleteShift?: (shiftId: string) => void
   scrollToNowRef?: React.MutableRefObject<(() => void) | null>
+  initialScrollToNow?: boolean
   onBlockCreate?: (block: Block) => void
   onBlockDelete?: (block: Block) => void
   onBlockMove?: (block: Block) => void
@@ -60,6 +61,7 @@ export function TimelineView({
   availability,
   onDeleteShift,
   scrollToNowRef,
+  initialScrollToNow,
   onBlockCreate,
   onBlockDelete,
   onBlockMove,
@@ -95,6 +97,7 @@ export function TimelineView({
       availability={availability}
       onDeleteShift={onDeleteShift}
       scrollToNowRef={scrollToNowRef}
+      initialScrollToNow={initialScrollToNow}
       onBlockCreate={onBlockCreate}
       onBlockDelete={onBlockDelete}
       onBlockMove={onBlockMove}
