@@ -2888,7 +2888,7 @@ function GridViewInner({
                         onContextMenu={hideFloatingButtons ? (e) => {
                           e.preventDefault()
                           e.stopPropagation()
-                          setGridContextMenu({ clientX: e.clientX, clientY: e.clientY, date, hour: h, categoryId: cat.id, employeeId: emp?.id })
+                          setGridContextMenu({ clientX: e.clientX, clientY: e.clientY, date, hour: h, categoryId: cat.id, employeeId: row.employee?.id })
                         } : undefined}
                       />
                     )
@@ -2932,7 +2932,7 @@ function GridViewInner({
                         const localX = x - di * COL_W_WEEK
                         const hour = Math.max(settings.visibleFrom, Math.min(settings.visibleTo - 0.5,
                           settings.visibleFrom + localX / PX_WEEK))
-                        setGridContextMenu({ clientX: e.clientX, clientY: e.clientY, date, hour: Math.round(hour * 4) / 4, categoryId: cat.id, employeeId: emp?.id })
+                        setGridContextMenu({ clientX: e.clientX, clientY: e.clientY, date, hour: Math.round(hour * 4) / 4, categoryId: cat.id, employeeId: row.employee?.id })
                       } : undefined}
                     >
                       {Array.from(
