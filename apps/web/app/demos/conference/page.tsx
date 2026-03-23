@@ -15,7 +15,7 @@ export default function ConferenceDemo() {
   }, [])
 
   return (
-    <DemoShell title="Conference Schedule" description="6 rooms packed back-to-back — keynotes, workshops, breakouts" docsHref="/docs/examples/preset-conference">
+    <DemoShell title="TechConf 2025 — 3-Day Schedule" description="6 rooms · 3 days · 40+ sessions — keynotes, workshops, startup stage" docsHref="/docs/examples/preset-conference">
       {mounted && initialDate ? (
         <SchedulerConference
           categories={conferenceRooms}
@@ -23,8 +23,8 @@ export default function ConferenceDemo() {
           shifts={sessions}
           onShiftsChange={setSessions}
           initialDate={initialDate}
-          initialZoom={2}
-          bufferDays={0}
+          initialZoom={1.5}
+          bufferDays={2}
           config={{ defaultSettings: { visibleFrom: 8, visibleTo: 20 }, snapMinutes: 15 }}
         />
       ) : <div className="w-full h-full animate-pulse bg-muted" />}

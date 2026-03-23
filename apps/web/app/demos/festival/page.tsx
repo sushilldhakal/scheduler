@@ -15,7 +15,7 @@ export default function FestivalDemo() {
   }, [])
 
   return (
-    <DemoShell title="Music Festival Lineup" description="5 stages — Main Stage to Electronic Dome, packed noon to midnight" docsHref="/docs/examples/preset-festival">
+    <DemoShell title="Glastonbury 2025 — 3-Day Lineup" description="6 stages · 18 artists · 3 days — Main Stage to Electronic Dome" docsHref="/docs/examples/preset-festival">
       {mounted && initialDate ? (
         <SchedulerFestival
           categories={festivalStages}
@@ -24,7 +24,7 @@ export default function FestivalDemo() {
           onShiftsChange={setSets}
           initialDate={initialDate}
           initialZoom={2}
-          bufferDays={0}
+          bufferDays={2}
           config={{ defaultSettings: { visibleFrom: 12, visibleTo: 24 }, snapMinutes: 15 }}
         />
       ) : <div className="w-full h-full animate-pulse bg-muted" />}

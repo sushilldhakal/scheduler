@@ -304,6 +304,24 @@ export function GridViewSidebar({
                         isCollapsed: collapsed.has(cat.id),
                         onToggleCollapse: () => toggleCollapse(cat.id),
                       })
+                    ) : isDayViewMultiDay ? (
+                      // Timeline / event mode — just the name, no staff stats or Staff button
+                      <>
+                        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ width: 10, height: 10, borderRadius: "50%", background: c.bg, flexShrink: 0 }} />
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {cat.name}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => toggleCollapse(cat.id)}
+                          aria-label={collapsed.has(cat.id) ? "Expand" : "Collapse"}
+                          style={{ border: "none", background: "transparent", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)", transform: collapsed.has(cat.id) ? "rotate(-90deg)" : "none", transition: "transform 0.2s", flexShrink: 0, borderRadius: 4 }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+                        </button>
+                      </>
                     ) : (
                       <>
                         <div
