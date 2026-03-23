@@ -170,6 +170,30 @@ export function createSchedulerConfig(
   }
 }
 
+/**
+ * Composes two SchedulerConfig objects — overrides win over base.
+ * Use this to build domain-specific configs from a shared base without duplication.
+ *
+ * @example
+ * const base = createSchedulerConfig({ preset: "default" })
+ * const tv   = extendConfig(base, { labels: { category: "Channel" } })
+ */
+export function extendConfig(
+  base: SchedulerConfig,
+  overrides: Partial<SchedulerConfig>
+): SchedulerConfig {
+  return {
+    labels:              { ...base.labels,         ...overrides.labels },
+    categoryColors:      overrides.categoryColors   ?? base.categoryColors,
+    defaultSettings:     mergeSettings(base.defaultSettings, overrides.defaultSettings),
+    initialScrollToNow:  overrides.initialScrollToNow ?? base.initialScrollToNow ?? false,
+    views:               mergeViews(base.views, overrides.views),
+    showLiveIndicator:   overrides.showLiveIndicator ?? base.showLiveIndicator,
+    snapMinutes:         overrides.snapMinutes       ?? base.snapMinutes,
+    allowOvernight:      overrides.allowOvernight    ?? base.allowOvernight,
+  }
+}
+
 function mergeViews(
   ...partials: (Partial<Record<ViewKey, boolean>> | undefined)[]
 ): Partial<Record<ViewKey, boolean>> | undefined {
