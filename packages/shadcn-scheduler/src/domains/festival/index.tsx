@@ -9,15 +9,23 @@ export interface SchedulerFestivalProps extends Omit<React.ComponentProps<typeof
 }
 
 /**
- * Festival-domain scheduler: Stage/Set vocabulary.
- * Applies preset "festival"; pass config to override.
+ * Music festival / stage lineup — single-day timeline, no view tabs.
  */
 export function SchedulerFestival({
   config: configOverrides,
   ...props
 }: SchedulerFestivalProps): React.ReactElement {
   const config = createSchedulerConfig({ preset: "festival", ...configOverrides })
-  return <Scheduler {...props} config={config} />
+  return (
+    <Scheduler
+      {...props}
+      config={{ ...config, views: { timeline: true } }}
+      initialView="timeline"
+      showViewTabs={false}
+      showAddShiftButton={false}
+      
+    />
+  )
 }
 
 export type { Block, Resource }

@@ -1,10 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Scheduler, createGanttConfig, type Block } from '@sushill/shadcn-scheduler'
+import { SchedulerGantt, type Block } from '@sushill/shadcn-scheduler/gantt'
 import { ganttTeams, ganttMembers, ganttTasks } from '@/lib/demo/ganttData'
 import { DemoShell } from '../_demoShell'
-
-const config = createGanttConfig({ defaultSettings: { visibleFrom: 7, visibleTo: 18 }, snapMinutes: 60 })
 
 export default function GanttDemo() {
   const [mounted, setMounted] = useState(false)
@@ -25,14 +23,14 @@ export default function GanttDemo() {
   return (
     <DemoShell title="Project Gantt" description="5 teams, Mon–Fri sprint — frontend, backend, design, QA, DevOps" docsHref="/docs/examples/preset-gantt">
       {mounted && initialDate ? (
-        <Scheduler
+        <SchedulerGantt
           categories={ganttTeams}
           employees={ganttMembers}
           shifts={tasks}
           onShiftsChange={setTasks}
-          initialView="week"
           initialDate={initialDate}
-          config={config}
+          bufferDays={7}
+          config={{ defaultSettings: { visibleFrom: 7, visibleTo: 18 }, snapMinutes: 60 }}
         />
       ) : <div className="w-full h-full animate-pulse bg-muted" />}
     </DemoShell>

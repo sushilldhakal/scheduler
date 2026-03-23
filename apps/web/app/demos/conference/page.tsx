@@ -1,10 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Scheduler, createConferenceConfig, type Block } from '@sushill/shadcn-scheduler'
+import { SchedulerConference, type Block } from '@sushill/shadcn-scheduler/conference'
 import { conferenceRooms, conferenceSpeakers, conferenceSessions } from '@/lib/demo/conferenceData'
 import { DemoShell } from '../_demoShell'
-
-const config = createConferenceConfig({ defaultSettings: { visibleFrom: 8, visibleTo: 20 }, snapMinutes: 15 })
 
 export default function ConferenceDemo() {
   const [mounted, setMounted] = useState(false)
@@ -19,15 +17,15 @@ export default function ConferenceDemo() {
   return (
     <DemoShell title="Conference Schedule" description="6 rooms packed back-to-back — keynotes, workshops, breakouts" docsHref="/docs/examples/preset-conference">
       {mounted && initialDate ? (
-        <Scheduler
+        <SchedulerConference
           categories={conferenceRooms}
           employees={conferenceSpeakers}
           shifts={sessions}
           onShiftsChange={setSessions}
-          initialView="day"
           initialDate={initialDate}
           initialZoom={2}
-          config={config}
+          bufferDays={0}
+          config={{ defaultSettings: { visibleFrom: 8, visibleTo: 20 }, snapMinutes: 15 }}
         />
       ) : <div className="w-full h-full animate-pulse bg-muted" />}
     </DemoShell>

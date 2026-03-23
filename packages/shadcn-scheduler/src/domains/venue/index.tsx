@@ -9,15 +9,23 @@ export interface SchedulerVenueProps extends Omit<React.ComponentProps<typeof Sc
 }
 
 /**
- * Venue-domain scheduler: Space/Booking vocabulary.
- * Applies preset "venue"; pass config to override.
+ * Venue bookings — single-day timeline, no view tabs.
  */
 export function SchedulerVenue({
   config: configOverrides,
   ...props
 }: SchedulerVenueProps): React.ReactElement {
   const config = createSchedulerConfig({ preset: "venue", ...configOverrides })
-  return <Scheduler {...props} config={config} />
+  return (
+    <Scheduler
+      {...props}
+      config={{ ...config, views: { timeline: true } }}
+      initialView="timeline"
+      showViewTabs={false}
+      showAddShiftButton={true}
+      addShiftLabel="Add Booking"
+    />
+  )
 }
 
 export type { Block, Resource }

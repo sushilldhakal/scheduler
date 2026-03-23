@@ -9,15 +9,23 @@ export interface SchedulerGanttProps extends Omit<React.ComponentProps<typeof Sc
 }
 
 /**
- * Gantt-domain scheduler: Project/Task vocabulary.
- * Applies preset "gantt"; pass config to override.
+ * Project Gantt — timeline + week views only, no list/month/year.
  */
 export function SchedulerGantt({
   config: configOverrides,
   ...props
 }: SchedulerGanttProps): React.ReactElement {
   const config = createSchedulerConfig({ preset: "gantt", ...configOverrides })
-  return <Scheduler {...props} config={config} />
+  return (
+    <Scheduler
+      {...props}
+      config={{ ...config, views: { timeline: true, week: true } }}
+      initialView="timeline"
+      showViewTabs={true}
+      showAddShiftButton={true}
+      addShiftLabel="Add Task"
+    />
+  )
 }
 
 export type { Block, Resource }

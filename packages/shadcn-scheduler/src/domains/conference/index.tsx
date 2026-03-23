@@ -9,15 +9,23 @@ export interface SchedulerConferenceProps extends Omit<React.ComponentProps<type
 }
 
 /**
- * Conference-domain scheduler: Track/Session vocabulary.
- * Applies preset "conference"; pass config to override.
+ * Conference schedule — single-day timeline, no view tabs.
  */
 export function SchedulerConference({
   config: configOverrides,
   ...props
 }: SchedulerConferenceProps): React.ReactElement {
   const config = createSchedulerConfig({ preset: "conference", ...configOverrides })
-  return <Scheduler {...props} config={config} />
+  return (
+    <Scheduler
+      {...props}
+      config={{ ...config, views: { timeline: true } }}
+      initialView="timeline"
+      showViewTabs={false}
+      showAddShiftButton={false}
+      
+    />
+  )
 }
 
 export type { Block, Resource }

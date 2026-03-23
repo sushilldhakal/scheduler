@@ -1,10 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Scheduler, createVenueConfig, type Block } from '@sushill/shadcn-scheduler'
+import { SchedulerVenue, type Block } from '@sushill/shadcn-scheduler/venue'
 import { venueSpaces, venueClients, bookings } from '@/lib/demo/venueData'
 import { DemoShell } from '../_demoShell'
-
-const config = createVenueConfig({ defaultSettings: { visibleFrom: 8, visibleTo: 24 }, snapMinutes: 30 })
 
 export default function VenueDemo() {
   const [mounted, setMounted] = useState(false)
@@ -19,15 +17,15 @@ export default function VenueDemo() {
   return (
     <DemoShell title="Venue Bookings" description="6 spaces packed today — ballroom, rooftop, boardrooms, garden, cinema" docsHref="/docs/examples/preset-venue">
       {mounted && initialDate ? (
-        <Scheduler
+        <SchedulerVenue
           categories={venueSpaces}
           employees={venueClients}
           shifts={bks}
           onShiftsChange={setBks}
-          initialView="timeline"
           initialDate={initialDate}
           initialZoom={2}
-          config={config}
+          bufferDays={3}
+          config={{ defaultSettings: { visibleFrom: 8, visibleTo: 24 }, snapMinutes: 30 }}
         />
       ) : <div className="w-full h-full animate-pulse bg-muted" />}
     </DemoShell>
