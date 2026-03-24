@@ -22,7 +22,7 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf ../../dist/preset-healthcare"
+    "clean": "rm -rf dist"
   },
   "keywords": [
     "scheduler",

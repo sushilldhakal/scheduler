@@ -22,7 +22,7 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf ../../dist/core"
+    "clean": "rm -rf dist"
   },
   "keywords": [
     "scheduler",
