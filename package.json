@@ -12,7 +12,7 @@
     "build:plugins": "npm run build -w @shadcn-scheduler/plugin-markers -w @shadcn-scheduler/plugin-dependencies -w @shadcn-scheduler/plugin-histogram -w @shadcn-scheduler/plugin-availability -w @shadcn-scheduler/plugin-export -w @shadcn-scheduler/plugin-recurrence -w @shadcn-scheduler/plugin-audit",
     "build:presets": "npm run build -w @shadcn-scheduler/preset-healthcare -w @shadcn-scheduler/preset-tv -w @shadcn-scheduler/preset-conference",
     "build:scheduler": "npm run build -w @shadcn-scheduler/scheduler",
-    "build:all": "npm run build:packages && npm run build:views && npm run build:plugins && npm run build:presets && npm run build:scheduler",
+    "build:all": "npm run build:packages && npm run build -w @sushill/shadcn-scheduler && npm run build:views && npm run build:plugins && npm run build:presets && npm run build:scheduler",
     "build:web": "npm run build && npm run build -w web",
     "dev:web": "npm run dev -w web",
     "test": "npm run test --workspaces --if-present",
