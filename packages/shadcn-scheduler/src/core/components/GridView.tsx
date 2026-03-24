@@ -238,8 +238,9 @@ function GridViewInner({
   const scrollTriggeredUpdateRef = useRef(false)
   const lastReportedRangeRef = useRef<{ start: number; end: number } | null>(null)
 
-  /** Row highlighted during block drag — set by drag engine via onHoverCategory */
-  const [hoveredCategoryId, setHoveredCategoryId] = useState<string | null>(null)
+  /** Row highlighted during block drag — ref avoids re-renders on every cell hover */
+  const hoveredCategoryId = useRef<string | null>(null)
+  const rowHoverHighlightRef = useRef<HTMLDivElement>(null)
   /** Resizable sidebar width */
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   // sidebarWidth mirrors the panel pixel size for the header stub alignment
@@ -263,7 +264,8 @@ function GridViewInner({
   const staffDragRef = useRef<{ empId: string; fromCategoryId: string; empName: string; pointerId: number } | null>(null)
   const [dragEmpId, setDragEmpId] = useState<string | null>(null)
   const [isStaffDragging, setIsStaffDragging] = useState(false)
-  const [dropHover, setDropHover] = useState<DropHoverState | null>(null)
+  const dropHoverRef = useRef<DropHoverState | null>(null)
+  const dropHighlightRef = useRef<HTMLDivElement>(null)
   const [categoryWarn, setCategoryWarn] = useState<CategoryWarnState | null>(null)
   const [addPrompt, setAddPrompt] = useState<AddPromptState | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -845,6 +847,20 @@ function GridViewInner({
     return ids
   }, [shiftIndex, dates, CATEGORIES])
 
+  // Pre-computed packing: "catId:dateISO" → { shiftId → trackNum }
+  // Avoids calling packShifts() inline on every render iteration
+  const packedTracksIndex = useMemo((): Map<string, Map<string, number>> => {
+    const out = new Map<string, Map<string, number>>()
+    for (const [key, dayShifts] of shiftIndex.entries()) {
+      const sorted = [...dayShifts].sort((a, b) => a.startH - b.startH)
+      const nums = packShifts(sorted)
+      const trackMap = new Map<string, number>()
+      sorted.forEach((s, i) => trackMap.set(s.id, nums[i] ?? 0))
+      out.set(key, trackMap)
+    }
+    return out
+  }, [shiftIndex])
+
   const categoryHasShifts = useMemo((): Record<string, boolean> => {
     const map: Record<string, boolean> = {}
     for (const [key, list] of shiftIndex.entries()) {
@@ -1015,7 +1031,7 @@ function GridViewInner({
     staffDragRef.current = null
     setIsStaffDragging(false)
     setDragEmpId(null)
-    setDropHover(null)
+    dropHoverRef.current = null; if (dropHighlightRef.current) dropHighlightRef.current.style.display = "none"
     if (ghostRef.current) ghostRef.current.style.display = "none"
           if (resizeLabelRef.current) resizeLabelRef.current.style.display = "none"  }, [])
 
@@ -1694,7 +1710,30 @@ function GridViewInner({
       const cat = lay.CATEGORIES.find((c) => c.id === categoryId)
       const ghostEl = ghostRef.current
       // Update hovered row highlight
-      if ((cat?.id ?? null) !== hoveredCategoryId) setHoveredCategoryId(cat?.id ?? null)
+      const newId = cat?.id ?? null
+      if (newId !== hoveredCategoryId.current) {
+        hoveredCategoryId.current = newId
+        // Direct DOM update — no React re-render
+        const el = rowHoverHighlightRef.current
+        if (el) {
+          if (!newId || !dragId) {
+            el.style.display = 'none'
+          } else {
+            const top = categoryTops[newId] ?? 0
+            const h = categoryHeights[newId] ?? 0
+            const hovCat = SORTED_CATEGORIES.find(c => c.id === newId)
+            const col = hovCat ? getColor(hovCat.colorIdx) : null
+            if (col) {
+              el.style.display = 'block'
+              el.style.top = `${top}px`
+              el.style.height = `${h}px`
+              el.style.background = `${col.bg}12`
+              el.style.borderTop = `2px solid ${col.bg}44`
+              el.style.borderBottom = `2px solid ${col.bg}44`
+            }
+          }
+        }
+      }
       if (!orig || !cat || lay.collapsed.has(cat.id) || !ghostEl) {
         if (ghostEl) ghostEl.style.display = "none"
         return
@@ -1824,7 +1863,7 @@ function GridViewInner({
       dragPointerRef.current = null
       ds.current = null
       setDragId(null)
-      setHoveredCategoryId(null)
+      hoveredCategoryId.current = null; if (rowHoverHighlightRef.current) rowHoverHighlightRef.current.style.display = "none"
       clearBlockLongPress()
       stopEdgeScroll()
       if (ghostRef.current) ghostRef.current.style.display = "none"
@@ -1846,7 +1885,7 @@ function GridViewInner({
           if (el) el.style.transform = ""
           ds.current = null
           setDragId(null)
-          setHoveredCategoryId(null)
+          hoveredCategoryId.current = null; if (rowHoverHighlightRef.current) rowHoverHighlightRef.current.style.display = "none"
           stopEdgeScroll()
           if (ghostRef.current) ghostRef.current.style.display = "none"
           if (resizeLabelRef.current) resizeLabelRef.current.style.display = "none"
@@ -1889,7 +1928,7 @@ function GridViewInner({
           if (conflictEl) conflictEl.style.transform = ""
           ds.current = null
           setDragId(null)
-          setHoveredCategoryId(null)
+          hoveredCategoryId.current = null; if (rowHoverHighlightRef.current) rowHoverHighlightRef.current.style.display = "none"
           stopEdgeScroll()
           if (ghostRef.current) ghostRef.current.style.display = "none"
           if (resizeLabelRef.current) resizeLabelRef.current.style.display = "none"
@@ -1903,7 +1942,7 @@ function GridViewInner({
       dragPointerRef.current = null
       ds.current = null
       setDragId(null)
-      setHoveredCategoryId(null)
+      hoveredCategoryId.current = null; if (rowHoverHighlightRef.current) rowHoverHighlightRef.current.style.display = "none"
       stopEdgeScroll()
       if (ghostRef.current) ghostRef.current.style.display = "none"
           if (resizeLabelRef.current) resizeLabelRef.current.style.display = "none"
@@ -2314,7 +2353,7 @@ function GridViewInner({
             selEmps={selEmps}
             collapsed={collapsed}
             toggleCollapse={toggleCollapse}
-            hoveredCategoryId={hoveredCategoryId}
+            hoveredCategoryId={null}
             setStaffPanel={setStaffPanel}
             setAddPrompt={setAddPrompt}
             slots={slots}
@@ -2774,30 +2813,20 @@ function GridViewInner({
               )
             })()}
 
-            {/* Row hover highlight during drag */}
-            {dragId && hoveredCategoryId && (() => {
-              const top = categoryTops[hoveredCategoryId] ?? 0
-              const h = categoryHeights[hoveredCategoryId] ?? 0
-              const hovCat = SORTED_CATEGORIES.find(c => c.id === hoveredCategoryId)
-              if (!hovCat) return null
-              const col = getColor(hovCat.colorIdx)
-              return (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    top,
-                    width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
-                    height: h,
-                    background: `${col.bg}12`,
-                    borderTop: `2px solid ${col.bg}44`,
-                    borderBottom: `2px solid ${col.bg}44`,
-                    pointerEvents: "none",
-                    zIndex: 6,
-                  }}
-                />
-              )
-            })()}
+            {/* Row hover highlight during drag — DOM-driven, zero re-renders */}
+            <div
+              ref={rowHoverHighlightRef}
+              style={{
+                display: "none",
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
+                height: 0,
+                pointerEvents: "none",
+                zIndex: 6,
+              }}
+            />
             {/* Availability shading — per-employee unavailable time overlay */}
             {availability.length > 0 && rowVirtualizer.getVirtualItems().map((vr) => {
               const row = flatRows[vr.index]
@@ -2894,7 +2923,7 @@ function GridViewInner({
                         }}
                         onPointerEnter={() => {
                           if (!dragEmpId) return
-                          setDropHover({ categoryId: cat.id, di, hour: h })
+                          dropHoverRef.current = { categoryId: cat.id, di, hour: h }
                         }}
                         onContextMenu={hideFloatingButtons ? (e) => {
                           e.preventDefault()
@@ -2932,7 +2961,7 @@ function GridViewInner({
                       }}
                       onPointerEnter={() => {
                         if (!dragEmpId) return
-                        setDropHover({ categoryId: cat.id, di })
+                        dropHoverRef.current = { categoryId: cat.id, di }
                       }}
                       onContextMenu={hideFloatingButtons ? (e) => {
                         e.preventDefault()
@@ -2995,7 +3024,7 @@ function GridViewInner({
                     }}
                     onPointerEnter={() => {
                       if (!dragEmpId) return
-                      setDropHover({ categoryId: cat.id, hour: h })
+                      dropHoverRef.current = { categoryId: cat.id, hour: h }
                     }}
                   />
                 )})
@@ -3623,10 +3652,10 @@ function GridViewInner({
               ))
             })}
 
-            {dropHover &&
+            {false && dropHoverRef.current &&
               dragEmpId &&
               (() => {
-                const cat = CATEGORIES.find((c) => c.id === dropHover.categoryId)
+                const cat = CATEGORIES.find((c) => c.id === dropHoverRef.current?.categoryId)
                 if (!cat || collapsed.has(cat.id)) return null
                 const c = getColor(cat.colorIdx)
                 // Use category header top + total height of all employee rows in this category
@@ -3642,7 +3671,7 @@ function GridViewInner({
                       className={dropClass}
                       style={{
                         position: "absolute",
-                        left: (dropHover.di ?? 0) * COL_W_WEEK,
+                        left: (dropHoverRef.current?.di ?? 0) * COL_W_WEEK,
                         top,
                         width: COL_W_WEEK,
                         height: rowH,
@@ -3656,8 +3685,8 @@ function GridViewInner({
                       style={{
                         position: "absolute",
                         left:
-                          (dropHover.di ?? 0) * DAY_WIDTH +
-                          ((dropHover.hour ?? settings.visibleFrom) - settings.visibleFrom) * HOUR_W,
+                          (dropHoverRef.current?.di ?? 0) * DAY_WIDTH +
+                          ((dropHoverRef.current?.hour ?? settings.visibleFrom) - settings.visibleFrom) * HOUR_W,
                         top,
                         width: HOUR_W * 2,
                         height: rowH,
@@ -3669,7 +3698,7 @@ function GridViewInner({
                     className={dropClass}
                     style={{
                       position: "absolute",
-                      left: ((dropHover.hour ?? settings.visibleFrom) - settings.visibleFrom) * HOUR_W,
+                      left: ((dropHoverRef.current?.hour ?? settings.visibleFrom) - settings.visibleFrom) * HOUR_W,
                       top,
                       width: HOUR_W * 2,
                       height: rowH,
@@ -3690,10 +3719,10 @@ function GridViewInner({
                 const catTop = vr.start
                 return dates.map((date, di) => {
                   const dayShifts = shiftIndex.get(`${cat.id}:${toDateISO(date)}`) ?? []
+                  const trackMap = packedTracksIndex.get(`${cat.id}:${toDateISO(date)}`) ?? new Map()
                   const sorted = [...dayShifts].sort((a, b) => a.startH - b.startH)
-                  const trackNums = packShifts(sorted)
-                  return sorted.map((shift, si) => {
-                    const track = trackNums[si] ?? 0
+                  return sorted.map((shift) => {
+                    const track = trackMap.get(shift.id) ?? 0
                     const isDraft = shift.status === "draft"
                     const isDrag = dragId === shift.id
                     let left: number, width: number
@@ -3943,11 +3972,11 @@ function GridViewInner({
                 // Only render shifts belonging to this specific employee
                 const allDayShifts = shiftIndex.get(`${cat.id}:${toDateISO(date)}`) ?? []
                 const dayShifts = allDayShifts.filter((s) => s.employeeId === emp.id)
+                const trackMap = packedTracksIndex.get(`${cat.id}:${toDateISO(date)}`) ?? new Map()
                 const sorted = [...dayShifts].sort((a, b) => a.startH - b.startH)
-                const trackNums = packShifts(sorted)
-                return sorted.map((shift, si) => {
+                return sorted.map((shift) => {
                   if (isLoading) {
-                    const track = trackNums[si] ?? 0
+                    const track = trackMap.get(shift.id) ?? 0
                     let left: number, width: number
                     if (isWeekView) {
                       const cs = Math.max(shift.startH, settings.visibleFrom)
@@ -3974,7 +4003,7 @@ function GridViewInner({
                       />
                     )
                   }
-                  const track = trackNums[si] ?? 0
+                  const track = trackMap.get(shift.id) ?? 0
                   const isDraft = shift.status === "draft"
                   const isDrag = dragId === shift.id
                   const top = catTop + track * SHIFT_H + 4
