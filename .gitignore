@@ -3,10 +3,10 @@ node_modules
 .DS_Store
 
 # Built output — never commit
-# All @shadcn-scheduler/* packages build to /dist/<package-name>/ at the repo root
+# Shared root dist (legacy, superseded by per-package dist/)
 /dist/
-# Original monolithic package keeps its own dist inside its folder
-packages/shadcn-scheduler/dist/
+# Per-package dist directories (built by tsup on CI/Vercel)
+packages/*/dist/
 
 # Next.js
 apps/web/.next/
