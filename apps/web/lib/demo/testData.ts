@@ -79,13 +79,13 @@ export const testShifts: Block[] = [
   ...([-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7].flatMap(o => {
     const dow = new Date(new Date().setDate(new Date().getDate()+o)).getDay()
     if (![2,4,6].includes(dow)) return []
-    return [{ id:`e05_${o}`, categoryId:"c1", employeeId:"e05", employee:"Eva P.", date:d(o), startH:12, endH:20, breakStartH:16, breakEndH:16.5, status:(o<0?"published":"draft") as const }]
+    return [{ id:`e05_${o}`, categoryId:"c1", employeeId:"e05", employee:"Eva P.", date:d(o), startH:12, endH:20, breakStartH:16, breakEndH:16.5, status:(o<0?"published":"draft") as "published" | "draft" }]
   })),
   // Frank — evenings
   ...([-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7].flatMap(o => {
     const dow = new Date(new Date().setDate(new Date().getDate()+o)).getDay()
     if (dow===0) return []
-    return [{ id:`e06_${o}`, categoryId:"c1", employeeId:"e06", employee:"Frank L.", date:d(o), startH:16, endH:24, breakStartH:20, breakEndH:20.5, status:(o<0?"published":"draft") as const }]
+    return [{ id:`e06_${o}`, categoryId:"c1", employeeId:"e06", employee:"Frank L.", date:d(o), startH:16, endH:24, breakStartH:20, breakEndH:20.5, status:(o<0?"published":"draft") as "published" | "draft" }]
   })),
 
   // ── KITCHEN ───────────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ export const testShifts: Block[] = [
   ...([-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7].flatMap(o => {
     const dow = new Date(new Date().setDate(new Date().getDate()+o)).getDay()
     if (dow===0||dow===6) return []
-    return [{ id:`e10_${o}`, categoryId:"c2", employeeId:"e10", employee:"Jack N.", date:d(o), startH:8, endH:16, breakStartH:12, breakEndH:12.5, status:(o>3?"draft":"published") as const }]
+    return [{ id:`e10_${o}`, categoryId:"c2", employeeId:"e10", employee:"Jack N.", date:d(o), startH:8, endH:16, breakStartH:12, breakEndH:12.5, status:(o>3?"draft":"published") as "published" | "draft" }]
   })),
   ...([-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7].flatMap(o => {
     const dow = new Date(new Date().setDate(new Date().getDate()+o)).getDay()
@@ -105,7 +105,7 @@ export const testShifts: Block[] = [
   ...([-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7].flatMap(o => {
     const dow = new Date(new Date().setDate(new Date().getDate()+o)).getDay()
     if (![5,6,0].includes(dow)) return []
-    return [{ id:`e12_${o}`, categoryId:"c2", employeeId:"e12", employee:"Leo F.", date:d(o), startH:18, endH:24, status:(o<0?"published":"draft") as const }]
+    return [{ id:`e12_${o}`, categoryId:"c2", employeeId:"e12", employee:"Leo F.", date:d(o), startH:18, endH:24, status:(o<0?"published":"draft") as "published" | "draft" }]
   })),
 
   // ── MANAGER ───────────────────────────────────────────────────────────────
@@ -117,7 +117,7 @@ export const testShifts: Block[] = [
   ...([-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7].flatMap(o => {
     const dow = new Date(new Date().setDate(new Date().getDate()+o)).getDay()
     if ([0,3,6].includes(dow)) return []
-    return [{ id:`e14_${o}`, categoryId:"c3", employeeId:"e14", employee:"Noah D.", date:d(o), startH:12, endH:21, breakStartH:17, breakEndH:18, status:(o>5?"draft":"published") as const }]
+    return [{ id:`e14_${o}`, categoryId:"c3", employeeId:"e14", employee:"Noah D.", date:d(o), startH:12, endH:21, breakStartH:17, breakEndH:18, status:(o>5?"draft":"published") as "published" | "draft" }]
   })),
   ...([-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7].flatMap(o => {
     const dow = new Date(new Date().setDate(new Date().getDate()+o)).getDay()
@@ -132,12 +132,12 @@ export const testShifts: Block[] = [
   ...([-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7].flatMap(o => {
     const dow = new Date(new Date().setDate(new Date().getDate()+o)).getDay()
     if (dow===0) return []
-    return [{ id:`e19_${o}`, categoryId:"c4", employeeId:"e19", employee:"Sara V.", date:d(o), startH:14, endH:22, breakStartH:18, breakEndH:18.5, status:(o>4?"draft":"published") as const }]
+    return [{ id:`e19_${o}`, categoryId:"c4", employeeId:"e19", employee:"Sara V.", date:d(o), startH:14, endH:22, breakStartH:18, breakEndH:18.5, status:(o>4?"draft":"published") as "published" | "draft" }]
   })),
   ...([-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7].flatMap(o => {
     const dow = new Date(new Date().setDate(new Date().getDate()+o)).getDay()
     if ([1,2,3].includes(dow)) return []
-    return [{ id:`e20_${o}`, categoryId:"c4", employeeId:"e20", employee:"Tom X.", date:d(o), startH:16, endH:24, status:(o<0?"published":"draft") as const }]
+    return [{ id:`e20_${o}`, categoryId:"c4", employeeId:"e20", employee:"Tom X.", date:d(o), startH:16, endH:24, status:(o<0?"published":"draft") as "published" | "draft" }]
   })),
 
   // ── SECURITY ──────────────────────────────────────────────────────────────
@@ -160,17 +160,17 @@ export const demoMarkers: SchedulerMarker[] = [
 
 // ── Availability ─────────────────────────────────────────────────────────────
 export const demoAvailability: EmployeeAvailability[] = [
-  { employeeId:"e04", windows:[{ day:1,from:8,to:14 },{ day:3,from:8,to:14 },{ day:5,from:8,to:14 }] },
-  { employeeId:"e05", windows:[{ day:2,from:12,to:20 },{ day:4,from:12,to:20 },{ day:6,from:12,to:20 }] },
-  { employeeId:"e15", windows:[{ day:5,from:9,to:18 },{ day:6,from:9,to:18 },{ day:0,from:9,to:18 }] },
+  { employeeId:"e04", windows:[{ dayOfWeek:1,startH:8,endH:14 },{ dayOfWeek:3,startH:8,endH:14 },{ dayOfWeek:5,startH:8,endH:14 }] },
+  { employeeId:"e05", windows:[{ dayOfWeek:2,startH:12,endH:20 },{ dayOfWeek:4,startH:12,endH:20 },{ dayOfWeek:6,startH:12,endH:20 }] },
+  { employeeId:"e15", windows:[{ dayOfWeek:5,startH:9,endH:18 },{ dayOfWeek:6,startH:9,endH:18 },{ dayOfWeek:0,startH:9,endH:18 }] },
 ]
 
 export const demoDependencies: ShiftDependency[] = [
-  { id:"dep1", type:"precedence", sourceId:"e01", targetId:"e02", status:"published" as const },
-  { id:"dep2", type:"precedence", sourceId:"e02", targetId:"e03", status:"published" as const },
-  { id:"dep3", type:"precedence", sourceId:"e03", targetId:"e04", status:"published" as const },
-  { id:"dep4", type:"precedence", sourceId:"e04", targetId:"e05", status:"published" as const },
-  { id:"dep5", type:"precedence", sourceId:"e05", targetId:"e06", status:"published" as const },
+  { id:"dep1", type:"finish-to-start", fromId:"e01", toId:"e02" },
+  { id:"dep2", type:"finish-to-start", fromId:"e02", toId:"e03" },
+  { id:"dep3", type:"finish-to-start", fromId:"e03", toId:"e04" },
+  { id:"dep4", type:"finish-to-start", fromId:"e04", toId:"e05" },
+  { id:"dep5", type:"finish-to-start", fromId:"e05", toId:"e06" },
 ]    
 
 // ── Small dataset (used elsewhere) ───────────────────────────────────────────
