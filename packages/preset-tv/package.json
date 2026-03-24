@@ -3,16 +3,18 @@
   "version": "0.1.0",
   "description": "TV scheduling preset for shadcn-scheduler with domain-specific views and plugins",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "../../dist/preset-tv/index.cjs",
+  "module": "../../dist/preset-tv/index.js",
+  "types": "../../dist/preset-tv/index.d.ts",
   "sideEffects": false,
-  "files": ["dist", "README.md"],
+  "files": [
+    "README.md"
+  ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "types": "../../dist/preset-tv/index.d.ts",
+      "import": "../../dist/preset-tv/index.js",
+      "require": "../../dist/preset-tv/index.cjs"
     }
   },
   "scripts": {
@@ -20,9 +22,15 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf ../../dist/preset-tv"
   },
-  "keywords": ["scheduler", "preset", "tv", "broadcasting", "react"],
+  "keywords": [
+    "scheduler",
+    "preset",
+    "tv",
+    "broadcasting",
+    "react"
+  ],
   "author": "Sushil Dhakal",
   "license": "MIT",
   "dependencies": {

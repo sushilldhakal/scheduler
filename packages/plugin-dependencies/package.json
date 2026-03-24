@@ -3,16 +3,18 @@
   "version": "0.1.0",
   "description": "Dependencies plugin for shadcn-scheduler",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "../../dist/plugin-dependencies/index.cjs",
+  "module": "../../dist/plugin-dependencies/index.js",
+  "types": "../../dist/plugin-dependencies/index.d.ts",
   "sideEffects": false,
-  "files": ["dist", "README.md"],
+  "files": [
+    "README.md"
+  ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "types": "../../dist/plugin-dependencies/index.d.ts",
+      "import": "../../dist/plugin-dependencies/index.js",
+      "require": "../../dist/plugin-dependencies/index.cjs"
     }
   },
   "scripts": {
@@ -20,9 +22,14 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf ../../dist/plugin-dependencies"
   },
-  "keywords": ["scheduler", "plugin", "dependencies", "react"],
+  "keywords": [
+    "scheduler",
+    "plugin",
+    "dependencies",
+    "react"
+  ],
   "author": "Sushil Dhakal",
   "license": "MIT",
   "peerDependencies": {

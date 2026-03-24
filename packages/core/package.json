@@ -3,19 +3,18 @@
   "version": "0.1.0",
   "description": "Headless core engine for shadcn-scheduler with zero React dependencies",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "../../dist/core/index.cjs",
+  "module": "../../dist/core/index.js",
+  "types": "../../dist/core/index.d.ts",
   "sideEffects": false,
   "files": [
-    "dist",
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "types": "../../dist/core/index.d.ts",
+      "import": "../../dist/core/index.js",
+      "require": "../../dist/core/index.cjs"
     }
   },
   "scripts": {
@@ -23,7 +22,7 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf ../../dist/core"
   },
   "keywords": [
     "scheduler",

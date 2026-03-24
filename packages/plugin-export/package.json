@@ -3,16 +3,18 @@
   "version": "0.1.0",
   "description": "Export plugin for shadcn-scheduler",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "../../dist/plugin-export/index.cjs",
+  "module": "../../dist/plugin-export/index.js",
+  "types": "../../dist/plugin-export/index.d.ts",
   "sideEffects": false,
-  "files": ["dist", "README.md"],
+  "files": [
+    "README.md"
+  ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "types": "../../dist/plugin-export/index.d.ts",
+      "import": "../../dist/plugin-export/index.js",
+      "require": "../../dist/plugin-export/index.cjs"
     }
   },
   "scripts": {
@@ -20,9 +22,14 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf ../../dist/plugin-export"
   },
-  "keywords": ["scheduler", "plugin", "export", "react"],
+  "keywords": [
+    "scheduler",
+    "plugin",
+    "export",
+    "react"
+  ],
   "author": "Sushil Dhakal",
   "license": "MIT",
   "peerDependencies": {

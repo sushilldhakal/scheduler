@@ -1,9 +1,11 @@
 node_modules
-dist
 *.log
 .DS_Store
 
 # Built output — never commit
+# All @shadcn-scheduler/* packages build to /dist/<package-name>/ at the repo root
+/dist/
+# Original monolithic package keeps its own dist inside its folder
 packages/shadcn-scheduler/dist/
 
 # Next.js

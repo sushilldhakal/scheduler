@@ -3,16 +3,18 @@
   "version": "0.1.0",
   "description": "Conference scheduling preset for shadcn-scheduler with domain-specific views and plugins",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "../../dist/preset-conference/index.cjs",
+  "module": "../../dist/preset-conference/index.js",
+  "types": "../../dist/preset-conference/index.d.ts",
   "sideEffects": false,
-  "files": ["dist", "README.md"],
+  "files": [
+    "README.md"
+  ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "types": "../../dist/preset-conference/index.d.ts",
+      "import": "../../dist/preset-conference/index.js",
+      "require": "../../dist/preset-conference/index.cjs"
     }
   },
   "scripts": {
@@ -20,9 +22,15 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf ../../dist/preset-conference"
   },
-  "keywords": ["scheduler", "preset", "conference", "events", "react"],
+  "keywords": [
+    "scheduler",
+    "preset",
+    "conference",
+    "events",
+    "react"
+  ],
   "author": "Sushil Dhakal",
   "license": "MIT",
   "dependencies": {

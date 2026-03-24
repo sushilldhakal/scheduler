@@ -3,16 +3,18 @@
   "version": "0.1.0",
   "description": "Healthcare preset for shadcn-scheduler with domain-specific views and plugins",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "../../dist/preset-healthcare/index.cjs",
+  "module": "../../dist/preset-healthcare/index.js",
+  "types": "../../dist/preset-healthcare/index.d.ts",
   "sideEffects": false,
-  "files": ["dist", "README.md"],
+  "files": [
+    "README.md"
+  ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "types": "../../dist/preset-healthcare/index.d.ts",
+      "import": "../../dist/preset-healthcare/index.js",
+      "require": "../../dist/preset-healthcare/index.cjs"
     }
   },
   "scripts": {
@@ -20,9 +22,14 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf ../../dist/preset-healthcare"
   },
-  "keywords": ["scheduler", "preset", "healthcare", "react"],
+  "keywords": [
+    "scheduler",
+    "preset",
+    "healthcare",
+    "react"
+  ],
   "author": "Sushil Dhakal",
   "license": "MIT",
   "dependencies": {

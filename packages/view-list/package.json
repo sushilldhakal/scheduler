@@ -3,16 +3,18 @@
   "version": "0.1.0",
   "description": "List view component for shadcn-scheduler",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "../../dist/view-list/index.cjs",
+  "module": "../../dist/view-list/index.js",
+  "types": "../../dist/view-list/index.d.ts",
   "sideEffects": false,
-  "files": ["dist", "README.md"],
+  "files": [
+    "README.md"
+  ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "types": "../../dist/view-list/index.d.ts",
+      "import": "../../dist/view-list/index.js",
+      "require": "../../dist/view-list/index.cjs"
     }
   },
   "scripts": {
@@ -20,9 +22,14 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf ../../dist/view-list"
   },
-  "keywords": ["scheduler", "list-view", "calendar", "react"],
+  "keywords": [
+    "scheduler",
+    "list-view",
+    "calendar",
+    "react"
+  ],
   "author": "Sushil Dhakal",
   "license": "MIT",
   "peerDependencies": {
