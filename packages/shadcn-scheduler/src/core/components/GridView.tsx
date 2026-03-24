@@ -2353,10 +2353,6 @@ function GridViewInner({
                   borderBottom: "2px solid var(--border)",
                   flexShrink: 0,
                   width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
-                  // Lock the sticky header to exactly HOUR_HDR_H so it matches the sidebar header height.
-                  // Without this, the timeline (multiday) header is content-sized and drifts by a few px.
-                  height: HOUR_HDR_H,
-                  overflow: "hidden",
                 }}
                 onContextMenu={(e) => {
                   e.preventDefault()
@@ -2525,6 +2521,8 @@ function GridViewInner({
                       width: TOTAL_W,
                       background: "var(--muted)",
                       flexShrink: 0,
+                      height: HOUR_HDR_H,
+                      overflow: "hidden",
                     }}
                   >
                     <div
@@ -2570,7 +2568,7 @@ function GridViewInner({
                       style={{
                         display: "flex",
                         width: TOTAL_W,
-                        minHeight: 32,
+                        minHeight: 20,
                       }}
                     >
                       {dates.map((d, i) => (
