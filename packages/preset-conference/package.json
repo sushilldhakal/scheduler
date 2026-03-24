@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "Conference scheduling preset for shadcn-scheduler with domain-specific views and plugins",
   "type": "module",
-  "main": "../../dist/preset-conference/index.cjs",
-  "module": "../../dist/preset-conference/index.js",
-  "types": "../../dist/preset-conference/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "../../dist/preset-conference/index.d.ts",
-      "import": "../../dist/preset-conference/index.js",
-      "require": "../../dist/preset-conference/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {

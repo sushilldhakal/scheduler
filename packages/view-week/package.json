@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "Week view component for shadcn-scheduler",
   "type": "module",
-  "main": "../../dist/view-week/index.cjs",
-  "module": "../../dist/view-week/index.js",
-  "types": "../../dist/view-week/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "../../dist/view-week/index.d.ts",
-      "import": "../../dist/view-week/index.js",
-      "require": "../../dist/view-week/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {

@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "Histogram plugin for shadcn-scheduler",
   "type": "module",
-  "main": "../../dist/plugin-histogram/index.cjs",
-  "module": "../../dist/plugin-histogram/index.js",
-  "types": "../../dist/plugin-histogram/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "../../dist/plugin-histogram/index.d.ts",
-      "import": "../../dist/plugin-histogram/index.js",
-      "require": "../../dist/plugin-histogram/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {

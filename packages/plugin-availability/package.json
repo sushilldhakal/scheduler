@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "Availability plugin for shadcn-scheduler",
   "type": "module",
-  "main": "../../dist/plugin-availability/index.cjs",
-  "module": "../../dist/plugin-availability/index.js",
-  "types": "../../dist/plugin-availability/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "../../dist/plugin-availability/index.d.ts",
-      "import": "../../dist/plugin-availability/index.js",
-      "require": "../../dist/plugin-availability/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {

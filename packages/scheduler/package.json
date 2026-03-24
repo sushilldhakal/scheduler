@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "Backward compatibility bundle for shadcn-scheduler with all views and plugins",
   "type": "module",
-  "main": "../../dist/scheduler/index.cjs",
-  "module": "../../dist/scheduler/index.js",
-  "types": "../../dist/scheduler/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "../../dist/scheduler/index.d.ts",
-      "import": "../../dist/scheduler/index.js",
-      "require": "../../dist/scheduler/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {

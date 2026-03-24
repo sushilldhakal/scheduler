@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "Month view component for shadcn-scheduler",
   "type": "module",
-  "main": "../../dist/view-month/index.cjs",
-  "module": "../../dist/view-month/index.js",
-  "types": "../../dist/view-month/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "../../dist/view-month/index.d.ts",
-      "import": "../../dist/view-month/index.js",
-      "require": "../../dist/view-month/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {

@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "Recurrence plugin for shadcn-scheduler",
   "type": "module",
-  "main": "../../dist/plugin-recurrence/index.cjs",
-  "module": "../../dist/plugin-recurrence/index.js",
-  "types": "../../dist/plugin-recurrence/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "../../dist/plugin-recurrence/index.d.ts",
-      "import": "../../dist/plugin-recurrence/index.js",
-      "require": "../../dist/plugin-recurrence/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {

@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "Healthcare preset for shadcn-scheduler with domain-specific views and plugins",
   "type": "module",
-  "main": "../../dist/preset-healthcare/index.cjs",
-  "module": "../../dist/preset-healthcare/index.js",
-  "types": "../../dist/preset-healthcare/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "../../dist/preset-healthcare/index.d.ts",
-      "import": "../../dist/preset-healthcare/index.js",
-      "require": "../../dist/preset-healthcare/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {

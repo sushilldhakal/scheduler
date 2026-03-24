@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "TV scheduling preset for shadcn-scheduler with domain-specific views and plugins",
   "type": "module",
-  "main": "../../dist/preset-tv/index.cjs",
-  "module": "../../dist/preset-tv/index.js",
-  "types": "../../dist/preset-tv/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "../../dist/preset-tv/index.d.ts",
-      "import": "../../dist/preset-tv/index.js",
-      "require": "../../dist/preset-tv/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {

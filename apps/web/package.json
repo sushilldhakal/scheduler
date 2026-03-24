@@ -16,6 +16,7 @@
     "@sushill/shadcn-scheduler": "*",
     "@shadcn-scheduler/core": "*",
     "@shadcn-scheduler/shell": "*",
+    "@shadcn-scheduler/grid-engine": "*",
     "@shadcn-scheduler/view-day": "*",
     "@shadcn-scheduler/view-week": "*",
     "@shadcn-scheduler/view-month": "*",

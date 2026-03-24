@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "Markers plugin for shadcn-scheduler",
   "type": "module",
-  "main": "../../dist/plugin-markers/index.cjs",
-  "module": "../../dist/plugin-markers/index.js",
-  "types": "../../dist/plugin-markers/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "../../dist/plugin-markers/index.d.ts",
-      "import": "../../dist/plugin-markers/index.js",
-      "require": "../../dist/plugin-markers/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {

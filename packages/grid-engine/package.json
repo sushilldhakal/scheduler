@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "Shared grid rendering foundation for shadcn-scheduler grid-based views",
   "type": "module",
-  "main": "../../dist/grid-engine/index.cjs",
-  "module": "../../dist/grid-engine/index.js",
-  "types": "../../dist/grid-engine/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "../../dist/grid-engine/index.d.ts",
-      "import": "../../dist/grid-engine/index.js",
-      "require": "../../dist/grid-engine/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {

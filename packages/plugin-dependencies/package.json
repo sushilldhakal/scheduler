@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "Dependencies plugin for shadcn-scheduler",
   "type": "module",
-  "main": "../../dist/plugin-dependencies/index.cjs",
-  "module": "../../dist/plugin-dependencies/index.js",
-  "types": "../../dist/plugin-dependencies/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "../../dist/plugin-dependencies/index.d.ts",
-      "import": "../../dist/plugin-dependencies/index.js",
-      "require": "../../dist/plugin-dependencies/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {

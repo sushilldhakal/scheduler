@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "Audit plugin for shadcn-scheduler",
   "type": "module",
-  "main": "../../dist/plugin-audit/index.cjs",
-  "module": "../../dist/plugin-audit/index.js",
-  "types": "../../dist/plugin-audit/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "files": [
     "README.md"
   ],
   "exports": {
     ".": {
-      "types": "../../dist/plugin-audit/index.d.ts",
-      "import": "../../dist/plugin-audit/index.js",
-      "require": "../../dist/plugin-audit/index.cjs"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {
