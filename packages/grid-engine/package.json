@@ -33,24 +33,40 @@
   ],
   "author": "Sushil Dhakal",
   "license": "MIT",
-  "peerDependencies": {
+  "dependencies": {
     "@shadcn-scheduler/core": "*",
-    "@shadcn-scheduler/shell": "*",
+    "@shadcn-scheduler/shell": "*"
+  },
+  "peerDependencies": {
+    "@radix-ui/react-context-menu": ">=1.0.0",
+    "@radix-ui/react-popover": ">=1.0.0",
+    "@radix-ui/react-slot": ">=1.0.0",
+    "@tanstack/react-virtual": ">=3.0.0",
+    "class-variance-authority": ">=0.7.0",
+    "clsx": ">=2.0.0",
+    "lucide-react": ">=0.260.0",
     "react": ">=18.0.0",
+    "react-day-picker": ">=8.0.0",
     "react-dom": ">=18.0.0",
-    "@tanstack/react-virtual": ">=3.0.0"
+    "tailwind-merge": ">=2.0.0"
   },
   "peerDependenciesMeta": {
-    "@tanstack/react-virtual": {
-      "optional": true
-    }
+    "@tanstack/react-virtual": { "optional": false }
   },
   "devDependencies": {
+    "@radix-ui/react-context-menu": "^2.1.0",
+    "@radix-ui/react-popover": "^1.0.7",
+    "@radix-ui/react-slot": "^1.0.2",
     "@tanstack/react-virtual": "^3.0.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.0",
+    "lucide-react": "^0.263.0",
     "react": "^18.2.0",
+    "react-day-picker": "^8.10.0",
     "react-dom": "^18.2.0",
+    "tailwind-merge": "^2.2.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0",
     "vitest": "^2.0.0"

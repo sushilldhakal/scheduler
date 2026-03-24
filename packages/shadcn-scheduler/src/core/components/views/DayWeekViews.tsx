@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from "react"
-import type { Block, Resource, SchedulerMarker, ShiftDependency, EmployeeAvailability } from "../../types"
-import { getWeeksForBuffer, clamp, toDateISO } from "../../constants"
-import { useSchedulerContext } from "../../context"
-import { useIsMobile } from "../../hooks/useMediaQuery"
-import { GridView } from "../GridView"
+import type { Block, Resource, SchedulerMarker, ShiftDependency, EmployeeAvailability } from "@shadcn-scheduler/core"
+import { getWeeksForBuffer, clamp, toDateISO } from "@shadcn-scheduler/core"
+import { useSchedulerContext } from "@shadcn-scheduler/shell"
+import { useIsMobile } from "@shadcn-scheduler/grid-engine"
+import { GridView } from "@shadcn-scheduler/grid-engine"
 
-interface DayViewProps {
+export interface DayViewProps {
   date: Date
   setDate?: React.Dispatch<React.SetStateAction<Date>>
   shifts: Block[]
@@ -165,7 +165,7 @@ export function DayView({
   )
 }
 
-interface WeekViewProps {
+export interface WeekViewProps {
   date: Date
   setDate: React.Dispatch<React.SetStateAction<Date>>
   shifts: Block[]

@@ -1,7 +1,7 @@
 // Core types — aligned with the real Block data model used across the scheduler.
 // These are the canonical types shared by all @shadcn-scheduler/* packages.
 
-import type { ReactNode } from 'react'
+import type { ReactNode, RefObject } from 'react'
 
 // ─── Recurrence ───────────────────────────────────────────────────────────────
 
@@ -240,6 +240,14 @@ export interface HistogramCapacity {
 
 export interface HistogramConfig {
   capacities?: HistogramCapacity[]
+}
+
+export interface SchedulerSettingsContext {
+  onSettingsChange: (partial: Partial<Settings>) => void
+  /** Ref to the main scheduler container for PDF/Image export. */
+  containerRef?: RefObject<HTMLElement | null>
+  /** Current shifts for CSV export. */
+  shifts?: Block[]
 }
 
 // ─── Grid geometry ────────────────────────────────────────────────────────────

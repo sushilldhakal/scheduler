@@ -1,4 +1,4 @@
-// Scheduler Provider — React context matching the real shadcn-scheduler context shape.
+// Scheduler Provider — full production implementation matching packages/shadcn-scheduler/context.tsx
 import React, { createContext, useContext, useMemo } from 'react'
 import type { Resource, Settings, SchedulerConfig, CategoryColor, SchedulerSlots } from '@shadcn-scheduler/core'
 import {
@@ -7,6 +7,7 @@ import {
   getCategoryColor,
   fmt12,
   nextUid as coreNextUid,
+  formatInTimezone,
 } from '@shadcn-scheduler/core'
 import type { SchedulerContextValue, Plugin } from './types'
 
@@ -47,12 +48,51 @@ export function SchedulerProvider({
   slots: slotsProp,
   children,
 }: SchedulerProviderProps) {
+  // Stable slots reference — new {} every render would invalidate context memo
   const slots = useMemo(() => slotsProp ?? {}, [slotsProp])
 
+  // Fine-grained label memoization — each label string is a separate dep so the
+  // memo only re-runs when a specific label string changes, not on every config
+  // object reference change.
+  const labelCategory          = config?.labels?.category
+  const labelEmployee          = config?.labels?.employee
+  const labelShift             = config?.labels?.shift
+  const labelStaff             = config?.labels?.staff
+  const labelRoster            = config?.labels?.roster
+  const labelAddShift          = config?.labels?.addShift
+  const labelPublish           = config?.labels?.publish
+  const labelDraft             = config?.labels?.draft
+  const labelPublished         = config?.labels?.published
+  const labelSelectStaff       = config?.labels?.selectStaff
+  const labelCopyLastWeek      = config?.labels?.copyLastWeek
+  const labelFillFromSchedules = config?.labels?.fillFromSchedules
+  const labelPublishAll        = config?.labels?.publishAll
+  const labelCategories        = config?.labels?.categories
+
   const labels = useMemo(
-    () => ({ ...DEFAULT_LABELS, ...config?.labels }),
+    () => ({
+      ...DEFAULT_LABELS,
+      ...(labelCategory          !== undefined && { category: labelCategory }),
+      ...(labelEmployee          !== undefined && { employee: labelEmployee }),
+      ...(labelShift             !== undefined && { shift: labelShift }),
+      ...(labelStaff             !== undefined && { staff: labelStaff }),
+      ...(labelRoster            !== undefined && { roster: labelRoster }),
+      ...(labelAddShift          !== undefined && { addShift: labelAddShift }),
+      ...(labelPublish           !== undefined && { publish: labelPublish }),
+      ...(labelDraft             !== undefined && { draft: labelDraft }),
+      ...(labelPublished         !== undefined && { published: labelPublished }),
+      ...(labelSelectStaff       !== undefined && { selectStaff: labelSelectStaff }),
+      ...(labelCopyLastWeek      !== undefined && { copyLastWeek: labelCopyLastWeek }),
+      ...(labelFillFromSchedules !== undefined && { fillFromSchedules: labelFillFromSchedules }),
+      ...(labelPublishAll        !== undefined && { publishAll: labelPublishAll }),
+      ...(labelCategories        !== undefined && { categories: labelCategories }),
+    }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [JSON.stringify(config?.labels)]
+    [
+      labelCategory, labelEmployee, labelShift, labelStaff, labelRoster,
+      labelAddShift, labelPublish, labelDraft, labelPublished, labelSelectStaff,
+      labelCopyLastWeek, labelFillFromSchedules, labelPublishAll, labelCategories,
+    ]
   )
 
   const settings: Settings = useMemo(
@@ -67,9 +107,15 @@ export function SchedulerProvider({
     [categoryColors]
   )
 
+  // Timezone-aware time label — uses Intl when timezone is set, falls back to fmt12
   const getTimeLabel = useMemo(
-    () => (_isoDate: string, hour: number) => fmt12(hour),
-    []
+    () =>
+      config?.timezone
+        ? (isoDate: string, hour: number) =>
+            formatInTimezone(isoDate, hour, config.timezone!, config?.locale)
+        : (_isoDate: string, hour: number) => fmt12(hour),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [config?.timezone, config?.locale]
   )
 
   const getDateLabel = useMemo(
@@ -98,21 +144,9 @@ export function SchedulerProvider({
       getDateLabel,
     }),
     [
-      categories,
-      employees,
-      labels,
-      getColor,
-      settings,
-      nextUidFn,
-      slots,
-      config?.snapMinutes,
-      config?.timezone,
-      config?.locale,
-      config?.isRTL,
-      config?.allowOvernight,
-      config?.timelineSidebarFlat,
-      getTimeLabel,
-      getDateLabel,
+      categories, employees, labels, getColor, settings, nextUidFn, slots,
+      config?.snapMinutes, config?.timezone, config?.locale, config?.isRTL,
+      config?.allowOvernight, config?.timelineSidebarFlat, getTimeLabel, getDateLabel,
     ]
   )
 
@@ -125,8 +159,6 @@ export function SchedulerProvider({
 
 export function useSchedulerContext(): SchedulerContextValue {
   const ctx = useContext(SchedulerContext)
-  if (!ctx) {
-    throw new Error('useSchedulerContext must be used within a SchedulerProvider')
-  }
+  if (!ctx) throw new Error('useSchedulerContext must be used within a SchedulerProvider')
   return ctx
 }

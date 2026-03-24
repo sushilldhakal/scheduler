@@ -7,16 +7,43 @@
 export * from '@shadcn-scheduler/core'
 export * from '@shadcn-scheduler/shell'
 
-// Grid engine (exclude DragEvent which conflicts with DOM's built-in DragEvent)
+// Grid engine
 export type {
-  GridRow,
-  GridColumn,
-  GridLayout,
-  CellProps,
-  GridDragEvent,
   GridViewProps,
+  GridConfig,
+  BlockRect,
+  DragCommit,
+  DragEngineOptions,
+  LongPressOptions,
 } from '@shadcn-scheduler/grid-engine'
-export { GridBase, GridCell, GridHeader, DragHandler, ScrollManager } from '@shadcn-scheduler/grid-engine'
+export {
+  GridView,
+  GridViewSidebar,
+  StaffPanel,
+  UserSelect,
+  AddShiftModal,
+  RoleWarningModal,
+  ShiftModal,
+  DayShiftsDialog,
+  Button,
+  BottomSheet,
+  DragEngine,
+  makeGridConfig,
+  blockRect,
+  ghostRect,
+  xToHour,
+  xToDateIndex,
+  cn,
+  useDragEngine,
+  useFlatRows,
+  buildFlatRowTops,
+  useScrollToNow,
+  useMediaQuery,
+  useIsMobile,
+  useIsTablet,
+  useIsDesktop,
+  useLongPress,
+} from '@shadcn-scheduler/grid-engine'
 
 // Views
 export { DayView } from '@shadcn-scheduler/view-day'

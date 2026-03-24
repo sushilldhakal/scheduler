@@ -7,8 +7,8 @@
  * right-click on empty cells instead.
  */
 import React from "react"
-import type { Block, Resource, SchedulerMarker, ShiftDependency, EmployeeAvailability } from "../../types"
-import { GridView } from "../GridView"
+import type { Block, Resource, SchedulerMarker, ShiftDependency, EmployeeAvailability } from "@shadcn-scheduler/core"
+import { GridView } from "@shadcn-scheduler/grid-engine"
 
 export interface TimelineViewProps {
   date: Date
@@ -105,7 +105,6 @@ export function TimelineView({
       onBlockPublish={onBlockPublish}
       readOnly={readOnly}
       isLoading={isLoading}
-      bufferDays={bufferDays}
       onVisibleRangeChange={onVisibleRangeChange}
       prefetchThreshold={prefetchThreshold}
       hideFloatingButtons

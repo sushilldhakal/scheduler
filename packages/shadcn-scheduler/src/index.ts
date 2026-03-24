@@ -91,3 +91,12 @@ export type { SchedulerVenueProps } from "./domains/venue"
 export { useFlatRows, buildFlatRowTops } from "./core/hooks/useFlatRows"
 export type { FlatRow, RowMode } from "./core/types"
 export { ChangeRowModeInput } from "./core/components/settings/ChangeRowModeInput"
+
+// ─── Grid views — exported so @shadcn-scheduler/view-* packages can wrap them ──
+export { DayView } from "./core/components/views/DayWeekViews"
+export type { DayViewProps } from "./core/components/views/DayWeekViews"
+export { WeekView } from "./core/components/views/DayWeekViews"
+export type { WeekViewProps } from "./core/components/views/DayWeekViews"
+export { TimelineView } from "./core/components/views/TimelineView"
+export type { TimelineViewProps } from "./core/components/views/TimelineView"
+export { GridView } from "@shadcn-scheduler/grid-engine"

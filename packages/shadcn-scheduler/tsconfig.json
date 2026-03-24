@@ -11,7 +11,12 @@
     "declaration": true,
     "declarationMap": true,
     "outDir": "./dist",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "paths": {
+      "@shadcn-scheduler/core": ["../core/src/index.ts"],
+      "@shadcn-scheduler/shell": ["../shell/src/index.ts"],
+      "@shadcn-scheduler/grid-engine": ["../grid-engine/src/index.ts"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

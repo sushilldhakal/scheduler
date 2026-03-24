@@ -171,6 +171,9 @@
     "vitest": "^2.0.0"
   },
   "dependencies": {
-    "@radix-ui/react-context-menu": ">=1.0.0"
+    "@radix-ui/react-context-menu": ">=1.0.0",
+    "@shadcn-scheduler/core": "*",
+    "@shadcn-scheduler/shell": "*",
+    "@shadcn-scheduler/grid-engine": "*"
   }
 }

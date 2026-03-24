@@ -31,11 +31,27 @@ export interface PluginConfig {
   [key: string]: unknown
 }
 
-/** The context value exposed via useSchedulerContext(). Mirrors the real shadcn-scheduler context. */
+/** The context value exposed via useSchedulerContext(). Exactly mirrors the real shadcn-scheduler context shape. */
 export interface SchedulerContextValue {
   categories: Resource[]
   employees: Resource[]
-  labels: Record<string, string>
+  /** Resolved labels — default values merged with any config.labels overrides */
+  labels: {
+    category: string
+    employee: string
+    shift: string
+    staff: string
+    roster: string
+    addShift: string
+    publish: string
+    draft: string
+    published: string
+    selectStaff: string
+    copyLastWeek: string
+    fillFromSchedules: string
+    publishAll: string
+    categories: string
+  }
   getColor: (idx: number) => CategoryColor
   settings: Settings
   nextUid: () => string
@@ -46,7 +62,9 @@ export interface SchedulerContextValue {
   isRTL?: boolean
   allowOvernight?: boolean
   timelineSidebarFlat?: boolean
+  /** Format a fractional hour for display — timezone-aware when SchedulerConfig.timezone is set */
   getTimeLabel: (isoDate: string, hour: number) => string
+  /** Format a date for display — uses config.locale when set */
   getDateLabel: (date: Date, options?: Intl.DateTimeFormatOptions) => string
 }
 
