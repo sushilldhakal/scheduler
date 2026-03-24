@@ -52,6 +52,27 @@ shadcn-scheduler is different. It's built on the same CSS variables and Tailwind
 | TypeScript | ✅ | ✅ | ✅ |
 | Open source | ✅ | Partial | ❌ |
 
+## Modular packages
+
+Starting in v0.5, shadcn-scheduler also ships as a **monorepo of 22 focused packages** under the `@shadcn-scheduler/*` scope. Install only what your app needs:
+
+```bash
+# Full calendar with audit trail — nothing else
+npm install @shadcn-scheduler/core @shadcn-scheduler/shell \
+            @shadcn-scheduler/view-month @shadcn-scheduler/plugin-audit
+```
+
+| Package group | What it does |
+|---------------|-------------|
+| `@shadcn-scheduler/core` | Pure-TS types, constants, utilities — no React |
+| `@shadcn-scheduler/shell` | React context provider for all view packages |
+| `@shadcn-scheduler/view-*` | 7 view packages — month, year, list, day, week, timeline, kanban |
+| `@shadcn-scheduler/plugin-*` | 7 plugin packages — audit, recurrence, export, markers, dependencies, histogram, availability |
+| `@shadcn-scheduler/preset-*` | 3 preset configs — tv, healthcare, conference |
+| `@shadcn-scheduler/scheduler` | Fat bundle (all of the above, backward-compatible) |
+
+[→ Full packages reference](/docs/packages)
+
 ## License
 
 MIT. Use it in personal or commercial projects. Modify it. Ship it. No attribution required. No seat fees.

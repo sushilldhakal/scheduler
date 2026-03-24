@@ -1,11 +1,11 @@
 ---
 title: Installation
-description: Install shadcn-scheduler — own the full source or use the npm package.
+description: Install shadcn-scheduler — own the full source, use the npm package, or pick individual modules.
 ---
 
 # Installation
 
-shadcn-scheduler gives you **two installation paths**. The key difference is ownership.
+shadcn-scheduler gives you **three installation paths**. The key difference is ownership and bundle size.
 
 ## Option 1 — shadcn registry (recommended — you own the code)
 
@@ -83,9 +83,9 @@ const config = createSchedulerConfig({ preset: 'roster', initialScrollToNow: tru
 
 ---
 
-## Option 2 — npm package
+## Option 2 — npm package (all presets, single install)
 
-If you prefer not to own the source, use the npm package (gets all presets):
+If you prefer not to own the source, use the npm package:
 
 ```bash
 npm install @sushill/shadcn-scheduler
@@ -99,6 +99,82 @@ const tvConfig = createSchedulerConfig({ preset: 'tv' })
 // Roster preset:
 const rosterConfig = createSchedulerConfig({ preset: 'roster', initialScrollToNow: true })
 ```
+
+---
+
+## Option 3 — Modular packages (tree-shakeable)
+
+The `@shadcn-scheduler/*` monorepo lets you install only the packages you actually use. No dead code.
+
+### Install the foundation
+
+```bash
+npm install @shadcn-scheduler/core @shadcn-scheduler/shell
+```
+
+### Add only the views you need
+
+```bash
+# Month calendar
+npm install @shadcn-scheduler/view-month
+
+# Year heatmap
+npm install @shadcn-scheduler/view-year
+
+# Tabular list view
+npm install @shadcn-scheduler/view-list
+
+# Grid views (day, week, timeline, kanban)
+npm install @shadcn-scheduler/view-day @shadcn-scheduler/view-week
+npm install @shadcn-scheduler/view-timeline @shadcn-scheduler/view-kanban
+```
+
+### Add only the plugins you need
+
+```bash
+npm install @shadcn-scheduler/plugin-audit       # action history
+npm install @shadcn-scheduler/plugin-recurrence  # recurring shifts
+npm install @shadcn-scheduler/plugin-export      # CSV / ICS / PDF export
+npm install @shadcn-scheduler/plugin-markers     # draggable deadline lines
+npm install @shadcn-scheduler/plugin-dependencies  # SVG dependency arrows
+npm install @shadcn-scheduler/plugin-histogram   # utilisation chart
+npm install @shadcn-scheduler/plugin-availability  # availability overlays
+```
+
+### Or use a domain preset config
+
+```bash
+npm install @shadcn-scheduler/preset-tv
+npm install @shadcn-scheduler/preset-healthcare
+npm install @shadcn-scheduler/preset-conference
+```
+
+### Or install the fat bundle (same API as Option 2)
+
+```bash
+npm install @shadcn-scheduler/scheduler
+```
+
+### Minimal usage example
+
+```tsx
+'use client'
+import { SchedulerProvider } from '@shadcn-scheduler/shell'
+import { MonthView } from '@shadcn-scheduler/view-month'
+import type { SchedulerConfig } from '@shadcn-scheduler/core'
+
+const config: SchedulerConfig = { snapMinutes: 30 }
+
+export default function App() {
+  return (
+    <SchedulerProvider categories={categories} employees={employees} config={config}>
+      <MonthView date={new Date()} shifts={shifts} setShifts={setShifts} onAddShift={handleAdd} />
+    </SchedulerProvider>
+  )
+}
+```
+
+[→ Full modular packages reference](/docs/packages) | [→ Try the demo](/demos/packages)
 
 ---
 
@@ -180,8 +256,9 @@ If you're not on shadcn/ui, add these to your global CSS:
 ## Verify the install
 
 ```tsx
-import { Scheduler } from '@/components/scheduler'  // registry
-// import { Scheduler } from '@sushill/shadcn-scheduler'  // npm
+import { Scheduler } from '@/components/scheduler'         // registry
+// import { Scheduler } from '@sushill/shadcn-scheduler'   // npm Option 2
+// import { Scheduler } from '@shadcn-scheduler/scheduler' // npm Option 3 fat bundle
 
 export default function Test() {
   return (

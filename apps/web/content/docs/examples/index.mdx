@@ -444,6 +444,70 @@ const handleVisibleRangeChange = async (start: Date, end: Date) => {
 
 ---
 
+## Using the modular `@shadcn-scheduler/*` packages
+
+The new monorepo packages let you import only what you use. All packages are tree-shakeable and have no cross-dependencies beyond their peer deps.
+
+### Compose a custom scheduler from parts
+
+```tsx
+'use client'
+import { useState } from 'react'
+import { SchedulerProvider }  from '@shadcn-scheduler/shell'
+import { MonthView }          from '@shadcn-scheduler/view-month'
+import { ListView }           from '@shadcn-scheduler/view-list'
+import { createHealthcareConfig } from '@shadcn-scheduler/preset-healthcare'
+import { useAuditTrail }      from '@shadcn-scheduler/plugin-audit'
+import type { Block }         from '@shadcn-scheduler/core'
+
+const config = createHealthcareConfig({ snapMinutes: 30 })
+
+export default function HospitalScheduler() {
+  const [shifts, setShifts] = useState<Block[]>([])
+  const [view, setView]     = useState<'month' | 'list'>('month')
+  const { log, onEvent }    = useAuditTrail()
+
+  return (
+    <SchedulerProvider categories={wards} employees={staff} config={config}>
+      {view === 'month' && (
+        <MonthView date={new Date()} shifts={shifts} setShifts={setShifts} onAddShift={handleAdd} />
+      )}
+      {view === 'list' && (
+        <ListView shifts={shifts} setShifts={setShifts} currentDate={new Date()} view="weeklist" />
+      )}
+    </SchedulerProvider>
+  )
+}
+```
+
+### Use core utilities server-side (no React)
+
+```ts
+// app/api/shifts/conflicts/route.ts
+import { packShifts } from '@shadcn-scheduler/core'
+import type { Block, Resource } from '@shadcn-scheduler/core'
+
+export async function POST(req: Request) {
+  const { blocks, resources }: { blocks: Block[], resources: Resource[] } = await req.json()
+  const { conflicts, utilization } = packShifts(blocks, resources)
+  return Response.json({ conflicts, utilization })
+}
+```
+
+### Export shifts without importing the full scheduler
+
+```ts
+import { exportToICS, exportToCSV } from '@shadcn-scheduler/plugin-export'
+
+// Runs in the browser — no scheduler component needed on the page
+exportToICS(shifts, 'my-schedule.ics')
+exportToCSV(shifts, categories, 'my-schedule.csv')
+```
+
+[→ Full packages reference](/docs/packages) | [→ Try the live demo](/demos/packages)
+
+---
+
 ## Install only what you need
 
 Each domain preset has its own registry entry — install just the files your use case needs.

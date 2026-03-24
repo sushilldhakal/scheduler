@@ -5,7 +5,61 @@ description: Breaking changes and migration steps between versions.
 
 # Upgrade guide
 
-## v0.4.0 (current)
+## v0.5.0 (current) — Modular packages
+
+### New packages
+
+shadcn-scheduler is now also available as **22 individual packages** under the `@shadcn-scheduler/*` scope. These are additive — existing users of `@sushill/shadcn-scheduler` are not affected.
+
+| New package | Contents |
+|-------------|----------|
+| `@shadcn-scheduler/core` | Shared types, constants, and pure utilities |
+| `@shadcn-scheduler/shell` | `SchedulerProvider` React context |
+| `@shadcn-scheduler/view-month` | `MonthView` component |
+| `@shadcn-scheduler/view-year` | `YearView` component |
+| `@shadcn-scheduler/view-list` | `ListView` component |
+| `@shadcn-scheduler/view-day` | `DayView` component |
+| `@shadcn-scheduler/view-week` | `WeekView` component |
+| `@shadcn-scheduler/view-timeline` | `TimelineView` component |
+| `@shadcn-scheduler/view-kanban` | `KanbanView` component |
+| `@shadcn-scheduler/plugin-audit` | `useAuditTrail` hook |
+| `@shadcn-scheduler/plugin-recurrence` | `expandRecurrence` |
+| `@shadcn-scheduler/plugin-export` | `exportToCSV`, `exportToICS`, `exportToImage`, `exportToPDF` |
+| `@shadcn-scheduler/plugin-markers` | `useMarkers`, `SchedulerMarker` type |
+| `@shadcn-scheduler/plugin-dependencies` | `useDependencies`, `ShiftDependency` type |
+| `@shadcn-scheduler/plugin-histogram` | `useHistogram`, `ResourceHistogram` component |
+| `@shadcn-scheduler/plugin-availability` | `useAvailability`, `detectConflicts` |
+| `@shadcn-scheduler/preset-tv` | `createTvConfig` |
+| `@shadcn-scheduler/preset-healthcare` | `createHealthcareConfig` |
+| `@shadcn-scheduler/preset-conference` | `createConferenceConfig` |
+| `@shadcn-scheduler/scheduler` | Backward-compatible fat bundle |
+
+### Breaking changes
+
+**None.** The existing `@sushill/shadcn-scheduler` package and API are unchanged. The new `@shadcn-scheduler/*` packages are an optional, parallel install path.
+
+### Migration (optional)
+
+If you want to adopt the modular packages in a new project or migrate an existing one:
+
+```tsx
+// Before (still works)
+import { Scheduler, createHealthcareConfig } from '@sushill/shadcn-scheduler'
+
+// After — fat bundle (same API, new package name)
+import { Scheduler, createHealthcareConfig } from '@shadcn-scheduler/scheduler'
+
+// After — tree-shakeable (import only what you use)
+import { SchedulerProvider } from '@shadcn-scheduler/shell'
+import { MonthView } from '@shadcn-scheduler/view-month'
+import { createHealthcareConfig } from '@shadcn-scheduler/preset-healthcare'
+```
+
+[→ Full packages reference](/docs/packages)
+
+---
+
+## v0.4.0
 
 ### Breaking changes
 

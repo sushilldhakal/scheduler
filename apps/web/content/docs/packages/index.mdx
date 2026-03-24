@@ -1,0 +1,445 @@
+---
+title: Modular Packages
+description: All @shadcn-scheduler/* packages — pick only what you need for maximum tree-shaking.
+---
+
+# Modular Packages
+
+`shadcn-scheduler` ships as a **monorepo of 22 focused packages** under the `@shadcn-scheduler/*` scope.
+Each package has zero cross-dependencies beyond its peers, so bundlers can tree-shake aggressively — you ship only what you import.
+
+[→ Interactive demo](/demos/packages) | [→ Raw packages demo](/demos/packages-raw)
+
+---
+
+## Package overview
+
+| Package | Category | Description |
+|---------|----------|-------------|
+| `@shadcn-scheduler/core` | Foundation | Pure-TS types, constants, utilities — no React |
+| `@shadcn-scheduler/shell` | Foundation | React context provider + plugin registration |
+| `@shadcn-scheduler/view-month` | Views | Full month calendar |
+| `@shadcn-scheduler/view-year` | Views | Year heatmap overview |
+| `@shadcn-scheduler/view-list` | Views | Tabular week/day list |
+| `@shadcn-scheduler/view-day` | Views | Single-day grid |
+| `@shadcn-scheduler/view-week` | Views | 7-day grid |
+| `@shadcn-scheduler/view-timeline` | Views | Horizontal Gantt timeline |
+| `@shadcn-scheduler/view-kanban` | Views | Kanban board |
+| `@shadcn-scheduler/plugin-audit` | Plugins | Action audit trail |
+| `@shadcn-scheduler/plugin-recurrence` | Plugins | Recurring shift expansion |
+| `@shadcn-scheduler/plugin-export` | Plugins | CSV / ICS / image / PDF export |
+| `@shadcn-scheduler/plugin-markers` | Plugins | Draggable vertical markers |
+| `@shadcn-scheduler/plugin-dependencies` | Plugins | SVG dependency arrows |
+| `@shadcn-scheduler/plugin-histogram` | Plugins | Resource utilisation chart |
+| `@shadcn-scheduler/plugin-availability` | Plugins | Employee availability overlays |
+| `@shadcn-scheduler/preset-tv` | Presets | TV / EPG guide config |
+| `@shadcn-scheduler/preset-healthcare` | Presets | Hospital rota config |
+| `@shadcn-scheduler/preset-conference` | Presets | Conference schedule config |
+| `@shadcn-scheduler/scheduler` | Bundle | Fat backward-compatible bundle (all of the above) |
+
+---
+
+## Installation
+
+Install only what you need:
+
+```bash
+# Foundation (required by all view packages)
+npm install @shadcn-scheduler/core @shadcn-scheduler/shell
+
+# Views — pick one or more
+npm install @shadcn-scheduler/view-month
+npm install @shadcn-scheduler/view-year
+npm install @shadcn-scheduler/view-list
+
+# Plugins — optional features
+npm install @shadcn-scheduler/plugin-audit
+npm install @shadcn-scheduler/plugin-export
+npm install @shadcn-scheduler/plugin-markers
+
+# Or install everything with the fat bundle
+npm install @shadcn-scheduler/scheduler
+```
+
+---
+
+## Foundation packages
+
+### `@shadcn-scheduler/core`
+
+Pure TypeScript — no React, no DOM. Safe to import in Node.js, edge functions, or server components.
+
+```ts
+import {
+  // Types
+  type Block,
+  type Resource,
+  type Settings,
+  type RecurrenceRule,
+  type SchedulerConfig,
+  type CategoryColor,
+
+  // Constants & defaults
+  DEFAULT_SETTINGS,
+  DEFAULT_CATEGORY_COLORS,
+  HOUR_W, SIDEBAR_W, SHIFT_H,
+
+  // Date utilities
+  sameDay,
+  toDateISO,
+  parseBlockDate,
+  isToday,
+  fmt12,
+  getWeekDates,
+
+  // Algorithms
+  packShifts,       // overlap detection + utilisation
+  expandRecurrence, // RRULE-style recurrence expansion
+  getCategoryColor,
+  nextUid,
+} from '@shadcn-scheduler/core'
+```
+
+**`packShifts(blocks, resources)`** — returns `{ blocks, conflicts: string[], utilization: number }`. Conflicts is an array of block IDs that overlap for the same resource. Utilization is 0–1 (hours scheduled / hours available).
+
+**`expandRecurrence(template, rule)`** — expands a single master block into concrete occurrences based on a `RecurrenceRule`. Returns a `Block[]`.
+
+---
+
+### `@shadcn-scheduler/shell`
+
+React context that all view packages consume. Wrap your views in `SchedulerProvider` once; every child view reads from it automatically.
+
+```tsx
+import { SchedulerProvider, useSchedulerContext } from '@shadcn-scheduler/shell'
+import type { SchedulerConfig } from '@shadcn-scheduler/core'
+
+const config: SchedulerConfig = {
+  snapMinutes: 30,
+  defaultSettings: { visibleFrom: 7, visibleTo: 22 },
+  labels: { category: 'Department', shift: 'Booking' },
+}
+
+export default function App() {
+  return (
+    <SchedulerProvider
+      categories={categories}
+      employees={employees}
+      config={config}
+    >
+      {/* any view package goes here */}
+    </SchedulerProvider>
+  )
+}
+```
+
+**`useSchedulerContext()`** — access categories, employees, settings, labels, and colour helpers from any child component.
+
+---
+
+## View packages
+
+All view packages must be wrapped in `<SchedulerProvider>`. They read categories, employees, settings, and labels from context — you don't pass those props to every view.
+
+### `@shadcn-scheduler/view-month`
+
+Full month calendar. Shift pills per day, staff panel sidebar, and a day-shifts dialog on click.
+
+```tsx
+import { MonthView } from '@shadcn-scheduler/view-month'
+
+<MonthView
+  date={currentDate}           // Date — the month to display
+  shifts={shifts}              // Block[]
+  setShifts={setShifts}        // (blocks: Block[]) => void
+  onShiftClick={handleClick}   // (block, resource) => void
+  onAddShift={handleAdd}       // (date, categoryId?, empId?) => void
+/>
+```
+
+---
+
+### `@shadcn-scheduler/view-year`
+
+Year heatmap — shift count per day, colour-coded by density. Click a month to drill down.
+
+```tsx
+import { YearView } from '@shadcn-scheduler/view-year'
+
+<YearView
+  date={currentDate}
+  shifts={shifts}
+  onMonthClick={(year, month) => {
+    setDate(new Date(year, month, 1))
+    setView('month')
+  }}
+/>
+```
+
+---
+
+### `@shadcn-scheduler/view-list`
+
+Tabular shift list with week / day grouping. Supports publish/unpublish actions.
+
+```tsx
+import { ListView } from '@shadcn-scheduler/view-list'
+
+<ListView
+  shifts={shifts}
+  setShifts={setShifts}
+  onShiftClick={handleClick}
+  onPublish={(...ids) => publish(ids)}
+  onUnpublish={(id) => unpublish(id)}
+  onAddShift={handleAdd}
+  currentDate={date}
+  view="weeklist"   // "weeklist" | "daylist"
+/>
+```
+
+---
+
+### `@shadcn-scheduler/view-day` / `view-week` / `view-timeline` / `view-kanban`
+
+These packages expose their view components with the same props pattern. Day and Week views render per-employee rows with shift blocks. Timeline uses a horizontal Gantt layout. Kanban groups shifts by category in columns.
+
+```tsx
+import { DayView }      from '@shadcn-scheduler/view-day'
+import { WeekView }     from '@shadcn-scheduler/view-week'
+import { TimelineView } from '@shadcn-scheduler/view-timeline'
+import { KanbanView }   from '@shadcn-scheduler/view-kanban'
+```
+
+---
+
+## Plugin packages
+
+Plugins are standalone hooks and components. Import only the ones you need — they have no dependency on each other.
+
+### `@shadcn-scheduler/plugin-audit`
+
+Tracks every user action with a timestamped log.
+
+```tsx
+import { useAuditTrail, type AuditEntry } from '@shadcn-scheduler/plugin-audit'
+
+function MyScheduler() {
+  const { log, onEvent } = useAuditTrail({ maxEntries: 50 })
+
+  return (
+    <>
+      <Scheduler onAuditEvent={onEvent} {...rest} />
+      {log.map((entry) => (
+        <div key={entry.id}>{entry.action} — {entry.blockId}</div>
+      ))}
+    </>
+  )
+}
+```
+
+`AuditEntry` fields: `id`, `timestamp`, `action`, `blockId`, `employeeName`, `categoryName`, `before?`, `after?`.
+
+---
+
+### `@shadcn-scheduler/plugin-recurrence`
+
+Expand recurring shift rules into concrete blocks.
+
+```tsx
+import { expandRecurrence, type RecurrenceRule } from '@shadcn-scheduler/plugin-recurrence'
+
+const rule: RecurrenceRule = {
+  freq: 'weekly',
+  byDay: [1, 2, 3, 4, 5],   // Mon–Fri
+  count: 52,
+}
+
+const occurrences = expandRecurrence(templateBlock, rule)
+```
+
+Supported frequencies: `daily`, `weekly`, `monthly`. Stop with `count` or `until` (ISO date string).
+
+---
+
+### `@shadcn-scheduler/plugin-export`
+
+Export shifts to CSV, ICS (iCalendar), image, or PDF.
+
+```ts
+import {
+  exportToCSV,
+  exportToICS,
+  exportToImage,
+  exportToPDF,
+} from '@shadcn-scheduler/plugin-export'
+
+// Download a .csv
+exportToCSV(shifts, categories, 'schedule.csv')
+
+// Download a .ics for Google Calendar / Outlook
+exportToICS(shifts, 'schedule.ics')
+
+// Screenshot a DOM container as PNG
+exportToImage(document.getElementById('scheduler')!, 'schedule.png')
+```
+
+---
+
+### `@shadcn-scheduler/plugin-markers`
+
+Draggable vertical marker lines for deadlines and milestones.
+
+```tsx
+import { useMarkers, type SchedulerMarker } from '@shadcn-scheduler/plugin-markers'
+
+const [markers, setMarkers] = useState<SchedulerMarker[]>([
+  { id: 'deadline', date: '2026-03-25', hour: 9, label: 'Sprint end', color: 'var(--color-amber-500)', draggable: true },
+])
+
+<Scheduler markers={markers} onMarkersChange={setMarkers} {...rest} />
+```
+
+---
+
+### `@shadcn-scheduler/plugin-dependencies`
+
+SVG curved arrows between blocks — for handovers, sequential tasks, or any dependency.
+
+```tsx
+import { useDependencies, type ShiftDependency } from '@shadcn-scheduler/plugin-dependencies'
+
+const deps: ShiftDependency[] = [
+  { id: 'd1', fromId: 'shift-a', toId: 'shift-b', type: 'finish-to-start', label: 'handover' },
+]
+
+<Scheduler dependencies={deps} onDependenciesChange={setDeps} {...rest} />
+```
+
+Types: `finish-to-start` (solid), `start-to-start` (dashed), `finish-to-finish` (dashed).
+
+---
+
+### `@shadcn-scheduler/plugin-histogram`
+
+Resource utilisation bar chart panel.
+
+```tsx
+import { useHistogram, ResourceHistogram, type HistogramConfig } from '@shadcn-scheduler/plugin-histogram'
+
+const config: HistogramConfig = {
+  capacities: [
+    { resourceId: 'c1', hours: 40 },
+    { resourceId: 'c2', hours: 35 },
+  ],
+}
+
+<Scheduler showHistogram histogramConfig={config} histogramHeight={130} {...rest} />
+```
+
+---
+
+### `@shadcn-scheduler/plugin-availability`
+
+Diagonal-stripe overlays for hours when employees are unavailable.
+
+```tsx
+import { useAvailability, detectConflicts, type EmployeeAvailability } from '@shadcn-scheduler/plugin-availability'
+
+const availability: EmployeeAvailability[] = [
+  {
+    employeeId: 'e3',
+    windows: [
+      { dayOfWeek: 1, startH: 9, endH: 17 },  // Mon 9–5
+      { dayOfWeek: 2, startH: 9, endH: 17 },  // Tue 9–5
+    ],
+  },
+]
+
+// Detect conflicts between shifts and availability
+const conflicts = detectConflicts(shifts, availability)
+
+<Scheduler availability={availability} {...rest} />
+```
+
+---
+
+## Preset packages
+
+Preset packages export config factory functions. They return a `SchedulerConfig` pre-filled with sensible defaults for that domain.
+
+### `@shadcn-scheduler/preset-tv`
+
+```ts
+import { createTvConfig, type TvBlockMeta } from '@shadcn-scheduler/preset-tv'
+
+const config = createTvConfig({
+  snapMinutes: 15,
+  defaultSettings: { visibleFrom: 6, visibleTo: 24 },
+})
+// → 24hr grid, 15-min snap, labels: Channel / Programme
+```
+
+### `@shadcn-scheduler/preset-healthcare`
+
+```ts
+import { createHealthcareConfig, type HealthcareBlockMeta } from '@shadcn-scheduler/preset-healthcare'
+
+const config = createHealthcareConfig({
+  defaultSettings: { visibleFrom: 0, visibleTo: 24 },
+  allowOvernight: true,
+  snapMinutes: 30,
+})
+// → 24hr grid, overnight support, labels: Ward / Rota slot
+```
+
+### `@shadcn-scheduler/preset-conference`
+
+```ts
+import { createConferenceConfig, type ConferenceBlockMeta } from '@shadcn-scheduler/preset-conference'
+
+const config = createConferenceConfig({
+  defaultSettings: { visibleFrom: 8, visibleTo: 20 },
+  snapMinutes: 15,
+})
+// → 8am–8pm grid, 15-min snap, labels: Room / Session
+```
+
+---
+
+## The fat bundle — `@shadcn-scheduler/scheduler`
+
+If you don't care about tree-shaking and want a single-package install, use the backward-compatible bundle. It re-exports everything from all other packages and exposes a single `<Scheduler>` component matching the original `@sushill/shadcn-scheduler` API.
+
+```bash
+npm install @shadcn-scheduler/scheduler
+```
+
+```tsx
+import { Scheduler } from '@shadcn-scheduler/scheduler'
+import type { Block, SchedulerConfig } from '@shadcn-scheduler/scheduler'
+
+<Scheduler
+  categories={categories}
+  employees={employees}
+  shifts={shifts}
+  onShiftsChange={setShifts}
+  initialView="month"
+  config={config}
+/>
+```
+
+This is a drop-in replacement for `@sushill/shadcn-scheduler`. The component API is identical.
+
+---
+
+## Choosing the right import strategy
+
+| Scenario | Recommended imports |
+|----------|---------------------|
+| Small app, just needs a calendar | `@shadcn-scheduler/scheduler` (fat bundle) |
+| Large app, multiple views | `core` + `shell` + individual `view-*` packages |
+| Server-side only (data processing) | `@shadcn-scheduler/core` only |
+| Adding one feature (e.g. export) | `@shadcn-scheduler/plugin-export` |
+| Domain-specific app | `core` + `shell` + 1-2 views + `preset-*` |
+
+[→ See all patterns in examples](/docs/examples) | [→ Try the live demo](/demos/packages)
