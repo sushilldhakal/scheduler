@@ -164,7 +164,7 @@
 
 .w-full.docs-full-width #nd-page {
   grid-area: main !important;
-  max-width: none !important;
+  max-width: 100% !important;
   width: auto !important;
   min-width: 0;
 }
