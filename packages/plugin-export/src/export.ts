@@ -1,0 +1,112 @@
+import type { Block } from '@shadcn-scheduler/core'
+
+export async function exportToImage(
+  container: HTMLElement,
+  filename = 'scheduler.png'
+): Promise<void> {
+  try {
+    const html2canvas = (await import('html2canvas')).default
+    const canvas = await html2canvas(container, { useCORS: true, scale: 2, logging: false })
+    const url = canvas.toDataURL('image/png')
+    const a = document.createElement('a')
+    a.href = url; a.download = filename; a.click()
+  } catch (e) {
+    const err = e as { code?: string }
+    if (err?.code === 'MODULE_NOT_FOUND') {
+      throw new Error('exportToImage requires html2canvas. Install it: npm install html2canvas')
+    }
+    throw e
+  }
+}
+
+export async function exportToPDF(
+  container: HTMLElement,
+  filename = 'scheduler.pdf'
+): Promise<void> {
+  try {
+    const [html2canvas, { jsPDF }] = await Promise.all([
+      import('html2canvas').then((m) => m.default),
+      import('jspdf'),
+    ])
+    const canvas = await html2canvas(container, { useCORS: true, scale: 2, logging: false })
+    const imgData = canvas.toDataURL('image/png')
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'px', format: [canvas.width, canvas.height] })
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
+    pdf.save(filename)
+  } catch (e) {
+    const err = e as { code?: string }
+    if (err?.code === 'MODULE_NOT_FOUND') {
+      throw new Error('exportToPDF requires jspdf and html2canvas. Install: npm install jspdf html2canvas')
+    }
+    throw e
+  }
+}
+
+export function exportToCSV(blocks: Block[], filename = 'scheduler-export.csv'): void {
+  if (blocks.length === 0) {
+    download('id,categoryId,employeeId,date,startH,endH,employee,status\n', filename, 'text/csv;charset=utf-8')
+    return
+  }
+  const metaKeys = new Set<string>()
+  for (const b of blocks) {
+    if (b.meta && typeof b.meta === 'object') {
+      for (const k of Object.keys(b.meta)) metaKeys.add(k)
+    }
+  }
+  const metaArr = Array.from(metaKeys).sort()
+  const header =
+    'id,categoryId,employeeId,date,startH,endH,employee,status' +
+    (metaArr.length ? ',' + metaArr.map((k) => `meta_${k}`).join(',') : '') +
+    '\n'
+  const rows = blocks.map((b) => {
+    const base = [
+      escapeCsv(b.id), escapeCsv(b.categoryId), escapeCsv(b.employeeId),
+      escapeCsv(b.date), String(b.startH), String(b.endH),
+      escapeCsv(b.employee), escapeCsv(b.status),
+    ]
+    const metaVals = metaArr.map((k) =>
+      b.meta && typeof b.meta === 'object' && k in b.meta
+        ? escapeCsv(String((b.meta as Record<string, unknown>)[k]))
+        : ''
+    )
+    return base.join(',') + (metaVals.length ? ',' + metaVals.join(',') : '') + '\n'
+  })
+  download(header + rows.join(''), filename, 'text/csv;charset=utf-8')
+}
+
+export function exportToICS(blocks: Block[], filename = 'scheduler-export.ics'): void {
+  function toHHMMSS(h: number): string {
+    return `${String(Math.floor(h)).padStart(2, '0')}${String(Math.floor((h % 1) * 60)).padStart(2, '0')}00`
+  }
+  const lines = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//shadcn-scheduler//EN',
+    'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+  ]
+  for (const block of blocks) {
+    const d = block.date.replace(/-/g, '')
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:${block.id}@shadcn-scheduler`,
+      `DTSTART:${d}T${toHHMMSS(block.startH)}`,
+      `DTEND:${d}T${toHHMMSS(block.endH)}`,
+      `SUMMARY:${block.employee ?? ''}`,
+      `DESCRIPTION:${block.categoryId} — ${block.status}`,
+      'END:VEVENT',
+    )
+  }
+  lines.push('END:VCALENDAR')
+  download(lines.join('\r\n'), filename, 'text/calendar;charset=utf-8')
+}
+
+function escapeCsv(v: string): string {
+  if (/[",\n\r]/.test(v)) return `"${v.replace(/"/g, '""')}"`
+  return v
+}
+
+function download(content: string, filename: string, mime: string): void {
+  const blob = new Blob([content], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = filename; a.click()
+  URL.revokeObjectURL(url)
+}

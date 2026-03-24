@@ -1,0 +1,58 @@
+{
+  "name": "@shadcn-scheduler/scheduler",
+  "version": "0.1.0",
+  "description": "Backward compatibility bundle for shadcn-scheduler with all views and plugins",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "files": ["dist", "README.md"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "keywords": ["scheduler", "compatibility", "bundle", "react"],
+  "author": "Sushil Dhakal",
+  "license": "MIT",
+  "dependencies": {
+    "@shadcn-scheduler/view-day": "*",
+    "@shadcn-scheduler/view-week": "*",
+    "@shadcn-scheduler/view-timeline": "*",
+    "@shadcn-scheduler/view-month": "*",
+    "@shadcn-scheduler/view-year": "*",
+    "@shadcn-scheduler/view-list": "*",
+    "@shadcn-scheduler/plugin-markers": "*",
+    "@shadcn-scheduler/plugin-dependencies": "*",
+    "@shadcn-scheduler/plugin-histogram": "*",
+    "@shadcn-scheduler/plugin-availability": "*",
+    "@shadcn-scheduler/plugin-export": "*",
+    "@shadcn-scheduler/plugin-recurrence": "*",
+    "@shadcn-scheduler/plugin-audit": "*"
+  },
+  "peerDependencies": {
+    "@shadcn-scheduler/core": "*",
+    "@shadcn-scheduler/shell": "*",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  }
+}

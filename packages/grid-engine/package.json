@@ -1,0 +1,59 @@
+{
+  "name": "@shadcn-scheduler/grid-engine",
+  "version": "0.1.0",
+  "description": "Shared grid rendering foundation for shadcn-scheduler grid-based views",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "scheduler",
+    "grid",
+    "rendering",
+    "virtualization",
+    "drag-drop"
+  ],
+  "author": "Sushil Dhakal",
+  "license": "MIT",
+  "peerDependencies": {
+    "@shadcn-scheduler/core": "*",
+    "@shadcn-scheduler/shell": "*",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "@tanstack/react-virtual": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-virtual": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@tanstack/react-virtual": "^3.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  }
+}

@@ -1852,6 +1852,7 @@ function GridViewInner({
     [getGridXY, getCategoryAtY, getDateIdx, isWeekView, isDayViewMultiDay, COL_W_WEEK, DAY_WIDTH, PX_WEEK, HOUR_W, clearLongPress, setZoom, onPinchZoom, settings.visibleFrom, settings.visibleTo, getColor]
   )
 
+
   const onPC = useCallback(
     (e: React.PointerEvent<HTMLDivElement>): void => {
       // Reset lifted block transform before nulling ds so we have the id
@@ -2925,11 +2926,15 @@ function GridViewInner({
                           if (!dragEmpId) return
                           dropHoverRef.current = { categoryId: cat.id, di, hour: h }
                         }}
-                        onContextMenu={hideFloatingButtons ? (e) => {
+                        onContextMenu={(e) => {
+                          if (!copiedShift) return
                           e.preventDefault()
                           e.stopPropagation()
                           setGridContextMenu({ clientX: e.clientX, clientY: e.clientY, date, hour: h, categoryId: cat.id, employeeId: row.employee?.id })
-                        } : undefined}
+                        }}
+                        onDoubleClick={() => {
+                          setAddPrompt({ date, categoryId: cat.id, hour: h, employeeId: row.employee?.id })
+                        }}
                       />
                     )
                   })
@@ -2963,7 +2968,8 @@ function GridViewInner({
                         if (!dragEmpId) return
                         dropHoverRef.current = { categoryId: cat.id, di }
                       }}
-                      onContextMenu={hideFloatingButtons ? (e) => {
+                      onContextMenu={(e) => {
+                        if (!copiedShift) return
                         e.preventDefault()
                         e.stopPropagation()
                         const r = scrollRef.current?.getBoundingClientRect()
@@ -2973,7 +2979,16 @@ function GridViewInner({
                         const hour = Math.max(settings.visibleFrom, Math.min(settings.visibleTo - 0.5,
                           settings.visibleFrom + localX / PX_WEEK))
                         setGridContextMenu({ clientX: e.clientX, clientY: e.clientY, date, hour: Math.round(hour * 4) / 4, categoryId: cat.id, employeeId: row.employee?.id })
-                      } : undefined}
+                      }}
+                      onDoubleClick={(e) => {
+                        const r = scrollRef.current?.getBoundingClientRect()
+                        if (!r) return
+                        const x = (scrollRef.current?.scrollLeft ?? 0) + e.clientX - r.left
+                        const localX = x - di * COL_W_WEEK
+                        const hour = Math.max(settings.visibleFrom, Math.min(settings.visibleTo - 0.5,
+                          settings.visibleFrom + localX / PX_WEEK))
+                        setAddPrompt({ date, categoryId: cat.id, hour: Math.round(hour * 4) / 4, employeeId: row.employee?.id })
+                      }}
                     >
                       {Array.from(
                         { length: settings.visibleTo - settings.visibleFrom + 1 },
@@ -3025,6 +3040,15 @@ function GridViewInner({
                     onPointerEnter={() => {
                       if (!dragEmpId) return
                       dropHoverRef.current = { categoryId: cat.id, hour: h }
+                    }}
+                    onContextMenu={(e) => {
+                      if (!copiedShift) return
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setGridContextMenu({ clientX: e.clientX, clientY: e.clientY, date, hour: h, categoryId: cat.id, employeeId: row.employee?.id })
+                    }}
+                    onDoubleClick={() => {
+                      setAddPrompt({ date, categoryId: cat.id, hour: h, employeeId: row.employee?.id })
                     }}
                   />
                 )})
@@ -3551,107 +3575,6 @@ function GridViewInner({
                 </>
               )
             })()}
-            {/* Rows */}
-            {!hideFloatingButtons && rowVirtualizer.getVirtualItems().map((vr) => {
-              const row = flatRows[vr.index]
-              if (!row) return null
-              // Individual mode: skip category headers (no blocks, no add buttons)
-              if (row.kind === "category" && (effectiveRowMode === "individual" || effectiveRowMode === "flat")) return null
-              // Category mode: skip collapsed category rows
-              if (row.kind === "category" && collapsed.has(row.category.id)) return null
-              // Individual mode: skip collapsed employee rows
-              if (row.kind === "employee" && collapsed.has(row.category.id)) return null
-              const cat = row.category
-              const emp = row.kind === "employee" ? row.employee! : null
-              const top = vr.start
-              const rowH = vr.size
-              const addBtnTop = top + rowH - ADD_BTN_H + (ADD_BTN_H - 20) / 2
-              if (isWeekView || isDayViewMultiDay) {
-                const colW = isDayViewMultiDay ? DAY_WIDTH : COL_W_WEEK
-                return dates.map((date, di) => (
-                  <div key={`add-${row.key}-${di}`} style={{ position: "absolute", left: di * colW + colW / 2 - 10, top: addBtnTop, display: "flex", gap: 4, zIndex: 25 }}>
-                    <button
-                      onClick={() =>
-                        setAddPrompt({ date, categoryId: cat.id, hour: settings.visibleFrom, employeeId: emp?.id })
-                      }
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: "50%",
-                        border: "1.5px dashed var(--muted-foreground)",
-                        background: "var(--background)",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "var(--muted-foreground)",
-                        padding: 0,
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                      }}
-                      title="Add Shift"
-                    >
-                      <Plus size={9} />
-                    </button>
-                    {copiedShift && (
-                      <button
-                        onClick={() => {
-                          const newShift: Block = {
-                            ...copiedShift,
-                            id: nextUid(),
-                            date: toDateISO(date),
-                            categoryId: cat.id,
-                            employeeId: emp?.id ?? copiedShift.employeeId,
-                            employee: emp?.name ?? copiedShift.employee,
-                          }
-                          setShifts((prev) => [...prev, newShift])
-                          setCopiedShift?.(null)
-                        }}
-                        style={{ width: 20, height: 20, borderRadius: "50%", border: "1.5px dashed var(--primary)", background: "var(--background)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)", padding: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
-                        title="Paste Shift"
-                      >
-                        <ClipboardPaste size={9} />
-                      </button>
-                    )}
-                  </div>
-                ))
-              }
-              return DAY_VISIBLE_SLOTS.map((h) => (
-                <div key={`add-${row.key}-${h}`} style={{ position: "absolute", left: (h - settings.visibleFrom) * HOUR_W + SLOT_W / 2 - 9, top: addBtnTop, display: "flex", gap: 4, zIndex: 25 }}>
-                  <button
-                    onClick={() =>
-                      setAddPrompt({ date: dates[1] ?? dates[0]!, categoryId: cat.id, hour: h, employeeId: emp?.id })
-                    }
-                    style={{ width: 18, height: 18, borderRadius: "50%", border: "1.5px dashed var(--muted-foreground)", background: "var(--background)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--muted-foreground)", padding: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
-                    title="Add Shift"
-                  >
-                    <Plus size={8} />
-                  </button>
-                  {copiedShift && (
-                    <button
-                      onClick={() => {
-                        const newShift: Block = {
-                          ...copiedShift,
-                          id: nextUid(),
-                          date: toDateISO(dates[1] ?? dates[0]!),
-                          categoryId: cat.id,
-                          employeeId: emp?.id ?? copiedShift.employeeId,
-                          employee: emp?.name ?? copiedShift.employee,
-                          startH: h,
-                          endH: h + (copiedShift.endH - copiedShift.startH),
-                        }
-                        setShifts((prev) => [...prev, newShift])
-                        setCopiedShift?.(null)
-                      }}
-                      style={{ width: 18, height: 18, borderRadius: "50%", border: "1.5px dashed var(--primary)", background: "var(--background)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--primary)", padding: 0, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}
-                      title="Paste Shift"
-                    >
-                      <ClipboardPaste size={8} />
-                    </button>
-                  )}
-                </div>
-              ))
-            })}
-
             {false && dropHoverRef.current &&
               dragEmpId &&
               (() => {
@@ -4269,41 +4192,7 @@ function GridViewInner({
               })
             })}
 
-            {!isLoading &&
-              !readOnly &&
-              flatRows
-                .filter((row) => row.kind === "employee" && row.employee &&
-                  !collapsed.has(row.category.id) &&
-                  !categoryHasShifts[row.category.id])
-                .map((row) => {
-                  const cat = row.category
-                  const top = (categoryTops[`emp:${row.employee!.id}`] ?? 0)
-                  const rowH = categoryHeights[`emp:${row.employee!.id}`] ?? SHIFT_H
-                  const centerDate = dates[Math.floor(dates.length / 2)] ?? dates[0]!
-                  return (
-                    <div
-                      key={`empty-row-${row.key}`}
-                      className="flex items-center justify-center gap-2 rounded border border-dashed border-muted-foreground/40 bg-muted/20"
-                      style={{
-                        position: "absolute",
-                        left: 0,
-                        top,
-                        width: isWeekView || isDayViewMultiDay ? TOTAL_W : DAY_WIDTH,
-                        height: rowH,
-                        zIndex: 5,
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => onAddShift(centerDate, cat.id)}
-                        className="flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground"
-                      >
-                        <Plus size={14} />
-                        Add {labels.shift}
-                      </button>
-                    </div>
-                  )
-                })}
+
               </div>
             </div>
             {hasDayScrollNav && (
@@ -4464,18 +4353,6 @@ function GridViewInner({
             padding: "4px 0",
             overflow: "hidden",
           }}>
-            <button
-              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "8px 14px", border: "none", background: "none", cursor: "pointer", fontSize: 13, color: "var(--foreground)", textAlign: "left" }}
-              onPointerEnter={(e) => (e.currentTarget.style.background = "var(--accent)")}
-              onPointerLeave={(e) => (e.currentTarget.style.background = "none")}
-              onClick={() => {
-                setAddPrompt({ date: gridContextMenu.date, categoryId: gridContextMenu.categoryId, hour: gridContextMenu.hour, employeeId: gridContextMenu.employeeId })
-                setGridContextMenu(null)
-              }}
-            >
-              <Plus size={14} style={{ flexShrink: 0, color: "var(--muted-foreground)" }} />
-              Add shift here
-            </button>
             {copiedShift && (
               <button
                 style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "8px 14px", border: "none", background: "none", cursor: "pointer", fontSize: 13, color: "var(--foreground)", textAlign: "left" }}

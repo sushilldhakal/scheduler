@@ -1,0 +1,1 @@
+export { createConferenceConfig } from './config'

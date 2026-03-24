@@ -6,9 +6,17 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build -w @sushill/shadcn-scheduler",
-    "build:web": "npm run build -w @sushill/shadcn-scheduler && npm run build -w web",
+    "build": "npm run build:packages && npm run build -w @sushill/shadcn-scheduler",
+    "build:packages": "npm run build -w @shadcn-scheduler/core -w @shadcn-scheduler/shell -w @shadcn-scheduler/grid-engine",
+    "build:views": "npm run build -w @shadcn-scheduler/view-day -w @shadcn-scheduler/view-week -w @shadcn-scheduler/view-timeline -w @shadcn-scheduler/view-month -w @shadcn-scheduler/view-year -w @shadcn-scheduler/view-list -w @shadcn-scheduler/view-kanban",
+    "build:plugins": "npm run build -w @shadcn-scheduler/plugin-markers -w @shadcn-scheduler/plugin-dependencies -w @shadcn-scheduler/plugin-histogram -w @shadcn-scheduler/plugin-availability -w @shadcn-scheduler/plugin-export -w @shadcn-scheduler/plugin-recurrence -w @shadcn-scheduler/plugin-audit",
+    "build:presets": "npm run build -w @shadcn-scheduler/preset-healthcare -w @shadcn-scheduler/preset-tv -w @shadcn-scheduler/preset-conference",
+    "build:scheduler": "npm run build -w @shadcn-scheduler/scheduler",
+    "build:all": "npm run build:packages && npm run build:views && npm run build:plugins && npm run build:presets && npm run build:scheduler",
+    "build:web": "npm run build && npm run build -w web",
     "dev:web": "npm run dev -w web",
+    "test": "npm run test --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present",
     "publish:npm": "npm run build --workspace=@sushill/shadcn-scheduler && npm publish --workspace=@sushill/shadcn-scheduler --access public --registry https://registry.npmjs.org",
     "publish:github": "npm run build --workspace=@sushill/shadcn-scheduler && npm publish --workspace=@sushill/shadcn-scheduler --registry https://npm.pkg.github.com",
     "publish:all": "npm run publish:npm && npm run publish:github"
