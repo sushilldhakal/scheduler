@@ -689,8 +689,7 @@ export function Scheduler({
                 size="sm"
                 onClick={() => {
                   handleTodayClick()
-                  // RAF: wait for React to re-render with updated dates/nowPositionPx
-                  requestAnimationFrame(() => scrollToNowRef.current?.())
+                  requestAnimationFrame(() => requestAnimationFrame(() => scrollToNowRef.current?.()))
                 }}
                 className="shrink-0"
               >
@@ -732,7 +731,7 @@ export function Scheduler({
                       size="sm"
                       onClick={() => {
                         handleTodayClick()
-                        requestAnimationFrame(() => scrollToNowRef.current?.())
+                        requestAnimationFrame(() => requestAnimationFrame(() => scrollToNowRef.current?.()))
                       }}
                     >
                       Now
@@ -756,7 +755,7 @@ export function Scheduler({
                 {slots.toolbar
                   ? slots.toolbar({
                       goToDate: handleSetDate,
-                      goToNow: () => { handleTodayClick(); requestAnimationFrame(() => scrollToNowRef.current?.()) },
+                      goToNow: () => { handleTodayClick(); requestAnimationFrame(() => requestAnimationFrame(() => scrollToNowRef.current?.())) },
                       openAddShift: handleAddShiftButton,
                       copyLastWeek,
                       publishAllDrafts: handlePublishAllDrafts,

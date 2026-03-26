@@ -8,6 +8,9 @@ node_modules
 # Per-package dist directories (built by tsup on CI/Vercel)
 packages/*/dist/
 
+# Turborepo — per-package task logs, not build output
+.turbo/
+
 # Next.js
 apps/web/.next/
 apps/web/out/

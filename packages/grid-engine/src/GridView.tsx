@@ -1500,7 +1500,7 @@ function GridViewInner({
       }
       setDragId(shift.id)
     },
-    [getGridXY, readOnly]
+    [getGridXY, readOnly, getSrcTrack]
   )
 
 
@@ -2113,7 +2113,9 @@ function GridViewInner({
     (e: React.PointerEvent<HTMLDivElement>) => {
       gridPointerIdsRef.current.add(e.pointerId)
       const target = e.target as HTMLElement
-      if (target.closest("[data-empty-cell]")) {
+      // Only primary button triggers swipe/long-press on empty cells.
+      // Right-click (button=2) opens the context menu via onContextMenu — no timer needed.
+      if (target.closest("[data-empty-cell]") && e.button === 0) {
         swipeStartRef.current = { x: e.clientX, y: e.clientY }
         longPressStartRef.current = { x: e.clientX, y: e.clientY }
         longPressPointerIdRef.current = e.pointerId
@@ -2232,13 +2234,16 @@ function GridViewInner({
   }, [])
 
   const todayIdx = dates.findIndex((d) => isToday(d))
+  const nowInVisibleRange = nowH >= settings.visibleFrom && nowH < settings.visibleTo
+  // When today is in the grid but current time is outside visible hours, still scroll to
+  // today's column start (rather than position 0 which jumps to the far-left edge).
   const nowPositionPx =
-    todayIdx >= 0 && nowH >= settings.visibleFrom && nowH < settings.visibleTo
+    todayIdx >= 0
       ? isWeekView
-        ? todayIdx * COL_W_WEEK + (nowH - settings.visibleFrom) * PX_WEEK
+        ? todayIdx * COL_W_WEEK + (nowInVisibleRange ? (nowH - settings.visibleFrom) * PX_WEEK : 0)
         : isDayViewMultiDay
-          ? todayIdx * DAY_WIDTH + (nowH - settings.visibleFrom) * HOUR_W
-          : (nowH - settings.visibleFrom) * HOUR_W
+          ? todayIdx * DAY_WIDTH + (nowInVisibleRange ? (nowH - settings.visibleFrom) * HOUR_W : 0)
+          : (nowInVisibleRange ? (nowH - settings.visibleFrom) * HOUR_W : 0)
       : 0
   const scrollToNow = useScrollToNow(scrollRef, nowPositionPx)
   useEffect(() => {
@@ -2927,7 +2932,6 @@ function GridViewInner({
                           dropHoverRef.current = { categoryId: cat.id, di, hour: h }
                         }}
                         onContextMenu={(e) => {
-                          if (!copiedShift) return
                           e.preventDefault()
                           e.stopPropagation()
                           setGridContextMenu({ clientX: e.clientX, clientY: e.clientY, date, hour: h, categoryId: cat.id, employeeId: row.employee?.id })
@@ -2969,7 +2973,6 @@ function GridViewInner({
                         dropHoverRef.current = { categoryId: cat.id, di }
                       }}
                       onContextMenu={(e) => {
-                        if (!copiedShift) return
                         e.preventDefault()
                         e.stopPropagation()
                         const r = scrollRef.current?.getBoundingClientRect()
@@ -3042,7 +3045,6 @@ function GridViewInner({
                       dropHoverRef.current = { categoryId: cat.id, hour: h }
                     }}
                     onContextMenu={(e) => {
-                      if (!copiedShift) return
                       e.preventDefault()
                       e.stopPropagation()
                       setGridContextMenu({ clientX: e.clientX, clientY: e.clientY, date, hour: h, categoryId: cat.id, employeeId: row.employee?.id })
@@ -3821,8 +3823,7 @@ function GridViewInner({
                           <div
                             data-resize="left"
                             onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
-                            className="absolute left-0 top-0 h-full cursor-ew-resize flex items-center justify-start"
-                            style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 14, paddingLeft: 8, zIndex: 3 }}
+                            style={{ position: "absolute", left: 0, top: 0, height: "100%", width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 14, paddingLeft: 8, zIndex: 3, cursor: "ew-resize", display: "flex", alignItems: "center", justifyContent: "flex-start" }}
                           >
                             <div style={{ width: 2, height: "55%", minHeight: 10, borderRadius: 2, background: "rgba(255,255,255,0.65)", pointerEvents: "none" }} />
                           </div>
@@ -3831,8 +3832,7 @@ function GridViewInner({
                           <div
                             data-resize="right"
                             onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
-                            className="absolute right-0 top-0 h-full cursor-ew-resize flex items-center justify-end"
-                            style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 14, paddingRight: 8, zIndex: 3 }}
+                            style={{ position: "absolute", right: 0, top: 0, height: "100%", width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 14, paddingRight: 8, zIndex: 3, cursor: "ew-resize", display: "flex", alignItems: "center", justifyContent: "flex-end" }}
                           >
                             <div style={{ width: 2, height: "55%", minHeight: 10, borderRadius: 2, background: "rgba(255,255,255,0.65)", pointerEvents: "none" }} />
                           </div>
@@ -3898,8 +3898,14 @@ function GridViewInner({
                 // Only render shifts belonging to this specific employee
                 const allDayShifts = shiftIndex.get(`${cat.id}:${toDateISO(date)}`) ?? []
                 const dayShifts = allDayShifts.filter((s) => s.employeeId === emp.id)
-                const trackMap = packedTracksIndex.get(`${cat.id}:${toDateISO(date)}`) ?? new Map()
+                // In individual mode each employee has their own row, so pack only
+                // this employee's shifts (not all category shifts). Using the
+                // category-level packedTracksIndex would assign track > 0 to shifts
+                // that overlap with *other* employees, pushing them out of their row.
                 const sorted = [...dayShifts].sort((a, b) => a.startH - b.startH)
+                const empTrackNums = packShifts(sorted)
+                const trackMap = new Map<string, number>()
+                sorted.forEach((s, i) => trackMap.set(s.id, empTrackNums[i] ?? 0))
                 return sorted.map((shift) => {
                   if (isLoading) {
                     const track = trackMap.get(shift.id) ?? 0
@@ -4125,8 +4131,7 @@ function GridViewInner({
                             <div
                               data-resize="left"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRLD(e, shift)}
-                              className="absolute left-0 top-0 flex h-full cursor-ew-resize items-center justify-start"
-                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 14, paddingLeft: 8, zIndex: 3 }}
+                              style={{ position: "absolute", left: 0, top: 0, height: "100%", width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 14, paddingLeft: 8, zIndex: 3, cursor: "ew-resize", display: "flex", alignItems: "center", justifyContent: "flex-start" }}
                             >
                               <div style={{ width: 2, height: "55%", minHeight: 10, borderRadius: 2, background: "rgba(255,255,255,0.65)", pointerEvents: "none" }} />
                             </div>
@@ -4135,8 +4140,7 @@ function GridViewInner({
                             <div
                               data-resize="right"
                               onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => onRRD(e, shift)}
-                              className="absolute right-0 top-0 flex h-full cursor-ew-resize items-center justify-end"
-                              style={{ width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 14, paddingRight: 8, zIndex: 3 }}
+                              style={{ position: "absolute", right: 0, top: 0, height: "100%", width: isTouchDevice ? RESIZE_HANDLE_MIN_TOUCH_PX : 14, paddingRight: 8, zIndex: 3, cursor: "ew-resize", display: "flex", alignItems: "center", justifyContent: "flex-end" }}
                             >
                               <div style={{ width: 2, height: "55%", minHeight: 10, borderRadius: 2, background: "rgba(255,255,255,0.65)", pointerEvents: "none" }} />
                             </div>
@@ -4339,7 +4343,7 @@ function GridViewInner({
         document.body
       )}
 
-      {/* Grid right-click context menu — shown when hideFloatingButtons=true (Timeline mode) */}
+      {/* Grid right-click context menu — right-click on any empty cell */}
       {gridContextMenu && createPortal(
         <>
           <div style={{ position: "fixed", inset: 0, zIndex: 999998 }} onPointerDown={() => setGridContextMenu(null)} />
@@ -4356,6 +4360,26 @@ function GridViewInner({
             padding: "4px 0",
             overflow: "hidden",
           }}>
+            {/* Add shift — always shown, uses customisable label */}
+            {!readOnly && (
+              <button
+                style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "8px 14px", border: "none", background: "none", cursor: "pointer", fontSize: 13, color: "var(--foreground)", textAlign: "left" }}
+                onPointerEnter={(e) => (e.currentTarget.style.background = "var(--accent)")}
+                onPointerLeave={(e) => (e.currentTarget.style.background = "none")}
+                onClick={() => {
+                  setAddPrompt({ date: gridContextMenu.date, categoryId: gridContextMenu.categoryId, hour: gridContextMenu.hour, employeeId: gridContextMenu.employeeId })
+                  setGridContextMenu(null)
+                }}
+              >
+                <Plus size={14} style={{ flexShrink: 0, color: "var(--primary)" }} />
+                {labels.addShift}
+              </button>
+            )}
+            {/* Divider — only shown when both items are visible */}
+            {!readOnly && copiedShift && (
+              <div style={{ height: 1, margin: "4px 0", background: "var(--border)" }} />
+            )}
+            {/* Paste — only shown when there is a copied/cut shift */}
             {copiedShift && (
               <button
                 style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "8px 14px", border: "none", background: "none", cursor: "pointer", fontSize: 13, color: "var(--foreground)", textAlign: "left" }}

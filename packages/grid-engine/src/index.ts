@@ -40,6 +40,14 @@ export { RoleWarningModal } from './modals/RoleWarningModal'
 export { cn } from './lib/utils'
 export { Button } from './ui/button'
 export { BottomSheet } from './ui/BottomSheet'
+export {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuLabel,
+} from './ui/context-menu'
 
 // ─── Additional modals ────────────────────────────────────────────────────────
 export { ShiftModal } from './modals/ShiftModal'

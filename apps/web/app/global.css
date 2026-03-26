@@ -8,6 +8,7 @@
 @source "../app";
 @source "../lib";
 @source "../../../packages/shadcn-scheduler/dist";
+@source "../../../packages/grid-engine/dist";
 @source "../../node_modules/@sushill/shadcn-scheduler/dist";
 
 @custom-variant dark (&:is(.dark *));

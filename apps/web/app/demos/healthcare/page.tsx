@@ -4,7 +4,7 @@ import { Scheduler, createHealthcareConfig, type Block } from '@sushill/shadcn-s
 import { wards, staff, rotas } from '@/lib/demo/healthcareData'
 import { DemoShell } from '../_demoShell'
 
-const config = createHealthcareConfig({ defaultSettings: { visibleFrom: 0, visibleTo: 24 }, snapMinutes: 30 })
+const config = createHealthcareConfig({ defaultSettings: { visibleFrom: 0, visibleTo: 24 }, snapMinutes: 30, initialScrollToNow: true })
 
 export default function HealthcareDemo() {
   const [mounted, setMounted] = useState(false)
