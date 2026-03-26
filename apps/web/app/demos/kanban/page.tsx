@@ -276,6 +276,7 @@ export default function KanbanDemo() {
                 mode={view}
                 dates={view === 'week' ? weekDates : undefined}
                 onMonthDrill={handleMonthDrill}
+                onGoToDay={(d) => { setDate(d); setView('day') }}
               />
             </div>
           )}

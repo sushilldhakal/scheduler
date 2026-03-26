@@ -617,6 +617,7 @@ function WeekLayout({ dates, shifts, setShifts, readOnly, onBlockCreate, onBlock
   const [dragId, setDragId] = useState<string | null>(null)
   const [dropKey, setDropKey] = useState<string | null>(null)
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set())
+  const [dayPopover, setDayPopover] = useState<{ date: Date; rect: DOMRect } | null>(null)
 
   const toggleCat = (catId: string) =>
     setCollapsedCats((prev) => { const n = new Set(prev); n.has(catId) ? n.delete(catId) : n.add(catId); return n })
@@ -640,12 +641,14 @@ function WeekLayout({ dates, shifts, setShifts, readOnly, onBlockCreate, onBlock
             const dayShifts = weekShifts.filter((s) => s.date === iso)
             const dayH = dayShifts.reduce((a, s) => a + (s.endH - s.startH), 0)
             return (
-              <div key={i} style={{ display: 'table-cell', padding: '8px 10px 8px', borderBottom: '2px solid var(--border)', borderRight: i < dates.length - 1 ? '1px solid var(--border)' : undefined, background: today ? 'color-mix(in srgb, var(--primary) 5%, var(--background))' : 'var(--background)', verticalAlign: 'bottom' }}>
-                {/* "Mon 23 Mar" flat — exactly like screenshot */}
+              <div
+                key={i}
+                onClick={(e) => setDayPopover({ date: d, rect: (e.currentTarget as HTMLDivElement).getBoundingClientRect() })}
+                style={{ display: 'table-cell', padding: '8px 10px 8px', borderBottom: '2px solid var(--border)', borderRight: i < dates.length - 1 ? '1px solid var(--border)' : undefined, background: today ? 'color-mix(in srgb, var(--primary) 5%, var(--background))' : 'var(--background)', verticalAlign: 'bottom', cursor: 'pointer', userSelect: 'none' }}
+              >
                 <div style={{ fontSize: 12, fontWeight: 700, color: today ? 'var(--primary)' : 'var(--foreground)', whiteSpace: 'nowrap' }}>
                   {DOW_MON_FIRST[(d.getDay() + 6) % 7]} <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, borderRadius: '50%', background: today ? 'var(--primary)' : 'transparent', color: today ? 'var(--primary-foreground)' : 'var(--foreground)', fontSize: 12 }}>{d.getDate()}</span> {MONTHS_SHORT[d.getMonth()]}
                 </div>
-                {/* Total hours — "197h" below date like screenshot */}
                 {dayH > 0 && <div style={{ fontSize: 10, color: 'var(--muted-foreground)', marginTop: 2 }}>{dayH % 1 === 0 ? dayH : dayH.toFixed(1)}h</div>}
               </div>
             )
@@ -740,6 +743,39 @@ function WeekLayout({ dates, shifts, setShifts, readOnly, onBlockCreate, onBlock
           onDelete={(id) => { del(id); setEditTarget(null) }}
           onUpdate={(u) => { setShifts((p) => p.map((s) => s.id === u.id ? u : s)); onBlockUpdate?.(u) }}
         />
+      )}
+
+      {/* Day header click popover — "Go to Day View" */}
+      {dayPopover && createPortal(
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setDayPopover(null)} />
+          <div style={{
+            position: 'fixed',
+            top: dayPopover.rect.bottom + 6,
+            left: Math.min(dayPopover.rect.left + dayPopover.rect.width / 2, window.innerWidth - 220),
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            background: 'var(--popover)',
+            border: '1px solid var(--border)',
+            borderRadius: 10,
+            padding: '12px 14px',
+            minWidth: 200,
+            maxWidth: 240,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+          }}>
+            <button onClick={() => setDayPopover(null)} style={{ position: 'absolute', top: 8, right: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted-foreground)', fontSize: 14, lineHeight: 1, padding: 2 }}>✕</button>
+            <button
+              onClick={() => { onGoToDay?.(dayPopover.date); setDayPopover(null) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--foreground)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 6 }}
+            >
+              <span style={{ fontSize: 14 }}>→</span> Go to Day View
+            </button>
+            <div style={{ fontSize: 11, color: 'var(--muted-foreground)', lineHeight: 1.5 }}>
+              Check the sidebar for more info and actions for this day
+            </div>
+          </div>
+        </>,
+        document.body
       )}
     </div>
   )
@@ -958,7 +994,7 @@ function YearLayout({ date, shifts, onMonthDrill }: { date: Date; shifts: Block[
 
 export function KanbanView({
   date, shifts, setShifts, readOnly, mode = 'day', dates,
-  onMonthDrill, onBlockCreate, onBlockUpdate, onBlockDelete,
+  onMonthDrill, onGoToDay, onBlockCreate, onBlockUpdate, onBlockDelete,
 }: KanbanViewProps): React.ReactElement {
   if (mode === 'year') {
     return <YearLayout date={date} shifts={shifts} onMonthDrill={onMonthDrill} />
@@ -967,7 +1003,7 @@ export function KanbanView({
     return <MonthLayout date={date} shifts={shifts} setShifts={setShifts} readOnly={readOnly} onBlockCreate={onBlockCreate} onBlockUpdate={onBlockUpdate} onBlockDelete={onBlockDelete} />
   }
   if (mode === 'week' && dates && dates.length > 0) {
-    return <WeekLayout dates={dates} shifts={shifts} setShifts={setShifts} readOnly={readOnly} onBlockCreate={onBlockCreate} onBlockUpdate={onBlockUpdate} onBlockDelete={onBlockDelete} />
+    return <WeekLayout dates={dates} shifts={shifts} setShifts={setShifts} readOnly={readOnly} onGoToDay={onGoToDay} onBlockCreate={onBlockCreate} onBlockUpdate={onBlockUpdate} onBlockDelete={onBlockDelete} />
   }
   return <DayLayout date={date} shifts={shifts} setShifts={setShifts} readOnly={readOnly} onBlockCreate={onBlockCreate} onBlockUpdate={onBlockUpdate} onBlockDelete={onBlockDelete} />
 }
