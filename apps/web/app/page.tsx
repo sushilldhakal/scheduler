@@ -8,7 +8,7 @@ import {
   type Block,
 } from '@sushill/shadcn-scheduler'
 import { categories, employees, testShifts } from '@/lib/demo/testData'
-import { ArrowRight, Github, Check, Calendar, Users, Zap, Layers, Moon, Move, ChevronRight, Copy, Terminal } from 'lucide-react'
+import { ArrowRight, Github, Check, Calendar, Users, Zap, Layers, Moon, Move, ChevronRight, Copy, Terminal, LayoutGrid } from 'lucide-react'
 import { useWidth } from '@/components/docs/width-context'
 
 const config = createSchedulerConfig({ initialScrollToNow: true })
@@ -27,7 +27,8 @@ const features = [
   { icon: Move, title: '2D Free Drag', desc: 'Blocks lift out of their row and follow your cursor freely. Drop anywhere — across rows, days, views.' },
   { icon: Layers, title: 'Virtual Rendering', desc: '200+ staff with zero jank. TanStack virtualizer renders only visible rows at 60fps.' },
   { icon: Zap, title: 'Right-click & Bulk Actions', desc: 'Context menu with Edit, Copy, Cut, Delete. Rubber-band select multiple blocks and bulk move, publish or delete.' },
-  { icon: Calendar, title: '7 View Types', desc: 'Day, Week, Month, Year, List, Timeline. Multi-level zoom headers. Each view fully interactive.' },
+  { icon: Calendar, title: '7 View Types', desc: 'Day, Week, Month, Year, List, Timeline, Kanban. Multi-level zoom headers. Each view fully interactive.' },
+  { icon: LayoutGrid, title: 'Kanban Board View', desc: 'Week grid with accordion category rows, compact shift cards, hover popover, and one-click drill-down to Day timeline.' },
   { icon: Users, title: 'Recurring Shifts', desc: 'Daily, weekly, monthly recurrence with RRULE-compatible rules. Edit single occurrence or all future.' },
   { icon: Moon, title: 'Dependencies & Markers', desc: 'SVG arrows connect related shifts. Draggable vertical markers for deadlines and milestones.' },
 ]
@@ -135,6 +136,10 @@ export default function HomePage() {
               className="inline-flex items-center gap-2 rounded-lg border border-border px-6 py-3 text-sm font-semibold text-foreground hover:bg-accent transition-colors">
               Live demo
             </Link>
+            <Link href="/demos/kanban"
+              className="inline-flex items-center gap-2 rounded-lg border border-orange-500/40 bg-orange-500/5 px-6 py-3 text-sm font-semibold text-orange-700 dark:text-orange-400 hover:bg-orange-500/10 transition-colors">
+              <LayoutGrid className="h-4 w-4" /> Kanban view
+            </Link>
             <a href="https://github.com/sushilldhakal/scheduler" target="_blank" rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-lg border border-border px-6 py-3 text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
               <Github className="h-4 w-4" /> GitHub
@@ -187,7 +192,7 @@ export default function HomePage() {
         <div className={`${containerClass} py-8 flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground`}>
           <span className="flex items-center gap-2"><span className="text-2xl font-bold text-foreground"><AnimatedCounter target={7} /></span> domain presets</span>
           <span className="text-border">|</span>
-          <span className="flex items-center gap-2"><span className="text-2xl font-bold text-foreground"><AnimatedCounter target={6} /></span> view types</span>
+          <span className="flex items-center gap-2"><span className="text-2xl font-bold text-foreground"><AnimatedCounter target={7} /></span> view types</span>
           <span className="text-border">|</span>
           <span className="flex items-center gap-2"><span className="text-2xl font-bold text-foreground"><AnimatedCounter target={200} suffix="+" /></span> staff virtualized</span>
           <span className="text-border">|</span>
