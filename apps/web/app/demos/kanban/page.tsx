@@ -11,6 +11,7 @@ import {
   ChevronLeft, ChevronRight,
   AlignJustify, Columns, LayoutGrid, Grid,
   Plus,
+  type LucideIcon,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -99,7 +100,7 @@ function DateNav({
 
 // ─── View tabs (Day / Week / Month / Year) ────────────────────────────────────
 
-const VIEW_TABS: { k: KView; l: string; Icon: React.ElementType }[] = [
+const VIEW_TABS: { k: KView; l: string; Icon: LucideIcon }[] = [
   { k: 'day',   l: 'Day',   Icon: AlignJustify },
   { k: 'week',  l: 'Week',  Icon: Columns      },
   { k: 'month', l: 'Month', Icon: LayoutGrid   },
