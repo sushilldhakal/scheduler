@@ -14,13 +14,14 @@ import { useWidth } from '@/components/docs/width-context'
 const config = createSchedulerConfig({ initialScrollToNow: true })
 
 const domains = [
-  { name: 'Workforce Roster', tag: 'HR & Ops', color: '#3b82f6', desc: 'Shift scheduling, availability, and staff allocation' },
-  { name: 'TV Guide / EPG', tag: 'Broadcasting', color: '#8b5cf6', desc: 'Electronic programme guides and channel scheduling' },
-  { name: 'Conference', tag: 'Events', color: '#10b981', desc: 'Session, speaker, and room booking management' },
-  { name: 'Festival', tag: 'Music', color: '#f59e0b', desc: 'Stage, artist, and set-time scheduling across days' },
-  { name: 'Healthcare Rota', tag: 'Medical', color: '#ef4444', desc: 'Ward, shift, and on-call rota management' },
-  { name: 'Gantt / Projects', tag: 'Planning', color: '#06b6d4', desc: 'Task dependencies and milestone tracking' },
-  { name: 'Venue Bookings', tag: 'Hospitality', color: '#ec4899', desc: 'Room, table, and facility reservation' },
+  { name: 'Workforce Roster', tag: 'HR & Ops', color: '#3b82f6', desc: 'Shift scheduling, availability, and staff allocation', href: '/demos/roster' },
+  { name: 'TV Guide / EPG', tag: 'Broadcasting', color: '#8b5cf6', desc: 'Electronic programme guides and channel scheduling', href: '/demos/tv' },
+  { name: 'Conference', tag: 'Events', color: '#10b981', desc: 'Session, speaker, and room booking management', href: '/demos/conference' },
+  { name: 'Festival', tag: 'Music', color: '#f59e0b', desc: 'Stage, artist, and set-time scheduling across days', href: '/demos/festival' },
+  { name: 'Healthcare Rota', tag: 'Medical', color: '#ef4444', desc: 'Ward, shift, and on-call rota management', href: '/demos/healthcare' },
+  { name: 'Gantt / Projects', tag: 'Planning', color: '#06b6d4', desc: 'Task dependencies and milestone tracking', href: '/demos/gantt' },
+  { name: 'Venue Bookings', tag: 'Hospitality', color: '#ec4899', desc: 'Room, table, and facility reservation', href: '/demos/venue' },
+  { name: 'Kanban Board', tag: 'Workforce', color: '#f97316', desc: 'Day/Week/Month/Year kanban with accordion categories, drag-and-drop, and timeline drill-down', href: '/demos/kanban' },
 ]
 
 const features = [
@@ -190,7 +191,7 @@ export default function HomePage() {
       {/* ── Social proof strip ── */}
       <section className="border-b border-border bg-muted/20">
         <div className={`${containerClass} py-8 flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground`}>
-          <span className="flex items-center gap-2"><span className="text-2xl font-bold text-foreground"><AnimatedCounter target={7} /></span> domain presets</span>
+          <span className="flex items-center gap-2"><span className="text-2xl font-bold text-foreground"><AnimatedCounter target={8} /></span> domain presets</span>
           <span className="text-border">|</span>
           <span className="flex items-center gap-2"><span className="text-2xl font-bold text-foreground"><AnimatedCounter target={7} /></span> view types</span>
           <span className="text-border">|</span>
@@ -211,8 +212,8 @@ export default function HomePage() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {domains.map((d, i) => (
-              <div key={d.name}
-                className="group rounded-xl border border-border bg-muted/20 p-5 hover:bg-muted/50 hover:border-border/80 transition-all hover:-translate-y-0.5"
+              <Link key={d.name} href={d.href} target="_blank"
+                className="group rounded-xl border border-border bg-muted/20 p-5 hover:bg-muted/50 hover:border-border/80 transition-all hover:-translate-y-0.5 block no-underline"
                 style={{ animationDelay: `${i * 0.05}s` }}>
                 <div className="flex items-start gap-3 mb-2">
                   <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: d.color + '22' }}>
@@ -224,7 +225,8 @@ export default function HomePage() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">{d.desc}</p>
-              </div>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs text-primary opacity-0 group-hover:opacity-100 group-hover:gap-2 transition-all">Open demo →</span>
+              </Link>
             ))}
           </div>
         </div>
