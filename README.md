@@ -333,6 +333,113 @@ interface SchedulerLabels {
 - **Time labels** (7am, 9am, 11am…) appear below each date with 2-hour intervals.
 - **Visible hours** restrict the time range shown for each day.
 
+## Tour EPG (Tour Operations guide)
+
+`TourEPG` renders tour **departures** like a TV programme guide: rows are departures, columns are real calendar dates, and each cell is *that departure's own* itinerary day.
+
+```
+                  MON OCT 5   TUE OCT 6   WED OCT 7   THU OCT 8
+Everest 7D        D1 KTM      D2 Lukla    D3 Namche   D4 Tengboche
+Annapurna 5D                              D1 Pokhara  D2 Ghorepani
+Chitwan 3D                                D1 KTM      D2 Chitwan
+```
+
+The header only ever shows calendar dates. "D1, D2, D3…" lives inside each row, so three tours can be on three different itinerary days on the same date.
+
+**It is a view, not a second source of truth.** You pass the itineraries you already have; the EPG only maps `calendar date → itinerary day` (`startDate` = D1, `startDate + 1` = D2, …). It never invents, stores or edits itinerary data, and there is no drag-and-drop.
+
+```tsx
+import { TourEPG, type TourDeparture } from "@sushill/shadcn-scheduler"
+import "@sushill/shadcn-scheduler/tokens" // once, like the rest of the scheduler
+
+<TourEPG
+  departures={departures}
+  initialView="week"
+  initialDate="2026-10-05"
+  onDepartureClick={(d) => router.push(`/departures/${d.id}`)}
+  onItineraryDayClick={({ departure, day, dayNumber, date }) => openDay(departure.id, day?.id, date)}
+/>
+```
+
+Also available as `Scheduler.tourEpg` and from the tree-shakeable entry `@sushill/shadcn-scheduler/tour-epg`. The existing `<Scheduler />` and its Day/Week/Month/Year views are unchanged.
+
+### Data
+
+```ts
+interface TourDeparture {
+  id: string                    // one row per departure
+  tourId: string                // many departures can share a tourId
+  tourName: string
+  departureCode?: string        // e.g. "#EV102"
+  startDate: Date | string
+  endDate?: Date | string       // default: last itinerary day
+  status?: "cancelled" | …      // only "cancelled" is honoured; the rest is derived from dates
+  guide?: { id?: string; name: string }
+  guestCount?: number
+  itinerary: TourItineraryDay[]
+}
+
+interface TourItineraryDay {
+  id: string
+  dayNumber: number
+  date?: Date | string          // optional; if present it wins over startDate + dayNumber
+  destination?: string
+  accommodation?: { id?: string; name: string }
+  transportation?: { id?: string; name: string }
+  guide?: { id?: string; name: string }
+  restaurant?: { id?: string; name: string }
+  activities?: string[]
+  notes?: string
+}
+```
+
+**Dates are calendar dates, not timestamps.** Strings are read as the date written in them (`"2026-10-05"`, or `"2026-10-05T00:00:00Z"` → Oct 5). `Date` objects use their *local* calendar fields, so prefer `new Date(2026, 9, 5)` or `"2026-10-05"` over `new Date("2026-10-05")`, which is UTC midnight and is Oct 4 in the Americas. All arithmetic is done on UTC day numbers, so DST and timezone changes can't shift a date.
+
+### Views
+
+| View | Shows |
+| --- | --- |
+| `week` (default) | 7 dates (Mon–Sun, or `weekStartsOn={0}`), each cell is `D#`, destination and hotel / guide / transport |
+| `day` | One date, full detail per departure (adds restaurant and activities) |
+| `month` | Every date in the month; each departure is a status-coloured bar from start to end with `D1…Dn` markers. Bars clip at month edges |
+
+Departures with no day inside the visible range are not rendered. A departure whose range includes a date but has no itinerary entry for it still shows a `D#` cell (details empty).
+
+The left departure column is sticky while the dates scroll horizontally. A *Today* column is highlighted with a vertical rule and a TODAY pill, and moves with the clock (override with `today`).
+
+### Status and filters
+
+Status is derived per departure from its own dates: `upcoming`, `starting-today`, `running`, `ending-today`, `completed`, plus the host-supplied `cancelled`. A one-day tour reports `starting-today` on its day.
+
+Built-in status chips: All, Running (includes start and end day), Upcoming, Starting today, Ending today, Completed. Everything else comes from the host, so no database logic lives in the package:
+
+```tsx
+<TourEPG
+  departures={departures}
+  filters={{ destinations: ["Namche"], guides: ["Ram"], vehicles: ["Jeep"], tourIds: [], departureIds: [] }}
+  search={query}                     // matches tour, code, destination, guide, vehicle
+  onSearchChange={setQuery}
+  filterDeparture={(d) => d.meta?.region === "Khumbu"}
+/>
+```
+
+### Props
+
+| Prop | Notes |
+| --- | --- |
+| `departures` | Required |
+| `initialView` / `view` + `onViewChange` | `"day" \| "week" \| "month"` (uncontrolled / controlled) |
+| `initialDate` / `date` + `onDateChange` | Uncontrolled / controlled anchor date (`onDateChange` receives a local `Date`) |
+| `today`, `weekStartsOn` | Pin "today" (tests, SSR); `0` = Sunday-first weeks |
+| `statusFilter` + `onStatusFilterChange`, `filters`, `search` + `onSearchChange`, `filterDeparture` | See above |
+| `onTourClick(tourId, departure)`, `onDepartureClick(departure)` | Fired when a row's info panel (or month bar title) is clicked |
+| `onItineraryDayClick({ departure, day, dayNumber, date, status })` | `day` is `null` if the host has no entry for that date |
+| `title`, `showFilters`, `showSearch`, `emptyMessage`, `maxHeight`, `className` | Presentation |
+
+Hovering or focusing a cell opens a compact popover (tour, departure, day, date, destination, accommodation, restaurant, guide, transport, activities, status).
+
+Pure helpers (`buildTourEpgRows`, `tourEpgCellOn`, `deriveTourStatus`, …) are exported from `@sushill/shadcn-scheduler/tour-epg` if you want the date→day mapping without the UI.
+
 ## What's New in 0.4.0
 
 - **Row mode**: Category vs individual — one row per employee under collapsible category headers

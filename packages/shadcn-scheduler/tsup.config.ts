@@ -16,6 +16,7 @@ export default defineConfig([
       healthcare: "src/domains/healthcare/index.tsx",
       gantt:      "src/domains/gantt/index.tsx",
       venue:      "src/domains/venue/index.tsx",
+      "tour-epg": "src/tour-epg/index.ts",
     },
     format: ["cjs", "esm"],
     dts: true,

@@ -15,7 +15,7 @@ export function DemoShell({ title, description, docsHref, children }: DemoShellP
 
   const containerClass = fullWidth
     ? 'mx-auto w-full px-4 sm:px-6'
-    : 'mx-auto max-w-7xl px-4 sm:px-6'
+    : 'mx-auto w-full max-w-7xl px-4 sm:px-6'
 
   return (
     <div className="flex flex-col h-screen bg-background">

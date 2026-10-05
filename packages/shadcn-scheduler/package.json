@@ -1,6 +1,6 @@
 {
   "name": "@sushill/shadcn-scheduler",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "A flexible shift scheduling component for React with shadcn UI, Tailwind CSS, and lucide-react icons",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -66,6 +66,11 @@
       "types": "./dist/venue.d.ts",
       "import": "./dist/venue.js",
       "require": "./dist/venue.cjs"
+    },
+    "./tour-epg": {
+      "types": "./dist/tour-epg.d.ts",
+      "import": "./dist/tour-epg.js",
+      "require": "./dist/tour-epg.cjs"
     },
     "./tokens": {
       "default": "./dist/scheduler-tokens.css"

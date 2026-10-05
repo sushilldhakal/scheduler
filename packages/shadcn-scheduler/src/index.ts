@@ -7,6 +7,7 @@ import { SchedulerFestival } from "./domains/festival"
 import { SchedulerHealthcare } from "./domains/healthcare"
 import { SchedulerGantt } from "./domains/gantt"
 import { SchedulerVenue } from "./domains/venue"
+import { TourEPG } from "./tour-epg"
 
 export const Scheduler = Object.assign(SchedulerCore, {
   roster: SchedulerDefault,
@@ -16,6 +17,7 @@ export const Scheduler = Object.assign(SchedulerCore, {
   healthcare: SchedulerHealthcare,
   gantt: SchedulerGantt,
   venue: SchedulerVenue,
+  tourEpg: TourEPG,
 })
 
 export type { SchedulerProps, SchedulerHeaderActions } from "./core/Scheduler"
@@ -100,3 +102,18 @@ export type { WeekViewProps } from "./core/components/views/DayWeekViews"
 export { TimelineView } from "./core/components/views/TimelineView"
 export type { TimelineViewProps } from "./core/components/views/TimelineView"
 export { GridView } from "@shadcn-scheduler/grid-engine"
+
+// Tour Operations EPG — rows = tour departures, columns = calendar dates
+export { TourEPG } from "./tour-epg"
+export type {
+  TourDateInput,
+  TourDeparture,
+  TourDepartureStatus,
+  TourEntityRef,
+  TourEpgFilters,
+  TourEpgProps,
+  TourEpgStatusFilter,
+  TourEpgView,
+  TourItineraryDay,
+  TourItineraryDayClickContext,
+} from "./tour-epg"

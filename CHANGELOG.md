@@ -5,6 +5,18 @@ All notable changes to shadcn-scheduler will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-10-05
+
+### Added
+
+- **Tour EPG** (`TourEPG`, also `Scheduler.tourEpg` and `@sushill/shadcn-scheduler/tour-epg`): a Tour Operations guide with departures as rows, calendar dates as columns and each cell showing that departure's own itinerary day (D1, D2…). Day, Week and Month views, derived tour status, today marker, status filters, host-supplied facet filters and search, hover details, sticky departure column, and `onTourClick` / `onDepartureClick` / `onItineraryDayClick` callbacks. A read-only view over host itinerary data; no drag-and-drop.
+- Timezone-safe calendar-date helpers and pure EPG engine exported from the `tour-epg` entry.
+- Tour EPG demo at `/demos/tour-epg`.
+
+### Fixed
+
+- Demo shell no longer grows wider than the viewport when content has a large min-width.
+
 ## [0.4.0] - 2025-03-19
 
 ### Added

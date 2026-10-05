@@ -20,6 +20,7 @@ const domains = [
   { name: 'Festival', tag: 'Music', color: '#f59e0b', desc: 'Stage, artist, and set-time scheduling across days', href: '/demos/festival' },
   { name: 'Healthcare Rota', tag: 'Medical', color: '#ef4444', desc: 'Ward, shift, and on-call rota management', href: '/demos/healthcare' },
   { name: 'Gantt / Projects', tag: 'Planning', color: '#06b6d4', desc: 'Task dependencies and milestone tracking', href: '/demos/gantt' },
+  { name: 'Tour Operations EPG', tag: 'Travel', color: '#10b981', desc: 'Departures × dates, each tour on its own itinerary day', href: '/demos/tour-epg' },
   { name: 'Venue Bookings', tag: 'Hospitality', color: '#ec4899', desc: 'Room, table, and facility reservation', href: '/demos/venue' },
   { name: 'Kanban Board', tag: 'Workforce', color: '#f97316', desc: 'Day/Week/Month/Year kanban with accordion categories, drag-and-drop, and timeline drill-down', href: '/demos/kanban' },
 ]
