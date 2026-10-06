@@ -136,3 +136,47 @@ describe("<TourEPG /> callbacks, filters, controlled props", () => {
     expect(onDate.mock.calls[0][0]).toEqual(new Date(2026, 9, 15, 12))
   })
 })
+
+describe("<TourEPG /> keyboard navigation", () => {
+  const cell = (id: string, date: string) => within(rowFor(id)).getByRole("button", { name: new RegExp(`Oct ${Number(date.slice(8))}\\b`) })
+
+  it("Left/Right move along a departure; Up/Down keep the date across departures", () => {
+    mount()
+    const start = cell("everest", "2026-10-08")
+    start.focus()
+    fireEvent.keyDown(start, { key: "ArrowRight" })
+    expect(document.activeElement).toBe(cell("everest", "2026-10-09"))
+    fireEvent.keyDown(document.activeElement as Element, { key: "ArrowDown" })
+    expect(document.activeElement).toBe(cell("annapurna", "2026-10-09"))
+    fireEvent.keyDown(document.activeElement as Element, { key: "ArrowLeft" })
+    expect(document.activeElement).toBe(cell("annapurna", "2026-10-08"))
+    fireEvent.keyDown(document.activeElement as Element, { key: "ArrowUp" })
+    expect(document.activeElement).toBe(cell("everest", "2026-10-08"))
+  })
+
+  it("Up/Down land on the nearest date when the neighbour isn't running that day", () => {
+    mount()
+    const d5 = cell("everest", "2026-10-05")
+    d5.focus()
+    fireEvent.keyDown(d5, { key: "ArrowDown" }) // Annapurna starts Oct 7
+    expect(document.activeElement).toBe(cell("annapurna", "2026-10-07"))
+  })
+
+  it("Home/End jump to the row's first and last cell", () => {
+    mount()
+    const c = cell("annapurna", "2026-10-08")
+    c.focus()
+    fireEvent.keyDown(c, { key: "End" })
+    expect(document.activeElement).toBe(cell("annapurna", "2026-10-11"))
+    fireEvent.keyDown(document.activeElement as Element, { key: "Home" })
+    expect(document.activeElement).toBe(cell("annapurna", "2026-10-07"))
+  })
+
+  it("works on month day markers too", () => {
+    mount({ initialView: "month" })
+    const markers = within(rowFor("everest")).getAllByRole("button", { name: /day \d/i })
+    markers[0].focus()
+    fireEvent.keyDown(markers[0], { key: "ArrowRight" })
+    expect(document.activeElement).toBe(markers[1])
+  })
+})

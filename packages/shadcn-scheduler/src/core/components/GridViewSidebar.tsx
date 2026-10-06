@@ -3,7 +3,7 @@ import { ChevronsLeft, ChevronsRight } from "lucide-react";
 import type { Block, Resource, FlatRow, SchedulerSlots } from "../types";
 import { useSchedulerContext } from "../context";
 import type { Virtualizer } from "@tanstack/react-virtual";
-import type { StaffPanelState, AddPromptState } from "./GridView";
+import type { StaffPanelState, AddPromptState } from "@shadcn-scheduler/grid-engine";
 
 export interface GridViewSidebarProps {
   sidebarCollapsed: boolean;

@@ -25,7 +25,7 @@ export type { LongPressOptions } from './hooks/useLongPress'
 
 // ─── Main GridView ────────────────────────────────────────────────────────────
 export { GridView } from './GridView'
-export type { GridViewProps } from './GridView'
+export type { GridViewProps, StaffPanelState, AddPromptState } from './GridView'
 
 // ─── Supporting components ────────────────────────────────────────────────────
 export { GridViewSidebar } from './GridViewSidebar'

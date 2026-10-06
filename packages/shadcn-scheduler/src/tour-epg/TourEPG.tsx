@@ -33,6 +33,7 @@ import {
   weekdayShort,
   dayOfMonth,
   eachDate,
+  epochDay,
   type IsoDate,
 } from "./dates"
 import { buildRows, normalizeDepartures, type EpgCell, type EpgRow } from "./engine"
@@ -145,6 +146,48 @@ function cellLabel(row: EpgRow, cell: EpgCell): string {
   const code = dep.departureCode ? ` ${dep.departureCode}` : ""
   const dest = cell.day?.destination ? `: ${cell.day.destination}` : ""
   return `${dep.tourName}${code}, day ${cell.dayNumber}, ${formatShort(cell.date)}${dest}`
+}
+
+/**
+ * Arrow-key navigation between itinerary cells (and month day markers).
+ * Left/Right move along a departure, Up/Down move to the same date on the
+ * neighbouring departure (nearest date if that departure isn't running then).
+ * Home/End jump to the first/last cell of the row.
+ */
+function handleGridKeyDown(e: React.KeyboardEvent<HTMLElement>): void {
+  const target = e.target as HTMLElement
+  if (!target.matches?.("button[data-date]")) return
+  const rowEl = target.closest<HTMLElement>("[data-departure-id]")
+  if (!rowEl) return
+  const cellsOf = (row: Element): HTMLElement[] => Array.from(row.querySelectorAll<HTMLElement>("button[data-date]"))
+  let next: HTMLElement | undefined
+  const cells = cellsOf(rowEl)
+  const i = cells.indexOf(target)
+  switch (e.key) {
+    case "ArrowRight": next = cells[i + 1]; break
+    case "ArrowLeft": next = cells[i - 1]; break
+    case "Home": next = cells[0]; break
+    case "End": next = cells[cells.length - 1]; break
+    case "ArrowDown":
+    case "ArrowUp": {
+      const sibling = e.key === "ArrowDown" ? rowEl.nextElementSibling : rowEl.previousElementSibling
+      if (!(sibling instanceof HTMLElement) || !sibling.hasAttribute("data-departure-id")) break
+      const want = epochDay(target.dataset.date as IsoDate)
+      let best = Infinity
+      for (const c of cellsOf(sibling)) {
+        const dist = Math.abs(epochDay(c.dataset.date as IsoDate) - want)
+        if (dist < best) { best = dist; next = c }
+      }
+      break
+    }
+    default:
+      return
+  }
+  e.preventDefault()
+  if (next) {
+    next.focus()
+    next.scrollIntoView?.({ block: "nearest", inline: "nearest" })
+  }
 }
 
 // ─── pieces ──────────────────────────────────────────────────────────────────
@@ -576,8 +619,13 @@ export function TourEPG({
       )}
 
       {/* ── grid ── */}
-      <div className="overflow-auto rounded-md border border-border bg-background" style={{ maxHeight }} data-testid="tour-epg-scroll">
-        <div role="table" aria-label={`${title}, ${rangeText}`} style={{ minWidth }}>
+      <div
+        className="overflow-auto rounded-md border border-border bg-background"
+        // keep keyboard-focused cells clear of the sticky column and header
+        style={{ maxHeight, scrollPaddingLeft: leftW, scrollPaddingTop: 64 }}
+        data-testid="tour-epg-scroll"
+      >
+        <div role="table" aria-label={`${title}, ${rangeText}`} style={{ minWidth }} onKeyDown={handleGridKeyDown}>
           {/* global date header: real calendar dates only */}
           <div role="row" className="sticky top-0 z-30 grid bg-background" style={{ gridTemplateColumns: template }}>
             <div role="columnheader" className="sticky left-0 z-40 flex items-end border-b border-r border-border bg-background px-2 py-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -742,6 +790,7 @@ function MonthBar({
             title={`D${cell.dayNumber} · ${formatShort(cell.date)}${cell.day?.destination ? ` · ${cell.day.destination}` : ""}`}
             aria-label={cellLabel(row, cell)}
             data-day-number={cell.dayNumber}
+            data-date={cell.date}
             className="min-w-0 flex-1 truncate rounded-sm text-center text-[9px] font-medium tabular-nums text-foreground/70 hover:bg-background/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             {narrow && !cell.isStart && !cell.isEnd ? "·" : `D${cell.dayNumber}`}

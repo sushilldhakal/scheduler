@@ -564,6 +564,8 @@ Built-in status chips: All, Running (includes start and end day), Upcoming, Star
 | `onItineraryDayClick({ departure, day, dayNumber, date, status })` | `day` is `null` if the host has no entry for that date |
 | `title`, `showFilters`, `showSearch`, `emptyMessage`, `maxHeight`, `className` | Presentation |
 
+Keyboard: Tab to a cell, then arrow keys move between cells (←/→ along a departure, ↑/↓ to the same date on the next departure), Home/End jump to the row ends, Enter/Space open the day.
+
 Hovering or focusing a cell opens a compact popover (tour, departure, day, date, destination, accommodation, restaurant, guide, transport, activities, status).
 
 Pure helpers (`buildTourEpgRows`, `tourEpgCellOn`, `deriveTourStatus`, …) are exported from `@sushill/shadcn-scheduler/tour-epg` if you want the date→day mapping without the UI.

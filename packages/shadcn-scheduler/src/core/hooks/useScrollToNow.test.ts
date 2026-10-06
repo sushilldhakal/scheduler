@@ -2,12 +2,18 @@ import { describe, it, expect } from "vitest"
 import { renderHook } from "@testing-library/react"
 import { useScrollToNow } from "./useScrollToNow"
 
+/** jsdom has no Element.scrollTo; emulate it by applying `left` immediately. */
+function stubScrollTo(el: HTMLElement): void {
+  el.scrollTo = ((opts: ScrollToOptions) => { el.scrollLeft = opts.left ?? 0 }) as typeof el.scrollTo
+}
+
 describe("useScrollToNow", () => {
   it("scrollToNow sets scrollLeft so the now position is centered when possible", () => {
     const el = document.createElement("div")
     Object.defineProperty(el, "clientWidth", { value: 400, configurable: true })
     Object.defineProperty(el, "scrollWidth", { value: 2000, configurable: true })
     el.scrollLeft = 0
+    stubScrollTo(el)
 
     const ref = { current: el }
     const { result } = renderHook(() => useScrollToNow(ref, 600))
@@ -23,6 +29,7 @@ describe("useScrollToNow", () => {
     Object.defineProperty(el, "clientWidth", { value: 400, configurable: true })
     Object.defineProperty(el, "scrollWidth", { value: 2000, configurable: true })
     el.scrollLeft = 0
+    stubScrollTo(el)
 
     const ref = { current: el }
     const { result } = renderHook(() => useScrollToNow(ref, 100))

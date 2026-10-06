@@ -65,8 +65,8 @@ describe("getWeekDates", () => {
 })
 
 describe("snapH", () => {
-  it("snaps 1.3 to 1.5 with SNAP=0.5", () => {
-    expect(SNAP).toBe(0.5)
-    expect(snapH(1.3)).toBe(1.5)
+  it("snaps 1.3 to 1.25 with SNAP=0.25 (15 minutes)", () => {
+    expect(SNAP).toBe(0.25)
+    expect(snapH(1.3)).toBe(1.25)
   })
 })
